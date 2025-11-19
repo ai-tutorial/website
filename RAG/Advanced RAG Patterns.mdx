@@ -15,7 +15,8 @@ icon: "book"
 
 **Solution:** Use knowledge graph to find connected entities, then retrieve documents.
 
-```python
+<CodeGroup>
+```python Python
 # Simplified GraphRAG pattern (using NetworkX)
 import networkx as nx
 from typing import List, Set
@@ -94,6 +95,89 @@ answer = graph_rag.query(
 # Returns: "Alice worked on both projects"
 ```
 
+```ts TypeScript
+import { Graph } from "graphlib";
+import OpenAI from "openai";
+
+const client = new OpenAI();
+
+class GraphRAG {
+    private kg: Graph;
+    private docs: Map<string, string>;
+
+    constructor(knowledgeGraph: Graph, documentStore: Map<string, string>) {
+        this.kg = knowledgeGraph;
+        this.docs = documentStore;
+    }
+
+    graphGuidedRetrieval(
+        entities: string[],
+        maxHops: number = 2
+    ): string[] {
+        // Step 1: Find subgraph around entities
+        const relevantNodes = new Set(entities);
+
+        for (const entity of entities) {
+            // Get nodes within max_hops
+            if (this.kg.hasNode(entity)) {
+                const neighbors = this.kg.successors(entity) || [];
+                for (const neighbor of neighbors) {
+                    relevantNodes.add(neighbor);
+                }
+            }
+        }
+
+        // Step 2: Retrieve documents mentioning any relevant node
+        const docIds = new Set<string>();
+        for (const node of relevantNodes) {
+            // Look up which documents mention this entity
+            const nodeData = this.kg.node(node);
+            if (nodeData?.document_ids) {
+                for (const docId of nodeData.document_ids) {
+                    docIds.add(docId);
+                }
+            }
+        }
+
+        return Array.from(docIds);
+    }
+
+    async query(question: string, entities: string[]): Promise<string> {
+        // Step 1: Graph-guided retrieval
+        const docIds = this.graphGuidedRetrieval(entities, 2);
+
+        // Step 2: Fetch actual documents
+        const documents = docIds.map(docId => this.docs.get(docId)).filter(Boolean) as string[];
+        const context = documents.join("\n\n");
+
+        // Step 3: Generate answer
+        const response = await client.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{
+                role: "user",
+                content: `Context:\n${context}\n\nQuestion: ${question}`
+            }]
+        });
+
+        return response.choices[0].message.content || "";
+    }
+}
+
+// Example usage
+const kg = new Graph();
+kg.setEdge("Alice", "Project X", { type: "works_on" });
+kg.setEdge("Bob", "Project X", { type: "works_on" });
+kg.setEdge("Alice", "Project Y", { type: "works_on" });
+
+const graphRag = new GraphRAG(kg, documentStore);
+const answer = await graphRag.query(
+    "Who worked on both Project X and Y?",
+    ["Project X", "Project Y"]
+);
+// Returns: "Alice worked on both projects"
+```
+</CodeGroup>
+
 **When to use:**
 - Multi-hop reasoning required
 - Entity-centric queries (people, companies, products)
@@ -114,7 +198,8 @@ answer = graph_rag.query(
 
 [Full runnable example of Iterative RAG](https://colab.research.google.com/drive/1qHfVmIYni7Um7FPYVDUOxUh1tntPpZVH?usp=drive_link)
 
-```python
+<CodeGroup>
+```python Python
 class IterativeRAG:
     def __init__(self, retriever):
         self.retriever = retriever
@@ -203,6 +288,115 @@ result = iterative.query("Tell me about the outage")
 # Final answer includes specific details from refined search
 ```
 
+```ts TypeScript
+import OpenAI from "openai";
+
+const openai = new OpenAI();
+
+class IterativeRAG {
+    private retriever: any;
+    private maxIterations: number = 3;
+
+    constructor(retriever: any) {
+        this.retriever = retriever;
+    }
+    
+    async refineQuery(
+        originalQuery: string,
+        retrievedDocs: string[],
+        iteration: number
+    ): Promise<string> {
+        // Use LLM to refine query based on initial results
+        const refinementPrompt = `
+        Original query: ${originalQuery}
+        
+        Initial search returned these documents:
+        ${retrievedDocs.slice(0, 2)}  // Show first 2 docs
+        
+        The documents don't directly answer the query. Generate a refined,
+        more specific query that might work better. Consider:
+        - Adding key terms from the documents
+        - Clarifying ambiguous parts
+        - Breaking down complex questions
+        
+        Refined query:
+        `;
+        
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",  // Cheap model fine for query refinement
+            messages: [{ role: "user", content: refinementPrompt }],
+            temperature: 0.3,
+            max_tokens: 100
+        });
+        
+        return response.choices[0].message.content?.trim() || "";
+    }
+    
+    async query(question: string): Promise<{
+        answer: string;
+        iterations: number;
+        finalQuery: string;
+    }> {
+        // Iterative retrieval with query refinement
+        let currentQuery = question;
+        const allDocs: string[] = [];
+        
+        let iteration = 0;
+        for (iteration = 0; iteration < this.maxIterations; iteration++) {
+            // Retrieve with current query
+            const results = await this.retriever.search(currentQuery, { topK: 5 });
+            const docs = results.map((r: any) => r.document);
+            allDocs.push(...docs);
+            
+            // Check if we have good results (simple heuristic: score threshold)
+            if (results[0].score > 0.8) {
+                break;  // Good enough, stop iterating
+            }
+            
+            // Refine query for next iteration
+            if (iteration < this.maxIterations - 1) {
+                const refinedQuery = await this.refineQuery(question, docs, iteration);
+                currentQuery = refinedQuery;
+                console.log(`Iteration ${iteration + 1}: Refined to '${currentQuery}'`);
+            }
+        }
+        
+        // Generate final answer from all retrieved docs
+        const context = allDocs.join("\n\n");
+        const answer = await this.generateAnswer(question, context);
+        
+        return {
+            answer,
+            iterations: iteration + 1,
+            finalQuery: currentQuery
+        };
+    }
+    
+    async generateAnswer(question: string, context: string): Promise<string> {
+        // Generate final answer
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{
+                role: "user",
+                content: `Context:\n${context}\n\nQuestion: ${question}`
+            }],
+            temperature: 0
+        });
+        return response.choices[0].message.content || "";
+    }
+}
+
+// Example
+const iterative = new IterativeRAG(retriever);
+const result = await iterative.query("Tell me about the outage");
+
+// Output might show:
+// Iteration 1: Refined to 'database outage January 2025 cause'
+// Iteration 2: Refined to 'PostgreSQL outage January 15 root cause analysis'
+// Final answer includes specific details from refined search
+```
+</CodeGroup>
+
 **When to use:**
 - Vague user queries common
 - Large document corpus (many potential matches)
@@ -217,7 +411,8 @@ result = iterative.query("Tell me about the outage")
 
 **Solution:** Let the LLM decide HOW to search based on the question.
 
-```python
+<CodeGroup>
+```python Python
 from typing import Literal
 
 class AgenticRAG:
@@ -308,6 +503,106 @@ answer = agentic.query("Which engineers on the data team have Python experience?
 # Analysis might select: entity search for ["data team", "Python"], multi-hop
 ```
 
+```ts TypeScript
+import OpenAI from "openai";
+
+const openai = new OpenAI();
+
+class AgenticRAG {
+    private retriever: any;
+
+    constructor(retriever: any) {
+        this.retriever = retriever;
+    }
+    
+    async analyzeQuery(question: string): Promise<any> {
+        // LLM analyzes query and decides retrieval strategy
+        const analysisPrompt = `
+        Analyze this query and determine the best retrieval strategy:
+        Query: ${question}
+        
+        Respond in JSON:
+        {
+            "query_type": "factual | conceptual | multi_hop | temporal",
+            "key_entities": ["entity1", "entity2"],
+            "time_range": "optional ISO date range",
+            "search_strategy": "keyword | semantic | hybrid",
+            "metadata_filters": {"document_type": "value"},
+            "reasoning": "brief explanation"
+        }
+        `;
+        
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: analysisPrompt }],
+            response_format: { type: "json_object" }
+        });
+        
+        return JSON.parse(response.choices[0].message.content || "{}");
+    }
+    
+    constructQuery(question: string, analysis: any): [string, any] {
+        // Build optimized query based on analysis
+        // Extract key terms for searching
+        const searchQuery = analysis.key_entities.join(" ");
+        
+        // Build metadata filters
+        const filters = analysis.metadata_filters || {};
+        
+        // Add temporal filter if specified
+        if (analysis.time_range) {
+            filters.created_at = { $gte: analysis.time_range };
+        }
+        
+        return [searchQuery, filters];
+    }
+    
+    async query(question: string): Promise<string> {
+        // Agentic RAG: LLM-guided retrieval
+        // Step 1: Analyze query
+        const analysis = await this.analyzeQuery(question);
+        console.log(`Analysis: ${analysis.reasoning}`);
+        
+        // Step 2: Construct optimized query
+        const [searchQuery, filters] = this.constructQuery(question, analysis);
+        
+        // Step 3: Retrieve with constructed query + filters
+        const results = await this.retriever.search(
+            searchQuery,
+            { metadataFilters: filters, topK: 5 }
+        );
+        
+        // Step 4: Generate answer
+        const context = results.map((r: any) => r.document).join("\n\n");
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{
+                role: "user",
+                content: `Context:\n${context}\n\nQuestion: ${question}`
+            }]
+        });
+        
+        return response.choices[0].message.content || "";
+    }
+}
+
+// Example
+const agentic = new AgenticRAG(retriever);
+
+// Query 1: Factual
+const answer1 = await agentic.query("What is our company's PTO policy?");
+// Analysis might select: keyword search, filter to HR docs
+
+// Query 2: Temporal
+const answer2 = await agentic.query("What changed in our benefits since last year?");
+// Analysis might select: semantic search, filter to docs after 2024-01-01
+
+// Query 3: Multi-hop
+const answer3 = await agentic.query("Which engineers on the data team have Python experience?");
+// Analysis might select: entity search for ["data team", "Python"], multi-hop
+```
+</CodeGroup>
+
 **When to use:**
 - Complex, varied query types
 - Large metadata taxonomy (many filter options)
@@ -324,7 +619,8 @@ answer = agentic.query("Which engineers on the data team have Python experience?
 - Revenue: Structured data (database query)
 - Industry analysis: Unstructured data (document retrieval)
 
-```python
+<CodeGroup>
+```python Python
 class HybridDataRAG:
     def __init__(self, sql_db, document_retriever):
         self.sql_db = sql_db
@@ -390,6 +686,86 @@ class HybridDataRAG:
         
         return response.choices[0].message.content
 ```
+
+```ts TypeScript
+import OpenAI from "openai";
+
+const openai = new OpenAI();
+
+class HybridDataRAG {
+    private sqlDb: any;
+    private docs: any;
+
+    constructor(sqlDb: any, documentRetriever: any) {
+        this.sqlDb = sqlDb;
+        this.docs = documentRetriever;
+    }
+    
+    async classifyQuery(question: string): Promise<any> {
+        // Determine if query needs SQL, docs, or both
+        const classificationPrompt = `
+        Does this query require:
+        - structured data (database)?
+        - unstructured data (documents)?
+        - both?
+        
+        Query: ${question}
+        
+        Respond in JSON:
+        {
+            "needs_sql": true/false,
+            "needs_documents": true/false,
+            "sql_query": "SELECT ... if needed",
+            "document_keywords": ["keyword1", "keyword2"]
+        }
+        `;
+        
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: classificationPrompt }],
+            response_format: { type: "json_object" }
+        });
+        
+        return JSON.parse(response.choices[0].message.content || "{}");
+    }
+    
+    async query(question: string): Promise<string> {
+        // Query both structured and unstructured data
+        // Step 1: Classify query needs
+        const classification = await this.classifyQuery(question);
+        
+        const contextParts: string[] = [];
+        
+        // Step 2a: Execute SQL if needed
+        if (classification.needs_sql) {
+            const sqlResults = await this.sqlDb.execute(classification.sql_query);
+            contextParts.push(`Database results:\n${sqlResults}`);
+        }
+        
+        // Step 2b: Retrieve documents if needed
+        if (classification.needs_documents) {
+            const docs = await this.docs.search(
+                classification.document_keywords.join(" "),
+                { topK: 3 }
+            );
+            contextParts.push(`Documents:\n${docs}`);
+        }
+        
+        // Step 3: Generate answer from combined context
+        const combinedContext = contextParts.join("\n\n");
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{
+                role: "user",
+                content: `Context:\n${combinedContext}\n\nQuestion: ${question}`
+            }]
+        });
+        
+        return response.choices[0].message.content || "";
+    }
+}
+```
+</CodeGroup>
 
 **When to use:**
 - Mixed data sources (databases + documents)

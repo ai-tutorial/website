@@ -12,7 +12,8 @@ icon: "book"
 ## Minimal rerank pipeline
 [Full runnable example of minimal rerank pipeline](https://colab.research.google.com/drive/12Kbj7Acd4rC3Ra1wW08_eBHWcohmZ8qa?usp=drive_link)
 
-```python
+<CodeGroup>
+```python Python
 # Requires: pip install sentence-transformers
 from sentence_transformers import CrossEncoder
 from typing import List, Dict
@@ -47,8 +48,45 @@ class CrossEncoderReranker:
         return rescored[:top_k]
 ```
 
+```ts TypeScript
+import { CrossEncoder } from "@xenova/transformers";
+
+class CrossEncoderReranker {
+    private model: any;
+
+    constructor(modelName: string = "cross-encoder/ms-marco-MiniLM-L-6-v2") {
+        // Lightweight cross-encoder (CPU-capable). Swap for larger models if you have GPU budget
+        // e.g., "BAAI/bge-reranker-large" for higher precision at higher latency.
+        this.model = new CrossEncoder(modelName);
+    }
+
+    async rerank(
+        query: string,
+        candidates: Array<{ document: string; score: number; rank: number }>,
+        topK: number = 5
+    ): Promise<Array<{ document: string; score: number; rank: number; rerank_score: number; rerank_rank: number }>> {
+        // Score (query, document) pairs and return top_k by cross-encoder score
+        const pairs = candidates.map(c => [query, c.document]);
+        const ceScores = await this.model.predict(pairs);
+
+        const rescored = candidates.map((c, idx) => ({
+            ...c,
+            rerank_score: ceScores[idx] as number
+        }));
+
+        rescored.sort((a, b) => b.rerank_score - a.rerank_score);
+        for (let i = 0; i < Math.min(rescored.length, topK); i++) {
+            rescored[i].rerank_rank = i + 1;
+        }
+        return rescored.slice(0, topK);
+    }
+}
+```
+</CodeGroup>
+
 ## Integrating with your retriever
-```python
+<CodeGroup>
+```python Python
 # Assume you have a first-pass retriever (BM25, Semantic, or Hybrid)
 # Example: use the HybridRetriever from Lesson 2.2 to get top-50
 def retrieve_then_rerank(query: str, hybrid_retriever, top_first_pass=50, top_final=5):
@@ -61,13 +99,34 @@ def retrieve_then_rerank(query: str, hybrid_retriever, top_first_pass=50, top_fi
     return top_docs
 ```
 
+```ts TypeScript
+// Assume you have a first-pass retriever (BM25, Semantic, or Hybrid)
+// Example: use the HybridRetriever from Lesson 2.2 to get top-50
+async function retrieveThenRerank(
+    query: string,
+    hybridRetriever: any,
+    topFirstPass: number = 50,
+    topFinal: number = 5
+): Promise<any[]> {
+    // Step 1: First-pass (maximize recall)
+    const candidates = await hybridRetriever.search(query, { topK: topFirstPass });
+
+    // Step 2: Cross-encoder rerank (maximize precision)
+    const reranker = new CrossEncoderReranker();
+    const topDocs = await reranker.rerank(query, candidates, topFinal);
+    return topDocs;
+}
+```
+</CodeGroup>
+
 **Latency/cost tips:**
 - Keep candidate pool small (e.g., 20-100) and final top_k small (3-5).
 - Run first-pass BM25+dense in parallel; batch rerank scoring for throughput.
 - Log latency and token/call costs during the lab.
 
 ## Practical Exercise (15 min)
-```python
+<CodeGroup>
+```python Python
 # Your task:
 # 0) Corpus: use chunks from 'Assets/paul_graham_essay.txt' (treat each chunk as a doc)
 # 1) Use HybridRetriever to get top-50 for 5 queries.
@@ -84,6 +143,25 @@ def retrieve_then_rerank(query: str, hybrid_retriever, top_first_pass=50, top_fi
 # - Pinecone Learn (2025): https://www.pinecone.io/learn/retrieval-augmented-generation/
 # - Practitioner write-up (2025): https://dj3dw.com/blog/the-power-of-reranking-in-retrieval-augmented-generation-rag-systems/
 ```
+
+```ts TypeScript
+// Your task:
+// 0) Corpus: use chunks from 'Assets/paul_graham_essay.txt' (treat each chunk as a doc)
+// 1) Use HybridRetriever to get top-50 for 5 queries.
+// 2) Rerank with CrossEncoderReranker to top-5.
+// 3) Compute NDCG@10, MRR before vs. after reranking.
+// 4) Record end-to-end latency; note candidate pool size impact.
+//
+// Expected insights:
+// - Reranking lifts precision-focused metrics.
+// - Most gains come from better ordering of already-relevant docs.
+// - Larger candidate pools help recall but increase latency.
+//
+// References:
+// - Pinecone Learn (2025): https://www.pinecone.io/learn/retrieval-augmented-generation/
+// - Practitioner write-up (2025): https://dj3dw.com/blog/the-power-of-reranking-in-retrieval-augmented-generation-rag-systems/
+```
+</CodeGroup>
 
 ### Production checklist callout
 - Retrieve top-50 in parallel (BM25 + embeddings) → cross-encoder rerank top-20 → keep top-5 for generation.

@@ -28,7 +28,8 @@ icon: "book"
 
 [Full runnable example of BM25 retrieval](https://colab.research.google.com/drive/1tCa4TlqtYkgCBGw7bT2ynYwyFCiapyDo?usp=drive_link)
 
-```python
+<CodeGroup>
+```python Python
 # BM25 with rank-bm25 library
 from rank_bm25 import BM25Okapi
 import numpy as np
@@ -70,6 +71,64 @@ results = retriever.search("Section 230 immunity")
 # Returns: High score for Section 230 document (exact match)
 ```
 
+```ts TypeScript
+// BM25 with @orama/orama or similar
+import { Orama, create, insert, search } from "@orama/orama";
+
+class BM25Retriever {
+    private corpus: string[];
+    private tokenizedCorpus: string[][];
+
+    constructor(documents: string[]) {
+        // Initialize BM25 with document corpus
+        // Tokenize documents (simple whitespace for demo)
+        this.tokenizedCorpus = documents.map(doc => doc.toLowerCase().split(/\s+/));
+        this.corpus = documents;
+    }
+
+    search(query: string, topK: number = 5): Array<{ document: string; score: number; rank: number }> {
+        // Return top-k documents by BM25 score
+        const tokenizedQuery = query.toLowerCase().split(/\s+/);
+        
+        // Simple BM25 scoring (simplified for demo)
+        const scores: number[] = [];
+        for (const docTokens of this.tokenizedCorpus) {
+            let score = 0;
+            for (const token of tokenizedQuery) {
+                const termFreq = docTokens.filter(t => t === token).length;
+                if (termFreq > 0) {
+                    score += termFreq / (docTokens.length + 1);
+                }
+            }
+            scores.push(score);
+        }
+
+        // Get top-k indices
+        const indexedScores = scores.map((score, idx) => ({ score, idx }));
+        indexedScores.sort((a, b) => b.score - a.score);
+        const topIndices = indexedScores.slice(0, topK);
+
+        return topIndices.map((item, rank) => ({
+            document: this.corpus[item.idx],
+            score: item.score,
+            rank: rank + 1
+        }));
+    }
+}
+
+// Example: Legal search
+const documents = [
+    "Section 230 of Communications Decency Act protects platforms...",
+    "The Digital Millennium Copyright Act (DMCA) Section 512...",
+    "GDPR Article 17 establishes the right to be forgotten..."
+];
+
+const retriever = new BM25Retriever(documents);
+const results = retriever.search("Section 230 immunity");
+// Returns: High score for Section 230 document (exact match)
+```
+</CodeGroup>
+
 ## Semantic Search (Embeddings)
 
 **How it works:** Converts text to vectors in semantic space; similar meaning = nearby vectors.
@@ -94,7 +153,8 @@ results = retriever.search("Section 230 immunity")
 
 [Full runnable example of a simple RAG](https://colab.research.google.com/drive/15LHzIlsxR4W-bm-FOC2HKQCV5siKgK9P?usp=drive_link)
 
-```python
+<CodeGroup>
+```python Python
 # Semantic search with sentence-transformers
 from sentence_transformers import SentenceTransformer
 import chromadb
@@ -149,6 +209,64 @@ results = retriever.search("I can't log in")
 # Returns: Both password reset docs (semantic match to login problem)
 ```
 
+```ts TypeScript
+// Semantic search with sentence-transformers
+import { pipeline } from "@xenova/transformers";
+import { ChromaClient } from "chromadb";
+
+class SemanticRetriever {
+    private model: any;
+    private client: ChromaClient;
+    private collection: any;
+
+    constructor(documents: string[], modelName: string = "all-MiniLM-L6-v2") {
+        // Initialize with embedding model and vector DB
+        this.model = await pipeline("feature-extraction", modelName);
+        this.client = new ChromaClient();
+        this.collection = await this.client.createCollection({
+            name: "semantic_search",
+            metadata: { "hnsw:space": "cosine" }  // Cosine similarity
+        });
+
+        // Embed and store documents
+        const embeddings = await this.model(documents, { pooling: "mean", normalize: true });
+        await this.collection.add({
+            documents: documents,
+            embeddings: Array.from(embeddings.data),
+            ids: documents.map((_, i) => `doc_${i}`)
+        });
+    }
+
+    async search(query: string, topK: number = 5): Promise<Array<{ document: string; score: number; rank: number }>> {
+        // Return top-k semantically similar documents
+        const queryEmbedding = await this.model(query, { pooling: "mean", normalize: true });
+        
+        const results = await this.collection.query({
+            queryEmbeddings: [Array.from(queryEmbedding.data)],
+            nResults: topK
+        });
+
+        return results.documents[0].map((doc: string, i: number) => ({
+            document: doc,
+            score: 1 - results.distances[0][i],  // Convert distance to similarity
+            rank: i + 1
+        }));
+    }
+}
+
+// Example: Customer support
+const documents = [
+    "How to reset your password: Click 'Forgot Password' on login page",
+    "Password reset instructions: Visit login, select password recovery option",
+    "Refund policy: Returns accepted within 30 days with receipt"
+];
+
+const retriever = new SemanticRetriever(documents);
+const results = await retriever.search("I can't log in");
+// Returns: Both password reset docs (semantic match to login problem)
+```
+</CodeGroup>
+
 ## Hybrid Search: Best of Both Worlds
 
 **The Production Standard:** Combine BM25 (precision) + embeddings (recall).
@@ -166,7 +284,8 @@ results = retriever.search("I can't log in")
 
 [Full runnable example of hybrid search with RRF](https://colab.research.google.com/drive/1v4V5IM0CBWJh5E27hBux4uS0lrvcXPtl?usp=drive_link) and [hybrid with RRF and cross-encoder](https://colab.research.google.com/drive/1tCa4TlqtYkgCBGw7bT2ynYwyFCiapyDo?usp=drive_link)
 
-```python
+<CodeGroup>
+```python Python
 # Hybrid search with reciprocal rank fusion
 class HybridRetriever:
     def __init__(self, documents: list[str]):
@@ -237,6 +356,85 @@ results = hybrid.search("Python exception handling")
 # Returns: Docs 1 & 2 both highly ranked (BM25 + semantic agree)
 ```
 
+```ts TypeScript
+// Hybrid search with reciprocal rank fusion
+class HybridRetriever {
+    private bm25: BM25Retriever;
+    private semantic: SemanticRetriever;
+    private documents: string[];
+
+    constructor(documents: string[]) {
+        // Initialize both BM25 and semantic retrievers
+        this.bm25 = new BM25Retriever(documents);
+        this.semantic = new SemanticRetriever(documents);
+        this.documents = documents;
+    }
+
+    reciprocalRankFusion(
+        bm25Results: Array<{ document: string; rank: number }>,
+        semanticResults: Array<{ document: string; rank: number }>,
+        k: number = 60  // RRF constant
+    ): Array<{ document: string; score: number; rank: number }> {
+        // Fuse results using Reciprocal Rank Fusion.
+        // RRF score = sum(1 / (k + rank)) for each result list.
+        const scores: Record<string, number> = {};
+
+        // Add BM25 scores
+        for (const result of bm25Results) {
+            scores[result.document] = (scores[result.document] || 0) + 1 / (k + result.rank);
+        }
+
+        // Add semantic scores
+        for (const result of semanticResults) {
+            scores[result.document] = (scores[result.document] || 0) + 1 / (k + result.rank);
+        }
+
+        // Sort by combined score
+        const ranked = Object.entries(scores)
+            .sort(([, a], [, b]) => b - a);
+
+        return ranked.map(([doc, score], i) => ({
+            document: doc,
+            score: score,
+            rank: i + 1
+        }));
+    }
+
+    async search(query: string, topK: number = 5): Promise<Array<{ document: string; score: number; rank: number }>> {
+        // Hybrid search with RRF fusion
+        // Get results from both retrievers
+        const bm25Results = this.bm25.search(query, 20);
+        const semanticResults = await this.semantic.search(query, 20);
+
+        // Fuse and return top-k
+        const fused = this.reciprocalRankFusion(bm25Results, semanticResults);
+        return fused.slice(0, topK);
+    }
+}
+
+// Example showing hybrid's advantage
+const documents = [
+    "Python 3.11 introduced exception groups for better error handling",
+    "Error handling in Python uses try-except blocks",
+    "JavaScript has try-catch for exception management"
+];
+
+const hybrid = new HybridRetriever(documents);
+
+// Query 1: Exact match (BM25 wins)
+const results1 = await hybrid.search("Python 3.11 features");
+// Returns: Doc 1 ranked highest (exact version match)
+
+// Query 2: Conceptual (semantic wins)
+const results2 = await hybrid.search("How do I handle errors in Python?");
+// Returns: Doc 2 ranked highest (semantic match to error handling)
+
+// Query 3: Hybrid helps
+const results3 = await hybrid.search("Python exception handling");
+// Returns: Docs 1 & 2 both highly ranked (BM25 + semantic agree)
+```
+</CodeGroup>
+
 ## When to Use Each Strategy
 
 | Query Type | Best Strategy | Example |
@@ -270,7 +468,8 @@ results = hybrid.search("Python exception handling")
 
 Implement and compare all three approaches on the same dataset:
 
-```python
+<CodeGroup>
+```python Python
 # Provided starter code: starter/lesson_2.2/compare_search.py
 # Your task:
 # 1. Load and chunk the essay at 'Assets/paul_graham_essay.txt'
@@ -283,3 +482,18 @@ Implement and compare all three approaches on the same dataset:
 # - Semantic excels on: paraphrased concepts (e.g., motivations, themes)
 # - Hybrid consistently strong across query types
 ```
+
+```ts TypeScript
+// Provided starter code: starter/lesson_2.2/compare_search.ts
+// Your task:
+// 1. Load and chunk the essay at 'Assets/paul_graham_essay.txt'
+// 2. Build a small corpus from chunks (treat each chunk as a document)
+// 3. Run 5 queries through BM25, Semantic, and Hybrid over the chunks
+// 4. Compare results per query; note where each strategy wins
+
+// Expected discoveries:
+// - BM25 excels on: exact phrases and names in the essay
+// - Semantic excels on: paraphrased concepts (e.g., motivations, themes)
+// - Hybrid consistently strong across query types
+```
+</CodeGroup>
