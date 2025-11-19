@@ -2,7 +2,7 @@ INSTRUCTIONS:
 
 In the MDX files, there are several code examples written in Python (```python blocks). The goal of this command is to:
 1. Find all Python code blocks in MDX files
-2. Wrap them in <CodeGroup> blocks if necessary
+2. Wrap them in CodeGroup blocks if necessary
 3. Translate each Python example to TypeScript
 4. Add the TypeScript translation alongside the Python code in the CodeGroup
 

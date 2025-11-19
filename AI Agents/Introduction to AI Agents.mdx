@@ -8,7 +8,8 @@ icon: "book"
 
 Let's start with the basics. You've been using LLMs for single-shot tasks:
 
-```python
+<CodeGroup>
+```python Python
 # Simple LLM call - one question, one answer
 response = client.messages.create(
     model="claude-sonnet-4-20250514",
@@ -16,6 +17,20 @@ response = client.messages.create(
 )
 # → "Paris"
 ```
+
+```ts TypeScript
+// Simple LLM call - one question, one answer
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+
+const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    messages: [{ role: "user", content: "What's the capital of France?" }]
+});
+// → "Paris"
+```
+</CodeGroup>
 
 This works great for simple questions. But what if you need to:
 - **Look up information** the LLM doesn't know (customer data, inventory levels)
@@ -77,7 +92,8 @@ Let's build the simplest possible agent - one that can look up weather informati
 [Full runnable example using LLMs, openai sdk, llamaindex, langchain, and googla adk](https://colab.research.google.com/drive/1-FeAz3P7uPZaclpGS0ZLdUduGfUMJ-Sq?usp=drive_link)
 [Full runnable example using koog AI in Kotlin](https://drive.google.com/file/d/1u93zy8jkYLMpS_l80khbIvjfhHnF62-I/view?usp=drive_link)
 
-```python
+<CodeGroup>
+```python Python
 from anthropic import Anthropic
 
 client = Anthropic()
@@ -164,6 +180,101 @@ print(run_agent("What's the weather in San Francisco?"))
 # Agent acts: Calls get_weather(city="San Francisco")
 # Agent responds: "It's currently 72°F and sunny in San Francisco..."
 ```
+
+```ts TypeScript
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+
+// Step 1: Define a tool
+const tools = [{
+    name: "get_weather",
+    description: "Get current weather for a city. Use this when user asks about weather.",
+    input_schema: {
+        type: "object",
+        properties: {
+            city: {
+                type: "string",
+                description: "City name, e.g. 'San Francisco'"
+            }
+        },
+        required: ["city"]
+    }
+}];
+
+// Step 2: Implement the tool function
+function getWeather(city: string): { city: string; temperature: number; condition: string; humidity: number } {
+    // Actually fetch weather data
+    // In production, call a real weather API
+    // For demo, return fake data
+    return {
+        city: city,
+        temperature: 72,
+        condition: "Sunny",
+        humidity: 45
+    };
+}
+
+// Step 3: Create the agent loop
+async function runAgent(userMessage: string): Promise<string> {
+    // Simple agent that can use one tool
+    
+    const messages: Array<{ role: "user" | "assistant"; content: any }> = [
+        { role: "user", content: userMessage }
+    ];
+    
+    // Agent loop - continue until agent stops using tools
+    while (true) {
+        const response = await client.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1024,
+            tools: tools,
+            messages: messages
+        });
+        
+        // Check if agent wants to use a tool
+        if (response.stop_reason === "tool_use") {
+            // Agent wants to use a tool
+            const toolUse = response.content.find(
+                (block: any) => block.type === "tool_use"
+            );
+            
+            // Execute the tool
+            let toolResult: any;
+            if (toolUse.name === "get_weather") {
+                toolResult = getWeather(toolUse.input.city);
+            }
+            
+            // Add tool use and result to conversation
+            messages.push({ role: "assistant", content: response.content });
+            messages.push({
+                role: "user",
+                content: [{
+                    type: "tool_result",
+                    tool_use_id: toolUse.id,
+                    content: JSON.stringify(toolResult)
+                }]
+            });
+            
+            // Loop continues - agent will think again with tool result
+            
+        } else {
+            // Agent is done - return final response
+            const finalText = response.content.find(
+                (block: any) => block.type === "text"
+            )?.text;
+            return finalText || "";
+        }
+    }
+}
+
+// Test the agent
+console.log(await runAgent("What's the weather in San Francisco?"));
+// Agent thinks: "I need weather data"
+// Agent acts: Calls get_weather(city="San Francisco")
+// Agent responds: "It's currently 72°F and sunny in San Francisco..."
+```
+</CodeGroup>
 
 **What just happened:**
 

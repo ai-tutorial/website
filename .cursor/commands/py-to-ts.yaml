@@ -2,8 +2,5 @@ name: py-to-ts
 description: Convert all Python code fences in MDX files into CodeGroups with TypeScript translations (executed manually by AI agent)
 run: |
   # This command is executed manually by the Cursor AI agent
-  # The AI agent will process all Python blocks directly using Cursor's built-in AI
-  # No script execution needed - see py-to-ts.md for instructions
-  echo "This command is processed manually by the Cursor AI agent."
-  echo "The AI will translate all Python blocks to TypeScript directly."
+  # See py-to-ts.md for instructions
 

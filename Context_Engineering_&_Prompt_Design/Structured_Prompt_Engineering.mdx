@@ -18,7 +18,8 @@ icon: "book"
 
 **Basic Template:**
 [Full runnable structured prompt notebook](https://colab.research.google.com/drive/15hKw-5PONe0DKkDmYVfLviFJUoK3aBcn?usp=drive_link)
-```python
+<CodeGroup>
+```python Python
 prompt = """
 [ROLE]
 You are an experienced customer support specialist for AcmeCo.
@@ -43,6 +44,32 @@ Customer message: {customer_message}
 """
 ```
 
+```ts TypeScript
+const prompt = `
+[ROLE]
+You are an experienced customer support specialist for AcmeCo.
+
+[CONTEXT]
+AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, 
+no questions asked. After 30 days, refunds require manager approval.
+
+[INSTRUCTIONS]
+Analyze the customer message below and:
+1. Identify the customer's primary issue
+2. Determine if this qualifies for automatic refund
+3. Suggest next steps for the support team
+
+[CONSTRAINTS]
+- Be empathetic but concise
+- Never promise refunds outside policy
+- If uncertain, recommend manager review
+
+[INPUT]
+Customer message: ${customerMessage}
+`;
+```
+</CodeGroup>
+
 **Practice Check:**
 - Write a prompt that includes role, context, instructions, constraints, examples, and input.
 - Expected: All 6 components present with explicit constraints and a clear output schema.
@@ -60,7 +87,8 @@ Customer message: {customer_message}
 - 40-60% reduction in hallucinations in controlled studies
 
 **Before (Ambiguous):**
-```python
+<CodeGroup>
+```python Python
 prompt = f"""
 System: You are a helpful assistant.
 User question: {user_input}
@@ -70,9 +98,21 @@ Previous conversation: {history}
 # LLM might confuse where context ends and question begins
 ```
 
+```ts TypeScript
+const prompt = `
+System: You are a helpful assistant.
+User question: ${userInput}
+Background context: ${knowledgeBase}
+Previous conversation: ${history}
+`;
+// LLM might confuse where context ends and question begins
+```
+</CodeGroup>
+
 **After (Clear):**
 [Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
-```python
+<CodeGroup>
+```python Python
 prompt = f"""
 <role>You are a helpful assistant</role>
 
@@ -93,6 +133,28 @@ prompt = f"""
 # Crystal clear boundaries
 ```
 
+```ts TypeScript
+const prompt = `
+<role>You are a helpful assistant</role>
+
+<context>
+<knowledge_base>
+${knowledgeBase}
+</knowledge_base>
+
+<conversation_history>
+${history}
+</conversation_history>
+</context>
+
+<user_question>
+${userInput}
+</user_question>
+`;
+// Crystal clear boundaries
+```
+</CodeGroup>
+
 **In Production:**
 **Cost Impact:** Tagging adds tokens; mitigate with caching (50–90% on static parts).
 **Reliability:** Clear boundaries reduce off-context responses; improves evaluability.
@@ -100,7 +162,8 @@ prompt = f"""
 **Real Example:** Teams report 40–60% fewer hallucinations when tags + validation are combined.
 
 **Pattern:**
-```python
+<CodeGroup>
+```python Python
 def format_docs(docs):
     return "\n".join(f"- {doc}" for doc in docs)
 
@@ -136,6 +199,49 @@ Output as JSON with keys: category, urgency, action, response
 """
 ```
 
+```ts TypeScript
+function formatDocs(docs: string[]): string {
+    return docs.map(doc => `- ${doc}`).join("\n");
+}
+
+function buildSupportPrompt(
+    query: string,
+    customerData: { tier: string; age_days: number; issue_count: number },
+    relevantDocs: string[]
+): string {
+    return `
+<system_role>
+You are AcmeCo's senior customer support specialist.
+</system_role>
+
+<policy_documents>
+${formatDocs(relevantDocs)}
+</policy_documents>
+
+<customer_context>
+<account_tier>${customerData.tier}</account_tier>
+<account_age_days>${customerData.age_days}</account_age_days>
+<previous_issues>${customerData.issue_count}</previous_issues>
+</customer_context>
+
+<customer_query>
+${query}
+</customer_query>
+
+<response_instructions>
+Analyze the query and provide:
+1. Issue category (billing, technical, account)
+2. Urgency level (low, medium, high)
+3. Recommended action
+4. Suggested response to customer
+
+Output as JSON with keys: category, urgency, action, response
+</response_instructions>
+`;
+}
+```
+</CodeGroup>
+
 ## Few-Shot Examples: Teaching by Showing
 
 **When to Use Few-Shot:**
@@ -145,7 +251,8 @@ Output as JSON with keys: category, urgency, action, response
 
 **Pattern:**
 [Full runnable few-shot examples notebook](https://colab.research.google.com/drive/1dCxVNAqgUY8bTiLXv32dvH5NyHSfZ67r?usp=drive_link)
-```python
+<CodeGroup>
+```python Python
 prompt = f"""
 <task>Classify customer sentiment</task>
 
@@ -172,6 +279,34 @@ prompt = f"""
 """
 ```
 
+```ts TypeScript
+const prompt = `
+<task>Classify customer sentiment</task>
+
+<examples>
+<example>
+<input>Your product is amazing! Best purchase ever.</input>
+<output>positive</output>
+</example>
+
+<example>
+<input>It's okay, does the job but nothing special.</input>
+<output>neutral</output>
+</example>
+
+<example>
+<input>Terrible quality. Broke after one week. Demanding refund!</input>
+<output>negative</output>
+</example>
+</examples>
+
+<input_to_classify>
+${customerMessage}
+</input_to_classify>
+`;
+```
+</CodeGroup>
+
 **Quality Over Quantity:**
 - 3-5 examples usually enough
 - More examples = more tokens = higher cost
@@ -180,7 +315,8 @@ prompt = f"""
 **Production Note:**
 Store examples separately and inject only relevant ones:
 
-```python
+<CodeGroup>
+```python Python
 example_db = {
     "classification": [...],
     "extraction": [...],
@@ -191,13 +327,27 @@ def get_relevant_examples(task_type: str, limit: int = 3):
     return example_db[task_type][:limit]
 ```
 
+```ts TypeScript
+const exampleDb: Record<string, any[]> = {
+    classification: [...],
+    extraction: [...],
+    summarization: [...]
+};
+
+function getRelevantExamples(taskType: string, limit: number = 3): any[] {
+    return exampleDb[taskType].slice(0, limit);
+}
+```
+</CodeGroup>
+
 ## Model-Specific Optimization
 
 Different models have different "personalities." Here's what works best for each:
 
 ### GPT-4 / GPT-4 Turbo
 [Full runnable model-specific optimization notebook](https://colab.research.google.com/drive/19Ge-7okrUJ0mLOxAe0sY6QkV07X9njr0?usp=drive_link)
-```python
+<CodeGroup>
+```python Python
 # Strengths: Structured output, following complex instructions
 # Best practices:
 prompt = """
@@ -216,8 +366,29 @@ Input: {data}
 # GPT-4 excels at JSON, clear role definitions
 ```
 
+```ts TypeScript
+// Strengths: Structured output, following complex instructions
+// Best practices:
+const prompt = `
+{
+  "role": "senior_analyst",
+  "task": "financial_analysis",
+  "output_format": {
+    "summary": "string",
+    "key_metrics": ["string"],
+    "recommendation": "buy|hold|sell"
+  }
+}
+
+Input: ${data}
+`;
+// GPT-4 excels at JSON, clear role definitions
+```
+</CodeGroup>
+
 ### Claude (Sonnet/Opus)
-```python
+<CodeGroup>
+```python Python
 # Strengths: Natural language, complex reasoning, long context
 # Best practices:
 prompt = """
@@ -231,8 +402,24 @@ Let me work through this step by step...
 # Excellent with XML tags and markdown
 ```
 
+```ts TypeScript
+// Strengths: Natural language, complex reasoning, long context
+// Best practices:
+const prompt = `
+<thinking>
+Let me work through this step by step...
+</thinking>
+
+[Your instructions here]
+`;
+// Claude benefits from explicit thinking blocks
+// Excellent with XML tags and markdown
+```
+</CodeGroup>
+
 ### Gemini 1.5 Pro
-```python
+<CodeGroup>
+```python Python
 # Strengths: Massive context (2M tokens), multimodal
 # Best practices:
 prompt = """
@@ -246,13 +433,29 @@ Based on ALL of the above context, answer: {query}
 # Can handle entire codebases or document sets
 ```
 
+```ts TypeScript
+// Strengths: Massive context (2M tokens), multimodal
+// Best practices:
+const prompt = `
+[Upload entire 500-page PDF]
+[Upload 10 images]
+[Provide conversation history]
+
+Based on ALL of the above context, answer: ${query}
+`;
+// Many teams place the query at the end; validate per task (see Gemini prompting strategies)
+// Can handle entire codebases or document sets
+```
+</CodeGroup>
+
 ## Structured Outputs with JSON Schemas
 
 **Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
 
 **Pattern:**
 [Full runnable structured outputs with JSON schemas notebook](https://colab.research.google.com/drive/1ivZiyimkc16BkvUYqEKtmd4xuvpLF8aU?usp=drive_link)
-```python
+<CodeGroup>
+```python Python
 import jsonschema
 
 CONTRACT_SCHEMA = {
@@ -287,6 +490,48 @@ def validate_output(json_text: str) -> dict:
     jsonschema.validate(instance=data, schema=CONTRACT_SCHEMA)
     return data
 ```
+
+```ts TypeScript
+import * as Ajv from "ajv";
+
+const CONTRACT_SCHEMA = {
+    type: "object",
+    properties: {
+        parties: { type: "array", items: { type: "string" } },
+        key_dates: { type: "array", items: { type: "string", format: "date" } },
+        obligations: { type: "array", items: { type: "string" } },
+        risk_flags: { type: "array", items: { type: "string" } },
+        summary: { type: "string" }
+    },
+    required: ["parties", "key_dates", "obligations", "risk_flags", "summary"],
+    additionalProperties: false
+};
+
+const PROMPT = `
+<task>Summarize and extract fields from the contract</task>
+
+<constraints>
+- Output valid JSON only (no markdown, no comments)
+- Conform EXACTLY to this JSON schema (no extra fields):
+${JSON.stringify(CONTRACT_SCHEMA, null, 2)}
+</constraints>
+
+<contract>
+${contractText}
+</contract>
+`;
+
+function validateOutput(jsonText: string): any {
+    const data = JSON.parse(jsonText);
+    const ajv = new Ajv();
+    const validate = ajv.compile(CONTRACT_SCHEMA);
+    if (!validate(data)) {
+        throw new Error("Invalid schema: " + JSON.stringify(validate.errors));
+    }
+    return data;
+}
+```
+</CodeGroup>
 
 **Vendor features to explore:**
 - OpenAI structured outputs with `response_format` (JSON schema)

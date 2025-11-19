@@ -17,7 +17,8 @@ You improve your prompt. It works great in testing. You deploy it. Customer comp
 
 **Production Pattern: Prompt Registry**
 
-```python
+<CodeGroup>
+```python Python
 # prompts.yaml
 prompts:
   contract_summarizer:
@@ -63,11 +64,62 @@ def get_prompt(name: str, user_id: str = None) -> str:
     return config[version]["prompt"]
 ```
 
+```ts TypeScript
+// prompts.yaml (same structure)
+// prompts:
+//   contract_summarizer:
+//     v1:
+//       created: "2025-01-01"
+//       prompt: "..."
+//       status: "deprecated"
+//       metrics:
+//         accuracy: 0.78
+//         avg_cost: 0.12
+//     
+//     v2:
+//       created: "2025-01-15"
+//       prompt: "..."
+//       status: "active"
+//       rollout: 100%
+//       metrics:
+//         accuracy: 0.92
+//         avg_cost: 0.08
+//     
+//     v3:
+//       created: "2025-02-01"
+//       prompt: "..."
+//       status: "testing"
+//       rollout: 10%
+//       metrics:
+//         accuracy: 0.94  // Looking good!
+//         avg_cost: 0.09
+
+// Code
+function getPrompt(name: string, userId?: string): string {
+    /**
+     * Load prompt with A/B testing support.
+     */
+    const config = loadPrompts()[name];
+    
+    // Determine version
+    let version: string;
+    if (userId && shouldTest(userId, config.v3.rollout)) {
+        version = "v3";
+    } else {
+        version = "v2";
+    }
+    
+    return config[version].prompt;
+}
+```
+</CodeGroup>
+
 ## Monitoring and Observability
 
 **What to Track:**
 
-```python
+<CodeGroup>
+```python Python
 @monitor
 def generate_response(prompt: str, user_id: str) -> str:
     start_time = time.time()
@@ -94,6 +146,37 @@ def generate_response(prompt: str, user_id: str) -> str:
     
     return response
 ```
+
+```ts TypeScript
+async function generateResponse(prompt: string, userId: string): Promise<string> {
+    const startTime = Date.now();
+    
+    const response = await llm.generate(prompt);
+    
+    // Log metrics
+    logMetrics({
+        user_id: userId,
+        prompt_version: getVersion(prompt),
+        latency: Date.now() - startTime,
+        input_tokens: countTokens(prompt),
+        output_tokens: countTokens(response),
+        cost: calculateCost(prompt, response),
+        timestamp: new Date()
+    });
+    
+    // Check for issues
+    if (detectHallucination(response)) {
+        alert("Possible hallucination detected");
+    }
+    
+    if (detectPromptInjection(prompt)) {
+        alert("Prompt injection attempt");
+    }
+    
+    return response;
+}
+```
+</CodeGroup>
 
 **Dashboard Metrics:**
 - Requests per minute
