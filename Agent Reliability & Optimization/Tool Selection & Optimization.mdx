@@ -20,7 +20,8 @@ icon: "book"
 
 **Anti-pattern: Flat List**
 
-```python
+<CodeGroup>
+```python Python
 # Agent sees all 20 tools at once
 tools = [
     search_customers, search_products, search_orders, search_tickets,
@@ -33,9 +34,24 @@ tools = [
 # Result: 58% correct selection
 ```
 
+```ts TypeScript
+// Agent sees all 20 tools at once
+const tools = [
+    searchCustomers, searchProducts, searchOrders, searchTickets,
+    getCustomer, getProduct, getOrder, getTicket,
+    updateCustomer, updateProduct, updateOrder, updateTicket,
+    createCustomer, createProduct, createOrder, createTicket,
+    deleteCustomer, deleteProduct, deleteOrder, deleteTicket
+];
+
+// Result: 58% correct selection
+```
+</CodeGroup>
+
 **Solution 1: Hierarchical Organization**
 
-```python
+<CodeGroup>
+```python Python
 @tool()
 async def route_to_domain(
     domain: Literal["customers", "products", "orders", "tickets"],
@@ -65,9 +81,46 @@ async def route_to_domain(
 # Step 2: Call specific tool
 ```
 
+```ts TypeScript
+server.tool({
+    name: "route_to_domain",
+    description: `Route to appropriate handler (Step 1 of 2).
+    
+    After calling this, use the specific tool returned.`,
+    inputSchema: {
+        type: "object",
+        properties: {
+            domain: { type: "string", enum: ["customers", "products", "orders", "tickets"] },
+            action: { type: "string", enum: ["search", "get", "update", "create", "delete"] }
+        },
+        required: ["domain", "action"]
+    }
+}, async (params: { domain: "customers" | "products" | "orders" | "tickets"; action: "search" | "get" | "update" | "create" | "delete" }): Promise<any> => {
+    const routing: Record<string, string> = {
+        "customers,search": "search_customers",
+        "customers,get": "get_customer",
+        "products,search": "search_products",
+        // ... complete mapping
+    };
+    
+    const toolName = routing[`${params.domain},${params.action}`];
+    
+    return {
+        next_tool: toolName,
+        instructions: `Now call ${toolName} with your parameters`
+    };
+});
+
+// Agent workflow: 2 steps, 90%+ accuracy
+// Step 1: Route to correct domain/action
+// Step 2: Call specific tool
+```
+</CodeGroup>
+
 **Solution 2: Context-Based Tool Groups**
 
-```python
+<CodeGroup>
+```python Python
 def get_tools_for_phase(conversation_phase: str) -> list:
     """Return only relevant tools for current phase."""
     
@@ -98,13 +151,46 @@ def get_tools_for_phase(conversation_phase: str) -> list:
 # Much higher accuracy
 ```
 
+```ts TypeScript
+function getToolsForPhase(conversationPhase: string): any[] {
+    // Return only relevant tools for current phase
+    const toolGroups: Record<string, any[]> = {
+        greeting: [
+            getCustomerHistory,
+            authenticateCustomer
+        ],
+        problem_diagnosis: [
+            searchKnowledgeBase,
+            checkSystemStatus,
+            getRecentTickets
+        ],
+        resolution: [
+            provideSolutionSteps,
+            createTicket,
+            scheduleCallback
+        ],
+        closing: [
+            sendSatisfactionSurvey,
+            updateNotes
+        ]
+    };
+    
+    return toolGroups[conversationPhase] || [];
+}
+
+// Agent only sees 2-4 tools at a time
+// Much higher accuracy
+```
+</CodeGroup>
+
 ## Challenge 2: Overlapping Functionality
 
 **Problem:** Multiple similar tools confuse agent.
 
 **Bad: Ambiguous Tools**
 
-```python
+<CodeGroup>
+```python Python
 @mcp_server.tool()
 async def search_products(query: str):
     """Search for products."""
@@ -123,9 +209,51 @@ async def product_lookup(query: str):
 # Agent picks randomly or tries all three
 ```
 
+```ts TypeScript
+mcpServer.tool({
+    name: "search_products",
+    description: "Search for products.",
+    inputSchema: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"]
+    }
+}, async (params: { query: string }) => {
+    // Implementation
+});
+
+mcpServer.tool({
+    name: "find_products",
+    description: "Find products.",
+    inputSchema: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"]
+    }
+}, async (params: { query: string }) => {
+    // Implementation
+});
+
+mcpServer.tool({
+    name: "product_lookup",
+    description: "Look up products.",
+    inputSchema: {
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"]
+    }
+}, async (params: { query: string }) => {
+    // Implementation
+});
+
+// Agent picks randomly or tries all three
+```
+</CodeGroup>
+
 **Good: Clear Differentiation**
 
-```python
+<CodeGroup>
+```python Python
 @tool()
 async def search_products_by_text(
     text_query: str,
@@ -179,13 +307,86 @@ async def filter_products_by_attributes(
     pass
 ```
 
+```ts TypeScript
+server.tool({
+    name: "search_products_by_text",
+    description: `Full-text search across product catalog.
+    
+    Use when:
+    - Customer describes product ("red shoes", "laptop under $1000")
+    - Need fuzzy matching (typos, partial names)
+    
+    Do NOT use when:
+    - You have exact SKU (use get_product_by_sku)
+    - Need structured filtering (use filter_products_by_attributes)
+    
+    Example: "wireless headphones under $100"`,
+    inputSchema: {
+        type: "object",
+        properties: {
+            text_query: { type: "string" },
+            include_out_of_stock: { type: "boolean" }
+        },
+        required: ["text_query"]
+    }
+}, async (params: { text_query: string; include_out_of_stock?: boolean }): Promise<any[]> => {
+    // Implementation
+});
+
+server.tool({
+    name: "get_product_by_sku",
+    description: `Get product by exact SKU.
+    
+    Use when:
+    - Customer provides SKU directly
+    - You extracted SKU from order/ticket
+    
+    Do NOT use for search (use search_products_by_text)
+    
+    Example: sku="PROD-12345"`,
+    inputSchema: {
+        type: "object",
+        properties: { sku: { type: "string" } },
+        required: ["sku"]
+    }
+}, async (params: { sku: string }): Promise<any> => {
+    // Implementation
+});
+
+server.tool({
+    name: "filter_products_by_attributes",
+    description: `Filter products by structured criteria.
+    
+    Use when:
+    - Customer specifies attributes (category, price, brand)
+    - Need structured filtering
+    
+    Examples:
+    - "Nike shoes under $100" → category="shoes", brand="Nike", price_max=100
+    - "Laptops in stock" → category="laptops"`,
+    inputSchema: {
+        type: "object",
+        properties: {
+            category: { type: "string" },
+            price_min: { type: "number" },
+            price_max: { type: "number" },
+            brand: { type: "string" }
+        }
+    }
+}, async (params: { category?: string; price_min?: number; price_max?: number; brand?: string }): Promise<any[]> => {
+    // Implementation
+});
+```
+</CodeGroup>
+
 ## Advanced Optimization Techniques
 
 ### 1. Retrieval-Augmented Tool Selection
 
 **Pattern:** Use retrieval to pre-filter tools before agent selection.
 
-```python
+<CodeGroup>
+```python Python
 from sentence_transformers import SentenceTransformer
 
 class ToolRetriever:
@@ -240,13 +441,79 @@ async def agent_with_retrieval(query: str):
     # Result: 92% accuracy (vs 58% with all 100 tools)
 ```
 
+```ts TypeScript
+import { SentenceTransformer } from "@xenova/transformers";
+
+class ToolRetriever {
+    private tools: any[];
+    private embedder: any;
+    private toolEmbeddings: any;
+
+    /** Retrieve relevant tools for query. */
+    constructor(allTools: any[]) {
+        this.tools = allTools;
+        this.embedder = await SentenceTransformer.from_pretrained('all-MiniLM-L6-v2');
+        
+        // Pre-compute embeddings
+        this.toolEmbeddings = await this.embedder.encode(
+            allTools.map(t => `${t.name}: ${t.description}`)
+        );
+    }
+
+    async retrieveRelevantTools(
+        query: string,
+        topK: number = 5
+    ): Promise<any[]> {
+        // Get most relevant tools for query
+        
+        // Embed query
+        const queryEmb = await this.embedder.encode([query]);
+        
+        // Calculate similarity (cosine similarity)
+        const similarities = this.toolEmbeddings.map((emb: any, i: number) => {
+            const dotProduct = queryEmb[0].reduce((sum: number, val: number, idx: number) => sum + val * emb[idx], 0);
+            const normA = Math.sqrt(queryEmb[0].reduce((sum: number, val: number) => sum + val * val, 0));
+            const normB = Math.sqrt(emb.reduce((sum: number, val: number) => sum + val * val, 0));
+            return { index: i, similarity: dotProduct / (normA * normB) };
+        });
+        
+        // Get top-k
+        const topIndices = similarities
+            .sort((a, b) => b.similarity - a.similarity)
+            .slice(0, topK)
+            .map(item => item.index);
+        
+        return topIndices.map(i => this.tools[i]);
+    }
+}
+
+// Usage
+const retriever = new ToolRetriever(all100Tools);
+
+async function agentWithRetrieval(query: string) {
+    // Stage 1: Retrieve relevant subset (fast)
+    const relevantTools = await retriever.retrieveRelevantTools(query, 5);
+    
+    // Stage 2: Agent selects from small set (accurate)
+    const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        messages: [{ role: "user", content: query }],
+        tools: relevantTools  // Only 5 tools vs 100
+    });
+    
+    // Result: 92% accuracy (vs 58% with all 100 tools)
+}
+```
+</CodeGroup>
+
 *Research: "ToolRAG: Efficient Tool Retrieval for Large Language Model-Based Agents" ([arXiv:2509.20386v1](https://arxiv.org/pdf/2509.20386v1))*
 
 ### 2. Dynamic Tool Subset Selection
 
 **Pattern:** Adapt tools based on conversation state.
 
-```python
+<CodeGroup>
+```python Python
 class AdaptiveToolSelector:
     """Dynamically filter tools by context."""
     
@@ -286,11 +553,54 @@ class AdaptiveToolSelector:
         return tools
 ```
 
+```ts TypeScript
+class AdaptiveToolSelector {
+    /** Dynamically filter tools by context. */
+    getTools(state: { phase?: string; user_role?: string; issue_type?: string }): any[] {
+        // Return appropriate tools for current state
+        const phase = state.phase;
+        const userRole = state.user_role;
+        const issueType = state.issue_type;
+        
+        const tools: any[] = [];
+        
+        // Phase-based
+        if (phase === "authentication") {
+            tools.push(verifyIdentity, sendVerificationCode);
+        } else if (phase === "diagnosis") {
+            tools.push(
+                searchKnowledgeBase,
+                checkSystemStatus,
+                getCustomerHistory
+            );
+            
+            // Add role-specific tools
+            if (userRole === "admin") {
+                tools.push(accessSystemLogs);
+            }
+        } else if (phase === "resolution") {
+            tools.push(createTicket, scheduleCallback);
+            
+            // Add issue-specific tools
+            if (issueType === "billing") {
+                tools.push(processRefund);
+            } else if (issueType === "technical") {
+                tools.push(restartService);
+            }
+        }
+        
+        return tools;
+    }
+}
+```
+</CodeGroup>
+
 ### 3. Code Execution as Universal Tool
 
 **Pattern:** One flexible tool instead of many specific ones.
 
-```python
+<CodeGroup>
+```python Python
 @tool()
 async def execute_python_code(
     code: str,
@@ -345,6 +655,66 @@ async def execute_python_code(
         }
 ```
 
+```ts TypeScript
+server.tool({
+    name: "execute_typescript_code",
+    description: `Execute TypeScript code for flexible operations.
+    
+    Use when:
+    - Need to perform calculations
+    - Transform data structures
+    - Call multiple APIs in sequence
+    - Implement custom logic not covered by other tools
+    
+    Available modules: fetch, JSON, Date, Math
+    
+    Example:
+        code = \`
+        // Fetch data
+        const response = await fetch("https://api.example.com/data");
+        const data = await response.json();
+        
+        // Process data
+        const result = data.reduce((acc: any, item: any) => {
+            const category = item.category;
+            acc[category] = (acc[category] || 0) + item.value;
+            return acc;
+        }, {});
+        
+        return result;
+        \``,
+    inputSchema: {
+        type: "object",
+        properties: {
+            code: { type: "string" },
+            description: { type: "string" }
+        },
+        required: ["code", "description"]
+    }
+}, async (params: { code: string; description: string }): Promise<any> => {
+    try {
+        // Execute in sandboxed environment
+        const result = await codeExecutor.execute(
+            params.code,
+            { timeout: 10000, allowedModules: ['fetch', 'JSON', 'Date', 'Math'] }
+        );
+        
+        return {
+            success: true,
+            result: result,
+            code_executed: params.code
+        };
+    } catch (e: any) {
+        return {
+            success: false,
+            error: e.message,
+            suggestion: "Check code syntax and available modules"
+        };
+    }
+});
+```
+</CodeGroup>
+
 **Pros:**
 - Reduces tool count dramatically
 - Maximum flexibility
@@ -361,7 +731,8 @@ async def execute_python_code(
 
 **Pattern:** Track and optimize based on actual usage.
 
-```python
+<CodeGroup>
+```python Python
 class ToolAnalytics:
     """Monitor tool usage patterns."""
     
@@ -432,6 +803,99 @@ class ToolAnalytics:
         return recommendations
 ```
 
+```ts TypeScript
+class ToolAnalytics {
+    /** Monitor tool usage patterns. */
+    private stats: Record<string, {
+        calls: number;
+        successes: number;
+        failures: number;
+        avg_latency_ms: number;
+    }> = {};
+
+    constructor() {
+        // Initialize stats
+    }
+
+    async callWithAnalytics(
+        toolName: string,
+        params: any
+    ): Promise<any> {
+        // Track metrics for every call
+        const start = Date.now();
+        
+        try {
+            const result = await executeTool(toolName, params);
+            
+            // Update stats
+            if (!this.stats[toolName]) {
+                this.stats[toolName] = {
+                    calls: 0,
+                    successes: 0,
+                    failures: 0,
+                    avg_latency_ms: 0
+                };
+            }
+            
+            const stats = this.stats[toolName];
+            stats.calls++;
+            stats.successes++;
+            
+            const latency = Date.now() - start;
+            stats.avg_latency_ms = (
+                (stats.avg_latency_ms * (stats.calls - 1) + latency) 
+                / stats.calls
+            );
+            
+            return result;
+        } catch (e) {
+            if (!this.stats[toolName]) {
+                this.stats[toolName] = {
+                    calls: 0,
+                    successes: 0,
+                    failures: 0,
+                    avg_latency_ms: 0
+                };
+            }
+            this.stats[toolName].failures++;
+            throw e;
+        }
+    }
+
+    getRecommendations(): string[] {
+        // Analyze and suggest optimizations
+        const recommendations: string[] = [];
+        
+        for (const [tool, stats] of Object.entries(this.stats)) {
+            // Unused tools
+            if (stats.calls === 0) {
+                recommendations.push(`Remove unused tool: ${tool}`);
+            }
+            
+            // High failure rate
+            const failureRate = stats.failures / Math.max(stats.calls, 1);
+            if (failureRate > 0.3) {
+                recommendations.push(
+                    `Tool '${tool}' fails ${(failureRate * 100).toFixed(0)}% of the time. ` +
+                    `Review error handling or simplify parameters.`
+                );
+            }
+            
+            // High latency
+            if (stats.avg_latency_ms > 2000) {
+                recommendations.push(
+                    `Tool '${tool}' averages ${stats.avg_latency_ms.toFixed(0)}ms. ` +
+                    `Consider caching or optimization.`
+                );
+            }
+        }
+        
+        return recommendations;
+    }
+}
+```
+</CodeGroup>
+
 ---
 
 ## Check Your Understanding
@@ -461,7 +925,8 @@ class ToolAnalytics:
    
    **Retrieval-augmented selection:**
    
-   ```python
+   <CodeGroup>
+   ```python Python
    # Pre-filter tools by relevance
    relevant_tools = retriever.retrieve_tools(query, top_k=5)
    
@@ -470,6 +935,17 @@ class ToolAnalytics:
    
    # Result: 92% accuracy vs 58% with all 100
    ```
+
+   ```ts TypeScript
+   // Pre-filter tools by relevance
+   const relevantTools = await retriever.retrieveTools(query, { topK: 5 });
+   
+   // Agent selects from 5 (not 100)
+   const response = await agent.process(query, { tools: relevantTools });
+   
+   // Result: 92% accuracy vs 58% with all 100
+   ```
+   </CodeGroup>
    
    Alternative: Hierarchical routing (route to domain first, then specific tool).
    </details>

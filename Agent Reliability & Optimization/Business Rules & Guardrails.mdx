@@ -8,7 +8,8 @@ icon: "book"
 
 You've probably tried encoding business rules in prompts:
 
-```python
+<CodeGroup>
+```python Python
 system_prompt = """You are processing expense reports.
 
 Rules:
@@ -19,6 +20,19 @@ Rules:
 - Manager approval needed for >$500 total
 """
 ```
+
+```ts TypeScript
+const systemPrompt = `You are processing expense reports.
+
+Rules:
+- Meals: $50/day maximum
+- Hotels: $200/night maximum  
+- Flights: Economy only, except >5 hours
+- Receipts required for purchases >$25
+- Manager approval needed for >$500 total
+`;
+```
+</CodeGroup>
 
 **What happens in production:**
 - Agent approves $75 meal ("seemed reasonable for a business dinner")
@@ -40,7 +54,8 @@ Rules:
 
 **Move rules from prompt to deterministic tool:**
 
-```python
+<CodeGroup>
+```python Python
 from typing import Literal
 from pydantic import BaseModel
 from datetime import datetime
@@ -200,9 +215,185 @@ async def validate_expense_report(
     )
 ```
 
+```ts TypeScript
+interface ExpenseValidation {
+    /** Validation result with full details. */
+    approved: boolean;
+    violations: string[];
+    warnings: string[];
+    approval_needed: string[];
+    total_amount: number;
+}
+
+server.tool({
+    name: "validate_expense_report",
+    description: `Validate expense report against company policy using deterministic rules.
+
+    Use this when:
+    - You have extracted line-item expenses and related trip metadata
+    - You need a definitive policy decision computed by code
+    
+    Do NOT use for:
+    - Free-form policy explanations without data
+    - Submitting/approving to a system of record
+    
+    Args:
+        expenses: List of expense objects with keys:
+            - category: str ["meals", "lodging", "airfare", ...]
+            - amount: float (USD)
+            - date: str (ISO 8601 "YYYY-MM-DD")
+            - receipt: bool|str (presence or URL)
+            - category-specific fields (e.g., lodging: checkin, checkout, name)
+        employee_id: str (e.g., "EMP-12345")
+        trip_type: Literal["domestic", "international"]
+        submission_date: str (ISO 8601)
+    
+    Returns:
+        ExpenseValidation with approved status, violations, warnings, 
+        approvals needed, and final total`,
+    inputSchema: {
+        type: "object",
+        properties: {
+            expenses: { type: "array", items: { type: "object" } },
+            employee_id: { type: "string" },
+            trip_type: { type: "string", enum: ["domestic", "international"] },
+            submission_date: { type: "string" }
+        },
+        required: ["expenses", "employee_id", "trip_type", "submission_date"]
+    }
+}, async (params: {
+    expenses: Array<{
+        category: string;
+        amount: number;
+        date: string;
+        receipt?: boolean | string;
+        checkin?: string;
+        checkout?: string;
+        name?: string;
+        origin?: string;
+        destination?: string;
+        number?: string;
+        class?: string;
+        description?: string;
+    }>;
+    employee_id: string;
+    trip_type: "domestic" | "international";
+    submission_date: string;
+}): Promise<ExpenseValidation> => {
+    const violations: string[] = [];
+    const warnings: string[] = [];
+    const approvalNeeded: string[] = [];
+    
+    // Rule 1: Meal limits (deterministic check)
+    const mealExpenses = params.expenses.filter(e => e.category === "meals");
+    const mealsByDay: Record<string, number> = {};
+    
+    for (const meal of mealExpenses) {
+        const date = meal.date;
+        mealsByDay[date] = (mealsByDay[date] || 0) + meal.amount;
+    }
+    
+    for (const [date, total] of Object.entries(mealsByDay)) {
+        if (total > 50) {
+            violations.push(
+                `Meals on ${date}: $${total.toFixed(2)} exceeds $50/day limit`
+            );
+        }
+    }
+    
+    // Rule 2: Hotel limits (deterministic check)
+    const hotels = params.expenses.filter(e => e.category === "lodging");
+    
+    for (const hotel of hotels) {
+        if (hotel.checkin && hotel.checkout) {
+            const checkin = new Date(hotel.checkin);
+            const checkout = new Date(hotel.checkout);
+            const nights = Math.floor((checkout.getTime() - checkin.getTime()) / (1000 * 60 * 60 * 24));
+            const perNight = nights > 0 ? hotel.amount / nights : hotel.amount;
+            
+            if (perNight > 200) {
+                violations.push(
+                    `Hotel ${hotel.name || "unknown"}: $${perNight.toFixed(2)}/night exceeds $200 limit`
+                );
+            }
+        }
+    }
+    
+    // Rule 3: Receipt requirements (deterministic check)
+    for (const expense of params.expenses) {
+        if (expense.amount > 25 && !expense.receipt) {
+            violations.push(
+                `${expense.description || expense.category}: ` +
+                `Receipt required for amounts over $25`
+            );
+        }
+    }
+    
+    // Rule 4: Flight class restrictions (deterministic with calculation)
+    const flights = params.expenses.filter(e => e.category === "airfare");
+    
+    for (const flight of flights) {
+        if (flight.origin && flight.destination) {
+            const durationHours = calculateFlightHours(flight.origin, flight.destination);
+            
+            if (flight.class && flight.class !== "economy") {
+                if (durationHours <= 5) {
+                    violations.push(
+                        `Flight ${flight.number || "unknown"}: Premium class only allowed ` +
+                        `for flights >5 hours (this flight: ${durationHours}h)`
+                    );
+                } else {
+                    warnings.push(
+                        `Flight ${flight.number || "unknown"}: Premium class approved ` +
+                        `(duration: ${durationHours}h)`
+                    );
+                }
+            }
+        }
+    }
+    
+    // Rule 5: Manager approval thresholds (deterministic calculation)
+    let total = params.expenses.reduce((sum, e) => sum + e.amount, 0);
+    
+    if (params.trip_type === "international") {
+        total *= 1.15;  // International gets 15% buffer
+        warnings.push("International trip: 15% buffer applied");
+    }
+    
+    if (total > 500) {
+        approvalNeeded.push("manager_approval");
+    }
+    
+    if (total > 2000) {
+        approvalNeeded.push("director_approval");
+    }
+    
+    // Rule 6: Q4 budget freeze (deterministic date logic)
+    const month = new Date(params.submission_date).getMonth() + 1;
+    
+    if (month >= 10) {  // October-December
+        approvalNeeded.push("budget_freeze_exception");
+        warnings.push("Q4 submission requires budget exception approval");
+    }
+    
+    // Final decision: approved only if no violations
+    const approved = violations.length === 0;
+    
+    return {
+        approved: approved,
+        violations: violations,
+        warnings: warnings,
+        approval_needed: approvalNeeded,
+        total_amount: total
+    };
+});
+```
+</CodeGroup>
+
 **Agent integration with tool:**
 
-```python
+<CodeGroup>
+```python Python
 # Configure LLM and prompt
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
@@ -229,6 +420,37 @@ async def process_expense_report(user_message: str):
     return result
 ```
 
+```ts TypeScript
+// Configure LLM and prompt
+import OpenAI from "openai";
+
+const openai = new OpenAI();
+
+const systemPrompt = `You are an expense processing assistant.
+
+Workflow:
+1. Extract expense information from user message
+2. Validate using validate_expense_report tool
+3. Explain results clearly and empathetically
+
+When violations occur:
+- Clearly state what's wrong
+- Suggest specific fixes
+- Explain approval requirements if needed`;
+
+const agent = createAgent({
+    model: openai,
+    tools: [validateExpenseReport],
+    systemPrompt: systemPrompt
+});
+
+async function processExpenseReport(userMessage: string): Promise<any> {
+    const result = await agent.invoke({ role: "user", content: userMessage });
+    return result;
+}
+```
+</CodeGroup>
+
 **Tradeoffs: Tool vs. Code Orchestration**
 
 | Aspect | Tool Approach | Code Orchestration |
@@ -249,7 +471,8 @@ async def process_expense_report(user_message: str):
 
 **Code orchestration for guaranteed validation:**
 
-```python
+<CodeGroup>
+```python Python
 async def process_expense_report(user_message: str):
     """Agent workflow: extract → validate → explain."""
     
@@ -310,6 +533,69 @@ Be empathetic but clear about violations. Suggest how to fix issues."""
     return explanation.content[0].text
 ```
 
+```ts TypeScript
+async function processExpenseReport(userMessage: string): Promise<string> {
+    // Agent workflow: extract → validate → explain
+    
+    // Step 1: Agent extracts expense data (LLM handles natural language)
+    const extraction = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        messages: [{
+            role: "user",
+            content: `Extract expense information from this message:
+
+${userMessage}
+
+Return JSON with:
+{
+  "expenses": [
+    {
+      "category": "meals|lodging|airfare|other",
+      "amount": number,
+      "date": "YYYY-MM-DD",
+      "description": "...",
+      "receipt": boolean
+    }
+  ],
+  "employee_id": "...",
+  "trip_type": "domestic|international",
+  "submission_date": "YYYY-MM-DD"
+}`
+        }]
+    });
+    
+    const expenseData = JSON.parse(extraction.content[0].text);
+    
+    // Step 2: Deterministic validation (code handles business logic)
+    const validation = await validateExpenseReport({
+        expenses: expenseData.expenses,
+        employee_id: expenseData.employee_id,
+        trip_type: expenseData.trip_type,
+        submission_date: expenseData.submission_date
+    });
+    
+    // Step 3: Agent explains results (LLM handles communication)
+    const explanation = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        messages: [{
+            role: "user",
+            content: `Explain these validation results to the user:
+
+Approved: ${validation.approved}
+Total: $${validation.total_amount.toFixed(2)}
+Violations: ${JSON.stringify(validation.violations)}
+Warnings: ${JSON.stringify(validation.warnings)}
+Approvals needed: ${JSON.stringify(validation.approval_needed)}
+
+Be empathetic but clear about violations. Suggest how to fix issues.`
+        }]
+    });
+    
+    return explanation.content[0].text;
+}
+```
+</CodeGroup>
+
 **Key Benefits:**
 - **100% consistency:** Same expenses = same decision every time
 - **Audit trail:** Know exactly which rule was violated
@@ -319,7 +605,8 @@ Be empathetic but clear about violations. Suggest how to fix issues."""
 
 **Preventing invalid operations before/after execution:**
 
-```python
+<CodeGroup>
+```python Python
 class AgentGuardrails:
     """Enforce business rules on agent actions."""
     
@@ -421,11 +708,129 @@ async def execute_tool_with_guardrails(
     return result
 ```
 
+```ts TypeScript
+class AgentGuardrails {
+    /** Enforce business rules on agent actions. */
+    async preExecutionCheck(
+        toolName: string,
+        params: any,
+        context: any
+    ): Promise<[boolean, string | undefined]> {
+        // Check if action is allowed BEFORE execution
+        
+        // Rule: Don't issue refunds >$500 without manager approval
+        if (toolName === "issue_refund") {
+            if (params.amount > 500) {
+                if (!context.manager_approved) {
+                    return [false, "Refunds over $500 require manager approval"];
+                }
+            }
+        }
+        
+        // Rule: Don't delete customer data without legal approval
+        if (toolName === "delete_customer_data") {
+            if (!context.legal_approved) {
+                return [false, "Data deletion requires legal department approval"];
+            }
+        }
+        
+        // Rule: Don't send emails outside business hours (if customer preference set)
+        if (toolName === "send_email") {
+            const customerTz = context.customer_timezone;
+            if (customerTz) {
+                const customerTime = new Date(new Date().toLocaleString("en-US", { timeZone: customerTz }));
+                const hour = customerTime.getHours();
+                
+                if (hour < 8 || hour > 20) {
+                    return [false, `Customer prefers no emails outside 8am-8pm ${customerTz}`];
+                }
+            }
+        }
+        
+        // Rule: Rate limiting per session
+        const actionCount = context.action_count || {};
+        if ((actionCount[toolName] || 0) >= 5) {
+            return [false, `Rate limit: '${toolName}' called 5 times already`];
+        }
+        
+        return [true, undefined];
+    }
+    
+    async postExecutionCheck(
+        toolName: string,
+        result: any
+    ): Promise<[boolean, string | undefined]> {
+        // Validate result AFTER execution
+        
+        // Rule: Discount can't exceed 50%
+        if (toolName === "calculate_discount") {
+            if (result.discount_percent > 50) {
+                return [false, "Discount exceeds maximum 50% allowed"];
+            }
+        }
+        
+        // Rule: Shipping address must be validated
+        if (toolName === "create_order") {
+            if (!result.address_validated) {
+                return [false, "Order created with unvalidated shipping address"];
+            }
+        }
+        
+        return [true, undefined];
+    }
+}
+
+// Integration with agent
+const guardrails = new AgentGuardrails();
+
+async function executeToolWithGuardrails(
+    toolName: string,
+    params: any,
+    context: any
+): Promise<any> {
+    // Safe tool execution with rule enforcement
+    
+    // Pre-check
+    const [allowed, reason] = await guardrails.preExecutionCheck(toolName, params, context);
+    
+    if (!allowed) {
+        return {
+            success: false,
+            blocked: true,
+            reason: reason,
+            required_approvals: extractApprovals(reason)
+        };
+    }
+    
+    // Execute
+    const result = await executeTool(toolName, params);
+    
+    // Post-check
+    const [valid, postReason] = await guardrails.postExecutionCheck(toolName, result);
+    
+    if (!valid) {
+        // Rollback if possible
+        await rollbackTool(toolName, params);
+        
+        return {
+            success: false,
+            blocked: true,
+            reason: postReason,
+            action_rolled_back: true
+        };
+    }
+    
+    return result;
+}
+```
+</CodeGroup>
+
 ### Pattern 3: Input/Output Validation
 
 **Ensure data quality at boundaries:**
 
-```python
+<CodeGroup>
+```python Python
 from pydantic import BaseModel, validator, Field
 
 class CustomerInput(BaseModel):
@@ -493,6 +898,65 @@ async def process_customer_request(
         }
 ```
 
+```ts TypeScript
+import { z } from "zod";
+
+const CustomerInputSchema = z.object({
+    email: z.string().email().refine((email) => {
+        const disposableDomains = ['tempmail.com', 'throwaway.email', 'guerrillamail.com'];
+        const domain = email.split('@')[1];
+        return !disposableDomains.includes(domain);
+    }, { message: "Disposable email addresses not allowed" }),
+    phone: z.string().regex(/^\+?1?\d{10,15}$/),
+    amount: z.number().min(0).max(100000).refine((v) => {
+        if (v > 10000) {
+            throw new Error("Amount exceeds $10,000. Contact support for large transactions.");
+        }
+        return true;
+    })
+});
+
+server.tool({
+    name: "process_customer_request",
+    description: "Process request with input validation.",
+    inputSchema: {
+        type: "object",
+        properties: {
+            email: { type: "string" },
+            phone: { type: "string" },
+            amount: { type: "number" }
+        },
+        required: ["email", "phone", "amount"]
+    }
+}, async (params: { email: string; phone: string; amount: number }): Promise<any> => {
+    try {
+        // Validate inputs
+        const validated = CustomerInputSchema.parse({
+            email: params.email,
+            phone: params.phone,
+            amount: params.amount
+        });
+        
+        // Process with clean data
+        const result = await processValidatedData(validated);
+        return result;
+    } catch (e: any) {
+        // Return validation errors to agent
+        if (e instanceof z.ZodError) {
+            return {
+                success: false,
+                validation_errors: e.errors.map(err => 
+                    `${err.path.join('.')}: ${err.message}`
+                ),
+                message: "Please correct the following and try again"
+            };
+        }
+        throw e;
+    }
+});
+```
+</CodeGroup>
+
 ### Pattern 4: Security Guardrails (PII, Jailbreaks, Toxicity)
 
 **The Problem:** LLM agents can inadvertently expose sensitive data, be manipulated by adversarial prompts, or generate harmful content.
@@ -509,7 +973,8 @@ async def process_customer_request(
 
 **Architecture Pattern: Multi-Layer Defense**
 
-```python
+<CodeGroup>
+```python Python
 class SecurityGuardrails:
     """Layered security checks for agent inputs and outputs."""
     
@@ -593,9 +1058,110 @@ class SecurityGuardrails:
         return True, sanitized, metadata
 ```
 
+```ts TypeScript
+class SecurityGuardrails {
+    /** Layered security checks for agent inputs and outputs. */
+    private piiDetector: PIIDetector;
+    private jailbreakDetector: JailbreakDetector;
+    private toxicityClassifier: ToxicityClassifier;
+
+    constructor() {
+        this.piiDetector = new PIIDetector();
+        this.jailbreakDetector = new JailbreakDetector();
+        this.toxicityClassifier = new ToxicityClassifier();
+    }
+
+    async checkInput(userInput: string): Promise<[boolean, string, any]> {
+        /**
+         * Check user input for security issues.
+         * 
+         * Returns:
+         *     (is_safe, sanitized_input, metadata)
+         */
+        const metadata: any = {};
+
+        // Layer 1: PII Detection and Redaction
+        const piiResult = await this.piiDetector.scan(userInput);
+
+        let sanitized: string;
+        if (piiResult.contains_pii) {
+            metadata.pii_detected = piiResult.entities;
+            metadata.pii_redacted = true;
+
+            // Redact PII before processing
+            sanitized = this.piiDetector.redact(userInput, piiResult.entities);
+        } else {
+            sanitized = userInput;
+        }
+
+        // Layer 2: Jailbreak Detection
+        const jailbreakResult = await this.jailbreakDetector.analyze(sanitized);
+
+        if (jailbreakResult.is_jailbreak) {
+            metadata.jailbreak_detected = true;
+            metadata.jailbreak_type = jailbreakResult.attack_type;
+
+            return [false, sanitized, metadata];
+        }
+
+        // Layer 3: Toxicity Check
+        const toxicityResult = await this.toxicityClassifier.predict(sanitized);
+
+        if (toxicityResult.is_toxic) {
+            metadata.toxicity_detected = true;
+            metadata.toxicity_score = toxicityResult.score;
+
+            return [false, sanitized, metadata];
+        }
+
+        return [true, sanitized, metadata];
+    }
+
+    async checkOutput(agentOutput: string): Promise<[boolean, string, any]> {
+        /**
+         * Check agent output before sending to user.
+         * 
+         * Returns:
+         *     (is_safe, sanitized_output, metadata)
+         */
+        const metadata: any = {};
+
+        // Layer 1: PII Leakage Prevention
+        const piiResult = await this.piiDetector.scan(agentOutput);
+
+        let sanitized: string;
+        if (piiResult.contains_pii) {
+            metadata.pii_leaked = piiResult.entities;
+
+            // Critical: Block output with PII from training data or other users
+            if (piiResult.entities.some((e: any) => e.source !== "user_session")) {
+                return [false, "", metadata];
+            }
+
+            // Redact PII from current session
+            sanitized = this.piiDetector.redact(agentOutput, piiResult.entities);
+        } else {
+            sanitized = agentOutput;
+        }
+
+        // Layer 2: Content Policy Compliance
+        const policyResult = await this.checkContentPolicy(sanitized);
+
+        if (policyResult.violates_policy) {
+            metadata.policy_violation = policyResult.violation_type;
+            return [false, sanitized, metadata];
+        }
+
+        return [true, sanitized, metadata];
+    }
+}
+```
+</CodeGroup>
+
 **PII Detection and Redaction:**
 
-```python
+<CodeGroup>
+```python Python
 import re
 from typing import List, Literal
 from presidio_analyzer import AnalyzerEngine
@@ -731,9 +1297,185 @@ async def process_with_pii_protection(user_input: str):
         return await agent.process(user_input)
 ```
 
+```ts TypeScript
+import * as crypto from "crypto";
+
+type RedactionType = "replace" | "mask" | "hash";
+
+interface PIIEntity {
+    type: string;
+    text: string;
+    start: number;
+    end: number;
+    score: number;
+    method: string;
+}
+
+interface PIIResult {
+    contains_pii: boolean;
+    entities: PIIEntity[];
+}
+
+class PIIDetector {
+    /** Detect and redact PII using multiple techniques. */
+    
+    private patterns: Record<string, RegExp>;
+    // Note: Presidio is a Python library. In TypeScript, you would use
+    // a similar NER library or implement custom detection logic.
+    // For demonstration, this is a placeholder.
+    
+    constructor() {
+        // Microsoft Presidio for NER-based detection
+        // In TypeScript, you would use a library like '@microsoft/presidio-js' or similar
+        // this.analyzer = new AnalyzerEngine();
+        // this.anonymizer = new AnonymizerEngine();
+        
+        // Regex patterns for structured data
+        this.patterns = {
+            "ssn": /\b\d{3}-\d{2}-\d{4}\b/,
+            "credit_card": /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/,
+            "phone": /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/,
+            "email": /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/
+        };
+    }
+    
+    async scan(text: string): Promise<PIIResult> {
+        /** Detect PII using multiple methods. */
+        
+        const entities: PIIEntity[] = [];
+        
+        // Method 1: Presidio (NER + patterns)
+        // Note: This would require a TypeScript equivalent of Presidio
+        // For demonstration, this is a placeholder.
+        // const presidioResults = this.analyzer.analyze({
+        //     text: text,
+        //     language: 'en',
+        //     entities: [
+        //         "PERSON", "EMAIL_ADDRESS", "PHONE_NUMBER",
+        //         "CREDIT_CARD", "US_SSN", "US_PASSPORT",
+        //         "LOCATION", "DATE_OF_BIRTH", "MEDICAL_LICENSE"
+        //     ]
+        // });
+        
+        // for (const result of presidioResults) {
+        //     entities.push({
+        //         type: result.entity_type,
+        //         text: text.substring(result.start, result.end),
+        //         start: result.start,
+        //         end: result.end,
+        //         score: result.score,
+        //         method: "presidio"
+        //     });
+        // }
+        
+        // Method 2: Regex patterns (for known formats)
+        for (const [piiType, pattern] of Object.entries(this.patterns)) {
+            const matches = text.matchAll(new RegExp(pattern, 'g'));
+            for (const match of matches) {
+                if (match.index !== undefined) {
+                    entities.push({
+                        type: piiType,
+                        text: match[0],
+                        start: match.index,
+                        end: match.index + match[0].length,
+                        score: 1.0,
+                        method: "regex"
+                    });
+                }
+            }
+        }
+        
+        return {
+            contains_pii: entities.length > 0,
+            entities: entities
+        };
+    }
+    
+    redact(
+        text: string,
+        entities: PIIEntity[],
+        redactionType: RedactionType = "replace"
+    ): string {
+        /** Redact PII from text. */
+        
+        if (redactionType === "replace") {
+            // Replace with entity type placeholder
+            let redacted = text;
+            const sortedEntities = [...entities].sort((a, b) => b.start - a.start);
+            for (const entity of sortedEntities) {
+                const placeholder = `[${entity.type}]`;
+                redacted = (
+                    redacted.substring(0, entity.start) +
+                    placeholder +
+                    redacted.substring(entity.end)
+                );
+            }
+            return redacted;
+        } else if (redactionType === "mask") {
+            // Mask with asterisks (preserving length)
+            let redacted = text;
+            const sortedEntities = [...entities].sort((a, b) => b.start - a.start);
+            for (const entity of sortedEntities) {
+                const mask = "*".repeat(entity.end - entity.start);
+                redacted = redacted.substring(0, entity.start) + mask + redacted.substring(entity.end);
+            }
+            return redacted;
+        } else if (redactionType === "hash") {
+            // Hash PII for consistency (same input → same hash)
+            let redacted = text;
+            const sortedEntities = [...entities].sort((a, b) => b.start - a.start);
+            for (const entity of sortedEntities) {
+                const piiText = entity.text;
+                const hashed = crypto.createHash('sha256').update(piiText).digest('hex').substring(0, 8);
+                const placeholder = `[${entity.type}_${hashed}]`;
+                redacted = (
+                    redacted.substring(0, entity.start) +
+                    placeholder +
+                    redacted.substring(entity.end)
+                );
+            }
+            return redacted;
+        }
+        
+        return text;
+    }
+}
+
+// Example usage
+async function processWithPIIProtection(userInput: string): Promise<any> {
+    /** Process input with PII protection. */
+    
+    const detector = new PIIDetector();
+    
+    // Scan for PII
+    const piiResult = await detector.scan(userInput);
+    
+    if (piiResult.contains_pii) {
+        // Log detection (for audit)
+        // logger.info(`PII detected: ${piiResult.entities.map(e => e.type)}`);
+        
+        // Redact before sending to LLM
+        const sanitized = detector.redact(userInput, piiResult.entities, "replace");
+        
+        // Process sanitized input
+        // const response = await agent.process(sanitized);
+        
+        // Important: Map placeholders back in response if needed
+        // (only if PII came from current user session)
+        
+        // return response;
+    } else {
+        // No PII, process normally
+        // return await agent.process(userInput);
+    }
+}
+```
+</CodeGroup>
+
 **Jailbreak Detection:**
 
-```python
+<CodeGroup>
+```python Python
 class JailbreakDetector:
     """Detect adversarial prompt injection attempts."""
     
@@ -867,9 +1609,176 @@ async def safe_agent_execution(user_input: str):
     return await agent.process(user_input)
 ```
 
+```ts TypeScript
+interface JailbreakResult {
+    is_jailbreak: boolean;
+    confidence: number;
+    attack_type: string | null;
+}
+
+class JailbreakDetector {
+    /** Detect adversarial prompt injection attempts. */
+    
+    private suspiciousPatterns: RegExp[];
+    // Model-based detection (LlamaGuard or custom)
+    private llmDetector: any = null; // Initialize if available
+    
+    constructor() {
+        // Pattern-based detection
+        this.suspiciousPatterns = [
+            // Instruction override attempts
+            /ignore (all )?previous (instructions|prompts)/i,
+            /disregard (all )?previous (instructions|prompts)/i,
+            /forget (all )?previous (instructions|prompts)/i,
+            /you are now/i,
+            /new instructions:/i,
+            /system (prompt|message):/i,
+            
+            // Role manipulation
+            /you are a (DAN|evil|unrestricted)/i,
+            /act as (if )?you are/i,
+            /pretend (that )?you are/i,
+            
+            // Encoding tricks
+            /base64/i,
+            /rot13/i,
+            /reverse this/i,
+            
+            // Output manipulation
+            /output (only|just)/i,
+            /respond with exactly/i,
+            /your response must be/i,
+        ];
+    }
+    
+    async analyze(text: string): Promise<JailbreakResult> {
+        /** Analyze text for jailbreak attempts. */
+        
+        // Method 1: Pattern matching (fast)
+        const patternScore = this.patternMatch(text);
+        
+        // Method 2: Heuristics
+        const heuristicScore = this.heuristicCheck(text);
+        
+        // Method 3: LLM-based detection (if available, slower)
+        let llmScore = 0;
+        if (this.llmDetector) {
+            llmScore = await this.llmDetect(text);
+        }
+        
+        // Combine scores
+        const combinedScore = Math.max(patternScore, heuristicScore, llmScore);
+        
+        return {
+            is_jailbreak: combinedScore > 0.7,
+            confidence: combinedScore,
+            attack_type: combinedScore > 0.7 ? this.classifyAttack(text) : null
+        };
+    }
+    
+    private patternMatch(text: string): number {
+        /** Check for known jailbreak patterns. */
+        const textLower = text.toLowerCase();
+        
+        let matches = 0;
+        for (const pattern of this.suspiciousPatterns) {
+            if (pattern.test(textLower)) {
+                matches++;
+            }
+        }
+        
+        // Normalize to 0-1 score
+        return Math.min(matches / 3, 1.0);
+    }
+    
+    private heuristicCheck(text: string): number {
+        /** Heuristic checks for manipulation attempts. */
+        let score = 0.0;
+        
+        // Check 1: Unusual structure (many newlines, separators)
+        const newlineCount = (text.match(/\n/g) || []).length;
+        const separatorCount = (text.match(/---/g) || []).length;
+        if (newlineCount > 10 || separatorCount > 2) {
+            score += 0.3;
+        }
+        
+        // Check 2: Multiple instruction-like phrases
+        const instructionWords = ['must', 'should', 'always', 'never', 'only', 'just'];
+        const textLower = text.toLowerCase();
+        const instructionCount = instructionWords.filter(word => textLower.includes(word)).length;
+        if (instructionCount > 5) {
+            score += 0.3;
+        }
+        
+        // Check 3: Contains code blocks or encoding
+        if (text.includes('```') || textLower.includes('base64')) {
+            score += 0.2;
+        }
+        
+        // Check 4: Excessive length (might hide injection)
+        if (text.length > 5000) {
+            score += 0.2;
+        }
+        
+        return Math.min(score, 1.0);
+    }
+    
+    private classifyAttack(text: string): string {
+        /** Classify the type of jailbreak attempt. */
+        const textLower = text.toLowerCase();
+        
+        if (['ignore', 'disregard', 'forget'].some(word => textLower.includes(word))) {
+            return "instruction_override";
+        } else if (['you are', 'act as', 'pretend'].some(word => textLower.includes(word))) {
+            return "role_manipulation";
+        } else if (['base64', 'rot13', 'encode'].some(word => textLower.includes(word))) {
+            return "encoding_attack";
+        } else if (['output only', 'respond with exactly'].some(word => textLower.includes(word))) {
+            return "output_constraint";
+        } else {
+            return "unknown";
+        }
+    }
+    
+    private async llmDetect(text: string): Promise<number> {
+        // Placeholder for LLM-based detection
+        return 0;
+    }
+}
+
+// Example usage
+async function safeAgentExecution(userInput: string): Promise<any> {
+    /** Execute agent with jailbreak protection. */
+    
+    const detector = new JailbreakDetector();
+    
+    // Check for jailbreak
+    const result = await detector.analyze(userInput);
+    
+    if (result.is_jailbreak) {
+        // logger.warning(
+        //     `Jailbreak detected: ${result.attack_type} ` +
+        //     `(confidence: ${result.confidence.toFixed(2)})`
+        // );
+        
+        // Return safe response without processing
+        return {
+            success: false,
+            message: "Your request couldn't be processed. Please rephrase.",
+            reason: "security_policy"
+        };
+    }
+    
+    // Safe to process
+    // return await agent.process(userInput);
+}
+```
+</CodeGroup>
+
 **Framework Integration: NeMo Guardrails Example**
 
-```python
+<CodeGroup>
+```python Python
 from nemoguardrails import RailsConfig, LLMRails
 
 # Define guardrails in Colang
@@ -940,9 +1849,116 @@ async def process_with_nemo_guardrails(user_input: str):
     return response
 ```
 
+```ts TypeScript
+// Note: NeMo Guardrails is a Python-specific framework.
+// In TypeScript, you would need to use a different guardrails framework
+// or implement similar guardrail logic using custom functions.
+
+// Example: Custom guardrails implementation in TypeScript
+interface GuardrailsConfig {
+    models: Array<{
+        type: string;
+        engine: string;
+        model: string;
+    }>;
+    rails: {
+        input: {
+            flows: string[];
+        };
+        output: {
+            flows: string[];
+        };
+    };
+}
+
+// Define guardrails configuration
+const config: GuardrailsConfig = {
+    models: [
+        {
+            type: "main",
+            engine: "openai",
+            model: "gpt-4"
+        }
+    ],
+    rails: {
+        input: {
+            flows: [
+                "check pii",
+                "check jailbreak",
+                "check toxicity"
+            ]
+        },
+        output: {
+            flows: [
+                "check pii leakage",
+                "check harmful content"
+            ]
+        }
+    }
+};
+
+// Guardrail flow implementations
+async function checkPII(userMessage: string): Promise<boolean> {
+    // Execute PII detection
+    // const piiDetected = await detectPII(userMessage);
+    // if (piiDetected) {
+    //     return "I noticed your message contains sensitive information. For your privacy, I've removed it before processing. Let me help you with your request.";
+    // }
+    return false;
+}
+
+async function checkJailbreak(userMessage: string): Promise<boolean> {
+    // Execute jailbreak detection
+    // const isJailbreak = await detectJailbreak(userMessage);
+    // if (isJailbreak) {
+    //     return "I can't process that request. How else can I help you?";
+    // }
+    return false;
+}
+
+async function checkPIILeakage(botMessage: string): Promise<boolean> {
+    // Execute PII detection on bot response
+    // const leaked = await detectPII(botMessage);
+    // if (leaked) {
+    //     return "I need to rephrase my response to protect sensitive information. Let me try again.";
+    // }
+    return false;
+}
+
+async function processWithGuardrails(userInput: string): Promise<any> {
+    /** Process input through guardrails. */
+    
+    // Input guardrails
+    const piiResult = await checkPII(userInput);
+    if (piiResult) {
+        return piiResult;
+    }
+    
+    const jailbreakResult = await checkJailbreak(userInput);
+    if (jailbreakResult) {
+        return jailbreakResult;
+    }
+    
+    // Process with LLM
+    // const response = await llm.generate({
+    //     messages: [{ role: "user", content: userInput }]
+    // });
+    
+    // Output guardrails
+    // const leakageResult = await checkPIILeakage(response.content);
+    // if (leakageResult) {
+    //     return leakageResult;
+    // }
+    
+    // return response;
+}
+```
+</CodeGroup>
+
 **Production Integration Pattern:**
 
-```python
+<CodeGroup>
+```python Python
 async def production_agent_pipeline(user_input: str, context: dict):
     """
     Production agent with full guardrail stack.
@@ -1008,11 +2024,84 @@ async def production_agent_pipeline(user_input: str, context: dict):
         return error_response("An error occurred processing your request")
 ```
 
+```ts TypeScript
+async function productionAgentPipeline(userInput: string, context: Record<string, any>): Promise<any> {
+    /**
+     * Production agent with full guardrail stack.
+     * 
+     * Security layers:
+     * 1. Input validation (format, size)
+     * 2. PII detection and redaction
+     * 3. Jailbreak detection
+     * 4. Business rule pre-checks
+     * 5. Agent execution
+     * 6. Business rule post-checks
+     * 7. Output PII scan
+     * 8. Content policy check
+     */
+    
+    const guardrails = new SecurityGuardrails();
+    const businessRules = new AgentGuardrails();
+    
+    try {
+        // Layer 1: Input validation
+        if (userInput.length > 10000) {
+            return errorResponse("Input too long");
+        }
+        
+        // Layer 2-4: Security checks
+        const { isSafe, sanitizedInput, securityMetadata } = await guardrails.checkInput(
+            userInput
+        );
+        
+        if (!isSafe) {
+            // logger.warning(`Security check failed: ${JSON.stringify(securityMetadata)}`);
+            return safeRejectionResponse(securityMetadata);
+        }
+        
+        // Layer 5: Business rule pre-checks (if action proposed)
+        // ... pre-execution validation ...
+        
+        // Layer 6: Agent execution
+        const agentOutput = await agent.process(sanitizedInput, context);
+        
+        // Layer 7: Business rule post-checks
+        // ... post-execution validation ...
+        
+        // Layer 8-9: Output security checks
+        const { isSafeOutput, sanitizedOutput, outputMetadata } = await guardrails.checkOutput(
+            agentOutput
+        );
+        
+        if (!isSafeOutput) {
+            // logger.error(`Output security check failed: ${JSON.stringify(outputMetadata)}`);
+            // Trigger alert - this shouldn't happen
+            return safeFallbackResponse();
+        }
+        
+        return {
+            success: true,
+            response: sanitizedOutput,
+            metadata: {
+                pii_redacted: securityMetadata.pii_redacted || false,
+                ...outputMetadata
+            }
+        };
+        
+    } catch (e: any) {
+        // logger.error(`Agent pipeline error: ${e}`);
+        return errorResponse("An error occurred processing your request");
+    }
+}
+```
+</CodeGroup>
+
 ## Full Example: Insurance Claims Processing
 
 **Before: Prompt-Based Rules (78% accuracy)**
 
-```python
+<CodeGroup>
+```python Python
 system_prompt = """Process insurance claims.
 
 Rules:
@@ -1024,9 +2113,23 @@ Rules:
 """
 ```
 
+```ts TypeScript
+const systemPrompt = `Process insurance claims.
+
+Rules:
+- Covered: Doctor visits, prescriptions, ER, surgery
+- Not covered: Cosmetic, experimental, out-of-network
+- Pre-auth required: Surgery, MRI, specialist
+- Deductible: $1000/year, then 80/20 co-insurance
+- Out-of-pocket max: $5000/year
+`;
+```
+</CodeGroup>
+
 **After: Deterministic Rules (99.7% accuracy)**
 
-```python
+<CodeGroup>
+```python Python
 @tool()
 async def evaluate_insurance_claim(
     claim: dict,
@@ -1107,6 +2210,141 @@ async def evaluate_insurance_claim(
 # - Cost per claim: $8 → $0.20
 # - Compliance violations: 400/month → 2/month
 ```
+
+```ts TypeScript
+// Assuming 'tool' decorator is part of an MCP server or similar framework
+// For demonstration, we'll define a plain function.
+
+interface ClaimDecision {
+    approved: boolean;
+    covered: number;
+    patient_owes: number;
+    reason?: string;
+    breakdown?: {
+        allowed_amount: number;
+        deductible: number;
+        coinsurance: number;
+        insurance_pays: number;
+    };
+}
+
+interface Claim {
+    procedure: string;
+    provider: string;
+    amount: number;
+    emergency?: boolean;
+    preauth_number?: string;
+}
+
+interface Policy {
+    deductible: number;
+    oop_max: number;
+    network: string[];
+}
+
+interface PatientYTD {
+    deductible_met: number;
+    out_of_pocket: number;
+}
+
+// Placeholder constants
+const COSMETIC_PROCEDURES: string[] = []; // Define as needed
+const EXPERIMENTAL_PROCEDURES: string[] = []; // Define as needed
+const REQUIRES_PREAUTH: string[] = []; // Define as needed
+
+function getRate(procedure: string, provider: string): number {
+    // Placeholder for rate lookup
+    return 0;
+}
+
+async function evaluateInsuranceClaim(
+    claim: Claim,
+    policy: Policy,
+    patientYtd: PatientYTD
+): Promise<ClaimDecision> {
+    /** Evaluate claim with deterministic rules. */
+    
+    let decision: ClaimDecision = { approved: true, covered: 0, patient_owes: 0 };
+    
+    // Rule 1: Coverage check (boolean logic - no ambiguity)
+    if (COSMETIC_PROCEDURES.includes(claim.procedure)) {
+        decision.approved = false;
+        decision.reason = "Cosmetic procedures not covered";
+        return decision;
+    }
+    
+    if (EXPERIMENTAL_PROCEDURES.includes(claim.procedure)) {
+        decision.approved = false;
+        decision.reason = "Experimental procedures not covered";
+        return decision;
+    }
+    
+    // Rule 2: Network check (boolean logic)
+    if (!policy.network.includes(claim.provider)) {
+        if (!claim.emergency) {
+            decision.approved = false;
+            decision.reason = "Out-of-network non-emergency";
+            return decision;
+        }
+    }
+    
+    // Rule 3: Pre-authorization (boolean logic)
+    if (REQUIRES_PREAUTH.includes(claim.procedure)) {
+        if (!claim.preauth_number) {
+            decision.approved = false;
+            decision.reason = "Pre-authorization required";
+            return decision;
+        }
+    }
+    
+    // Rule 4: Cost calculation (arithmetic - 100% deterministic)
+    const billed = claim.amount;
+    
+    // Negotiated rate
+    const allowed = Math.min(billed, getRate(claim.procedure, claim.provider));
+    
+    // Deductible
+    const remainingDeductible = Math.max(0, policy.deductible - patientYtd.deductible_met);
+    const deductibleApplies = Math.min(allowed, remainingDeductible);
+    const afterDeductible = allowed - deductibleApplies;
+    
+    // Co-insurance (80/20)
+    let insurancePays = afterDeductible * 0.8;
+    let patientCoinsurance = afterDeductible * 0.2;
+    
+    // Out-of-pocket max
+    const patientYtdOop = patientYtd.out_of_pocket;
+    const remainingOop = Math.max(0, policy.oop_max - patientYtdOop);
+    
+    // Adjust if hitting OOP max
+    const totalPatientCost = deductibleApplies + patientCoinsurance;
+    
+    if (totalPatientCost > remainingOop) {
+        // Insurance covers excess
+        const excess = totalPatientCost - remainingOop;
+        insurancePays += excess;
+        patientCoinsurance = remainingOop - deductibleApplies;
+    }
+    
+    decision.covered = insurancePays;
+    decision.patient_owes = totalPatientCost;
+    decision.breakdown = {
+        allowed_amount: allowed,
+        deductible: deductibleApplies,
+        coinsurance: patientCoinsurance,
+        insurance_pays: insurancePays
+    };
+    
+    return decision;
+}
+
+// Production results:
+// - Accuracy: 78% → 99.7%
+// - Processing time: 3 min → 5 sec
+// - Cost per claim: $8 → $0.20
+// - Compliance violations: 400/month → 2/month
+```
+</CodeGroup>
 
 ---
 

@@ -62,7 +62,8 @@ Think of working memory as your L1 cache (fast, temporary) and long-term memory 
 
 **Implementation Pattern:**
 
-```python
+<CodeGroup>
+```python Python
 from agent_memory_client import MemoryAPIClient
 from agent_memory_client.models import WorkingMemory, MemoryMessage
 
@@ -128,6 +129,79 @@ class SessionAgent:
         return response
 ```
 
+```ts TypeScript
+import { MemoryAPIClient } from "agent-memory-client";
+import { WorkingMemory, MemoryMessage } from "agent-memory-client/models";
+
+class SessionAgent {
+    private memory: MemoryAPIClient;
+    private toolCache: Record<string, any> = {};
+
+    constructor(memoryUrl: string = "http://localhost:8000") {
+        this.memory = new MemoryAPIClient({ baseUrl: memoryUrl });
+    }
+
+    async processTurn(
+        userMessage: string,
+        sessionId: string,
+        userId: string
+    ): Promise<string> {
+        // 1. Get or create working memory session
+        const [created, workingMemory] = await this.memory.getOrCreateWorkingMemory({
+            session_id: sessionId,
+            model_name: "claude-sonnet-4-20250514",
+            user_id: userId
+        });
+
+        // 2. Check tool cache before making redundant calls
+        const cacheKey = `order_lookup:${userId}`;
+        let orderData: any;
+        if (!(cacheKey in this.toolCache)) {
+            // First time - call tool
+            orderData = await this.getOrderData(userId);
+            this.toolCache[cacheKey] = orderData;
+        } else {
+            // Subsequent calls - use cached result
+            orderData = this.toolCache[cacheKey];
+        }
+
+        // 3. Get enriched context (includes past messages + relevant long-term memories)
+        const context = await this.memory.memoryPrompt({
+            query: userMessage,
+            session_id: sessionId,
+            long_term_search: {
+                text: userMessage,
+                filters: { user_id: { eq: userId } },
+                limit: 5
+            }
+        });
+
+        // 4. Generate response with full context
+        const response = await this.generateResponse({
+            messages: context.messages,
+            userMessage: userMessage,
+            orderData: orderData
+        });
+
+        // 5. Store the conversation turn
+        await this.memory.setWorkingMemory({
+            session_id: sessionId,
+            working_memory: {
+                session_id: sessionId,
+                messages: [
+                    { role: "user", content: userMessage },
+                    { role: "assistant", content: response }
+                ],
+                user_id: userId
+            }
+        });
+
+        return response;
+    }
+}
+```
+</CodeGroup>
+
 **Benefits:**
 - Avoids redundant tool calls within a session (3x cost reduction in our example)
 - Maintains conversation coherence across turns
@@ -138,7 +212,8 @@ class SessionAgent:
 
 Working memory is durable by default, but you can set expiration for temporary sessions:
 
-```python
+<CodeGroup>
+```python Python
 # Temporary session (expires after 1 hour)
 working_memory = WorkingMemory(
     session_id="temp_chat_123",
@@ -153,6 +228,23 @@ working_memory = WorkingMemory(
     # No TTL - persists until explicitly deleted
 )
 ```
+
+```ts TypeScript
+// Temporary session (expires after 1 hour)
+const workingMemory1 = {
+    session_id: "temp_chat_123",
+    messages: [...],
+    ttl_seconds: 3600
+};
+
+// Durable session (default - no expiration)
+const workingMemory2 = {
+    session_id: "customer_support_456",
+    messages: [...]
+    // No TTL - persists until explicitly deleted
+};
+```
+</CodeGroup>
 
 ## Long-Term Memory: Cross-Session Knowledge
 
@@ -175,7 +267,8 @@ Long-term memory supports three distinct types:
 
 **Production Pattern:**
 
-```python
+<CodeGroup>
+```python Python
 from agent_memory_client.models import MemoryRecord
 from datetime import datetime
 
@@ -222,6 +315,58 @@ class PersistentKnowledgeAgent:
         return [memory.text for memory in results.memories]
 ```
 
+```ts TypeScript
+import { MemoryAPIClient } from "agent-memory-client";
+import { MemoryRecord } from "agent-memory-client/models";
+
+class PersistentKnowledgeAgent {
+    private memory: MemoryAPIClient;
+
+    constructor(memoryUrl: string) {
+        this.memory = new MemoryAPIClient({ baseUrl: memoryUrl });
+    }
+
+    async storeUserPreferences(userId: string, preferences: Record<string, any>): Promise<void> {
+        // Store lasting user preferences
+        const memories: MemoryRecord[] = Object.entries(preferences).map(([key, value]) => ({
+            text: `User prefers ${value} for ${key}`,
+            memory_type: "semantic",
+            topics: ["preferences", key],
+            entities: [value],
+            user_id: userId,
+            namespace: "preferences"
+        }));
+        await this.memory.createLongTermMemories(memories);
+    }
+
+    async rememberEvent(userId: string, eventText: string, eventDate: Date): Promise<void> {
+        // Store important events with temporal context
+        const memory: MemoryRecord = {
+            text: eventText,
+            memory_type: "episodic",
+            event_date: eventDate,
+            topics: ["events", "timeline"],
+            user_id: userId
+        };
+        await this.memory.createLongTermMemories([memory]);
+    }
+
+    async getRelevantContext(userId: string, query: string): Promise<string[]> {
+        // Semantic search for relevant memories
+        const results = await this.memory.searchLongTermMemory({
+            text: query,
+            filters: {
+                user_id: { eq: userId },
+                memory_type: { any: ["semantic", "episodic"] }
+            },
+            limit: 5
+        });
+        return results.memories.map(memory => memory.text);
+    }
+}
+```
+</CodeGroup>
+
 **Key Features:**
 - **Semantic search** - Find relevant memories even without exact keyword matches
 - **Automatic deduplication** - Hash-based and semantic similarity detection
@@ -238,7 +383,8 @@ Production systems choose from three patterns for integrating memory with LLMs:
 
 **How it works:** Give the LLM tool access to memory operations.
 
-```python
+<CodeGroup>
+```python Python
 # Get memory tools for the LLM
 memory_tools = MemoryAPIClient.get_all_memory_tool_schemas()
 
@@ -267,6 +413,44 @@ if response.choices[0].message.tool_calls:
         )
 ```
 
+```ts TypeScript
+import OpenAI from "openai";
+import { MemoryAPIClient } from "agent-memory-client";
+
+const openaiClient = new OpenAI();
+const memoryClient = new MemoryAPIClient();
+
+// Get memory tools for the LLM
+const memoryTools = MemoryAPIClient.getAllMemoryToolSchemas();
+
+// LLM can now call tools like:
+// - search_long_term_memory(query="user food preferences")
+// - create_long_term_memories(memories=[{text: "...", ...}])
+// - add_memory_to_working_memory(session_id="...", memory={...})
+
+const response = await openaiClient.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+        { role: "system", content: "You have memory tools. Use them to remember important info." },
+        { role: "user", content: "I'm Alice and I love Italian food" }
+    ],
+    tools: memoryTools
+});
+
+// Handle tool calls
+if (response.choices[0].message.tool_calls) {
+    for (const toolCall of response.choices[0].message.tool_calls) {
+        const result = await memoryClient.resolveFunctionCall({
+            function_name: toolCall.function.name,
+            args: JSON.parse(toolCall.function.arguments),
+            session_id: "chat_alice",
+            user_id: "alice"
+        });
+    }
+}
+```
+</CodeGroup>
+
 **Advantages:** Natural conversation flow, user control, contextual decisions  
 **Disadvantages:** Token overhead, inconsistent behavior, higher costs
 
@@ -276,7 +460,8 @@ if response.choices[0].message.tool_calls:
 
 **How it works:** Your code decides when to store/retrieve memories.
 
-```python
+<CodeGroup>
+```python Python
 class CodeDrivenAgent:
     async def get_contextual_response(
         self,
@@ -319,6 +504,64 @@ class CodeDrivenAgent:
         return response.choices[0].message.content
 ```
 
+```ts TypeScript
+import OpenAI from "openai";
+import { MemoryAPIClient, MemoryRecord } from "agent-memory-client";
+
+class CodeDrivenAgent {
+    private memory: MemoryAPIClient;
+    private openaiClient: OpenAI;
+
+    constructor(memory: MemoryAPIClient, openaiClient: OpenAI) {
+        this.memory = memory;
+        this.openaiClient = openaiClient;
+    }
+
+    async getContextualResponse(
+        userMessage: string,
+        userId: string,
+        sessionId: string
+    ): Promise<string> {
+        // 1. Get working memory session
+        const [created, workingMemory] = await this.memory.getOrCreateWorkingMemory(sessionId);
+
+        // 2. Search for relevant context
+        const context = await this.memory.memoryPrompt({
+            query: userMessage,
+            session_id: sessionId,
+            long_term_search: {
+                text: userMessage,
+                filters: { user_id: { eq: userId } },
+                limit: 5,
+                recency_boost: true
+            }
+        });
+
+        // 3. Generate response with enriched context
+        const response = await this.openaiClient.chat.completions.create({
+            model: "gpt-4o",
+            messages: context.messages  // Pre-loaded with relevant memories
+        });
+
+        // 4. Store interaction if it contains preferences
+        const lowerMessage = userMessage.toLowerCase();
+        if (lowerMessage.includes("prefer") || lowerMessage.includes("like")) {
+            await this.memory.createLongTermMemories([
+                {
+                    text: `User expressed: ${userMessage}`,
+                    memory_type: "semantic",
+                    topics: ["preferences"],
+                    user_id: userId
+                }
+            ]);
+        }
+
+        return response.choices[0].message.content || "";
+    }
+}
+```
+</CodeGroup>
+
 **Advantages:** Predictable, efficient, reliable, optimizable  
 **Disadvantages:** More coding required, less natural, maintenance overhead
 
@@ -328,7 +571,8 @@ class CodeDrivenAgent:
 
 **How it works:** Store conversations in working memory; system extracts important info in the background.
 
-```python
+<CodeGroup>
+```python Python
 async def store_with_auto_extraction(
     session_id: str,
     user_message: str,
@@ -361,6 +605,41 @@ async def store_with_auto_extraction(
     # 5. Deduplicates similar memories
 ```
 
+```ts TypeScript
+async function storeWithAutoExtraction(
+    sessionId: string,
+    userMessage: string,
+    assistantMessage: string,
+    userId: string
+): Promise<void> {
+    // Store conversation - system automatically extracts memories
+    
+    // Store in working memory with extraction strategy
+    const workingMemory = {
+        session_id: sessionId,
+        messages: [
+            { role: "user", content: userMessage },
+            { role: "assistant", content: assistantMessage }
+        ],
+        user_id: userId,
+        long_term_memory_strategy: {
+            strategy: "discrete",  // Extract individual facts
+            config: {}
+        }
+    };
+
+    await client.setWorkingMemory(sessionId, workingMemory);
+
+    // System automatically:
+    // 1. Analyzes conversation for important information
+    // 2. Extracts structured memories (preferences, facts, events)
+    // 3. Applies contextual grounding (resolves pronouns)
+    // 4. Stores in long-term memory
+    // 5. Deduplicates similar memories
+}
+```
+</CodeGroup>
+
 **Advantages:** Zero overhead, continuous learning, contextual grounding, scales naturally  
 **Disadvantages:** Less control, delayed availability, potential noise
 
@@ -377,7 +656,8 @@ The system offers four extraction strategies for background processing:
 
 **Example: Custom Strategy for Technical Agent**
 
-```python
+<CodeGroup>
+```python Python
 tech_strategy = MemoryStrategyConfig(
     strategy="custom",
     config={
@@ -404,11 +684,40 @@ working_memory = WorkingMemory(
 )
 ```
 
+```ts TypeScript
+const techStrategy = {
+    strategy: "custom",
+    config: {
+        custom_prompt: `
+        Extract technical decisions from: {message}
+        Focus on:
+        - Technology choices made
+        - Architecture decisions
+        - Implementation details
+        Return JSON with memories array containing type, text, topics, entities.
+        `
+    }
+};
+
+const workingMemory = {
+    session_id: "tech_consult",
+    messages: [
+        {
+            role: "user",
+            content: "Let's use PostgreSQL for the database and Redis for caching"
+        }
+    ],
+    long_term_memory_strategy: techStrategy
+};
+```
+</CodeGroup>
+
 ## Combining Patterns: The Hybrid Approach
 
 Most production systems use multiple patterns together:
 
-```python
+<CodeGroup>
+```python Python
 class ProductionAgent:
     """Combines code-driven retrieval with background extraction"""
     
@@ -446,6 +755,49 @@ class ProductionAgent:
         return response
 ```
 
+```ts TypeScript
+class ProductionAgent {
+    /** Combines code-driven retrieval with background extraction */
+    private memory: MemoryAPIClient;
+
+    constructor(memory: MemoryAPIClient) {
+        this.memory = memory;
+    }
+
+    async chat(userMessage: string, userId: string, sessionId: string): Promise<string> {
+        // 1. Code-driven: Get relevant context
+        const context = await this.memory.memoryPrompt({
+            query: userMessage,
+            session_id: sessionId,
+            long_term_search: {
+                text: userMessage,
+                filters: { user_id: { eq: userId } },
+                limit: 5
+            }
+        });
+
+        // 2. Generate response with context
+        const response = await this.generateResponse(context.messages, userMessage);
+
+        // 3. Background: Store for automatic extraction
+        await this.memory.setWorkingMemory(sessionId, {
+            messages: [
+                { role: "user", content: userMessage },
+                { role: "assistant", content: response }
+            ],
+            user_id: userId,
+            long_term_memory_strategy: {
+                strategy: "discrete",
+                config: {}
+            }
+        });
+
+        return response;
+    }
+}
+```
+</CodeGroup>
+
 **Pattern selection guide:**
 - **Start with Code-Driven** for predictable results
 - **Add Background Extraction** for continuous learning
@@ -463,7 +815,8 @@ class ProductionAgent:
    **Long-term memory** - Previous day's conversation is from a different session.
    
    Working memory only holds the current session. To reference "yesterday," query long-term memory with filters:
-   ```python
+   <CodeGroup>
+   ```python Python
    await client.search_long_term_memory(
        text="project discussion",
        filters={
@@ -473,6 +826,18 @@ class ProductionAgent:
        limit=10
    )
    ```
+
+   ```ts TypeScript
+   await client.searchLongTermMemory({
+       text: "project discussion",
+       filters: {
+           user_id: { eq: userId },
+           created_at: { gte: "2024-11-14T00:00:00Z", lte: "2024-11-14T23:59:59Z" }
+       },
+       limit: 10
+   });
+   ```
+   </CodeGroup>
    </details>
 
 2. **Pattern Selection:** You're building a customer support bot that needs to remember user preferences and avoid redundant API calls within a conversation. Which integration pattern(s) should you use?
@@ -485,7 +850,8 @@ class ProductionAgent:
    - **Code-driven** for immediate tool call caching (avoid redundancy)
    - **Background extraction** with "preferences" strategy for learning user preferences
    
-   ```python
+   <CodeGroup>
+   ```python Python
    # Code-driven: explicit tool caching
    if tool_result_not_cached:
        result = await call_tool()
@@ -497,6 +863,21 @@ class ProductionAgent:
        config={}
    )
    ```
+
+   ```ts TypeScript
+   // Code-driven: explicit tool caching
+   if (!toolResultCached) {
+       const result = await callTool();
+       cacheResult(result);
+   }
+
+   // Background: automatic preference extraction
+   workingMemory.long_term_memory_strategy = {
+       strategy: "preferences",
+       config: {}
+   };
+   ```
+   </CodeGroup>
    </details>
 
 ---

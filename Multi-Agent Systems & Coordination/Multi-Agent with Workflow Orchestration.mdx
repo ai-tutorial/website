@@ -41,7 +41,8 @@ Three main categories:
 
 **LangGraph Implementation:**
 
-```python
+<CodeGroup>
+```python Python
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
 
@@ -116,8 +117,84 @@ result = app.invoke({
 })
 ```
 
+```ts TypeScript
+// Note: LangGraph is a Python-specific library.
+// In TypeScript, you would use a workflow orchestration library or implement a similar pattern.
+
+interface DocumentState {
+    raw_text: string;
+    entities: Record<string, any>;
+    summary: string;
+    keywords: string[];
+}
+
+async function extractEntities(state: DocumentState): Promise<DocumentState> {
+    /** Step 1: Extract named entities. */
+    const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        messages: [{
+            role: "user",
+            content: `Extract people, organizations, locations as JSON: ${state.raw_text}`
+        }]
+    });
+    
+    state.entities = JSON.parse(response.content[0].text);
+    return state;
+}
+
+async function generateSummary(state: DocumentState): Promise<DocumentState> {
+    /** Step 2: Summarize with entity context. */
+    const context = `Known entities: ${JSON.stringify(state.entities)}`;
+    
+    const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        messages: [{
+            role: "user",
+            content: `${context}\n\nSummarize: ${state.raw_text}`
+        }]
+    });
+    
+    state.summary = response.content[0].text;
+    return state;
+}
+
+async function extractKeywords(state: DocumentState): Promise<DocumentState> {
+    /** Step 3: Extract keywords from summary. */
+    const response = await client.messages.create({
+        model: "gpt-4o-mini",  // Cheaper for simple task
+        messages: [{
+            role: "user",
+            content: `Extract 5 keywords: ${state.summary}`
+        }]
+    });
+    
+    state.keywords = response.content[0].text.split(", ");
+    return state;
+}
+
+// Build workflow (simplified sequential execution)
+async function executeWorkflow(initialState: DocumentState): Promise<DocumentState> {
+    let state = { ...initialState };
+    state = await extractEntities(state);
+    state = await generateSummary(state);
+    state = await extractKeywords(state);
+    return state;
+}
+
+// Execute
+const result = await executeWorkflow({
+    raw_text: "Document text...",
+    entities: {},
+    summary: "",
+    keywords: []
+});
+```
+</CodeGroup>
+
 **code logic with OpenAI Agent SDK (Same Pattern):**
-```python
+
+<CodeGroup>
+```python Python
 from agents import Agent, Runner
 import asyncio
 import json
@@ -177,13 +254,98 @@ if __name__ == "__main__":
     print(json.dumps(final_result, indent=2, ensure_ascii=False))
 ```
 
+```ts TypeScript
+// Note: OpenAI Agent SDK is Python-specific.
+// In TypeScript, you would use the OpenAI SDK or a similar agent framework.
+
+interface EntityResult {
+    people: string[];
+    organizations: string[];
+    locations: string[];
+}
+
+interface SummaryResult {
+    summary: string;
+    keywords: string[];
+}
+
+// Agent 1: extract entities as JSON
+const entitiesAgent = {
+    name: "Entity Extractor",
+    model: "gpt-4o-mini",
+    instructions: (
+        "You extract named entities from user-provided text. " +
+        "Return ONLY a valid JSON object with keys: " +
+        '{"people": string[], "organizations": string[], "locations": string[]}. ' +
+        "No prose, no backticks."
+    )
+};
+
+// Agent 2: summarize using entities and return summary + keywords as JSON
+const summarizerAgent = {
+    name: "Summarizer",
+    model: "gpt-4o-mini",
+    instructions: (
+        "You write a concise summary (≤100 words) using the provided entities as context, " +
+        "and extract 5 keywords. Return ONLY a valid JSON object with keys: " +
+        '{"summary": string, "keywords": string[]}. No prose, no backticks.'
+    )
+};
+
+async function runSequential(rawText: string): Promise<{
+    entities: EntityResult;
+    summary: string;
+    keywords: string[];
+}> {
+    // 1) Run Entity Extractor
+    // const entitiesRun = await Runner.run(entitiesAgent, rawText);
+    // const entitiesMessages = entitiesRun.toInputList();
+    // const entitiesJsonStr = typeof entitiesMessages[entitiesMessages.length - 1] === "object" 
+    //     ? entitiesMessages[entitiesMessages.length - 1].content 
+    //     : String(entitiesMessages[entitiesMessages.length - 1]);
+    // const entities: EntityResult = JSON.parse(entitiesJsonStr);
+    
+    // Placeholder for actual agent execution
+    const entities: EntityResult = { people: [], organizations: [], locations: [] };
+
+    // 2) Run Summarizer using entities
+    const summarizerInput = (
+        `Raw text:\n${rawText}\n\n` +
+        `Entities (JSON):\n${JSON.stringify(entities)}`
+    );
+    // const summaryRun = await Runner.run(summarizerAgent, summarizerInput);
+    // const summaryMessages = summaryRun.toInputList();
+    // const resultJsonStr = typeof summaryMessages[summaryMessages.length - 1] === "object"
+    //     ? summaryMessages[summaryMessages.length - 1].content
+    //     : String(summaryMessages[summaryMessages.length - 1]);
+    // const result: SummaryResult = JSON.parse(resultJsonStr);
+    
+    // Placeholder for actual agent execution
+    const result: SummaryResult = { summary: "", keywords: [] };
+
+    // Combine into a single structured result (mirrors the sequential pattern)
+    return {
+        entities: entities,
+        summary: result.summary || "",
+        keywords: result.keywords || []
+    };
+}
+
+// Example usage
+const exampleText = "Sundar Pichai from Google met with leaders in Paris and New York.";
+const finalResult = await runSequential(exampleText);
+console.log(JSON.stringify(finalResult, null, 2));
+```
+</CodeGroup>
+
 ### 2. Parallel Execution
 
 **When to use:** Independent tasks that can run simultaneously.
 
 **Pattern:**
 
-```python
+<CodeGroup>
+```python Python
 async def parallel_analysis(documents: list[str]):
     """Analyze multiple documents in parallel."""
     
@@ -207,9 +369,37 @@ async def parallel_analysis(documents: list[str]):
 # 10 documents: Sequential = 30s, Parallel = 3s
 ```
 
+```ts TypeScript
+async function parallelAnalysis(documents: string[]): Promise<Array<{ document: string; analysis: string }>> {
+    /** Analyze multiple documents in parallel. */
+    
+    async function analyzeDoc(doc: string): Promise<{ document: string; analysis: string }> {
+        /** Single document analysis. */
+        const response = await client.messages.create({
+            model: "claude-haiku-3-5-20250305",
+            messages: [{
+                role: "user",
+                content: `Analyze sentiment and extract topics: ${doc}`
+            }]
+        });
+        return { document: doc, analysis: response.content[0].text };
+    }
+    
+    // Execute all in parallel
+    const tasks = documents.map(doc => analyzeDoc(doc));
+    const results = await Promise.all(tasks);
+    
+    return results;
+}
+
+// 10 documents: Sequential = 30s, Parallel = 3s
+```
+</CodeGroup>
+
 **Production Consideration:** Batch parallel requests to avoid overwhelming APIs:
 
-```python
+<CodeGroup>
+```python Python
 async def parallel_with_batching(items: list, batch_size: int = 10):
     """Process in parallel batches."""
     
@@ -225,13 +415,33 @@ async def parallel_with_batching(items: list, batch_size: int = 10):
 # 100 items, batches of 10 = 10 parallel batches
 ```
 
+```ts TypeScript
+async function parallelWithBatching<T>(items: T[], batchSize: number = 10): Promise<T[]> {
+    /** Process in parallel batches. */
+    
+    const results: T[] = [];
+    
+    for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        const batchResults = await Promise.all(batch.map(item => process(item)));
+        results.push(...batchResults);
+    }
+    
+    return results;
+}
+
+// 100 items, batches of 10 = 10 parallel batches
+```
+</CodeGroup>
+
 ### 3. Conditional Branching
 
 **When to use:** Different paths based on data or business logic.
 
 **Customer Support Routing Example:**
 
-```python
+<CodeGroup>
+```python Python
 class SupportTicketState(TypedDict):
     """Ticket workflow state."""
     message: str
@@ -367,6 +577,152 @@ for node in ["technical", "billing", "sales", "escalate"]:
 app = workflow.compile()
 ```
 
+```ts TypeScript
+// Note: LangGraph is a Python-specific library.
+// In TypeScript, you would use a workflow orchestration library or implement a similar pattern.
+
+interface SupportTicketState {
+    message: string;
+    category: "technical" | "billing" | "sales";
+    priority: "low" | "medium" | "high";
+    resolution: string;
+}
+
+async function classifyTicket(state: SupportTicketState): Promise<SupportTicketState> {
+    /** Classify incoming ticket. */
+    const response = await client.messages.create({
+        model: "gpt-4o-mini",
+        messages: [{
+            role: "user",
+            content: `Classify this support ticket:
+
+Message: ${state.message}
+
+Return JSON: {"category": "...", "priority": "..."}`
+        }]
+    });
+    
+    const result = JSON.parse(response.content[0].text);
+    state.category = result.category;
+    state.priority = result.priority;
+    return state;
+}
+
+async function handleTechnical(state: SupportTicketState): Promise<SupportTicketState> {
+    /** Technical support handler. */
+    // Search knowledge base
+    const articles = searchKb(state.message);
+    
+    const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        messages: [{
+            role: "user",
+            content: `Provide technical support.
+
+Issue: ${state.message}
+KB Articles: ${articles}
+
+Give step-by-step solution.`
+        }]
+    });
+    
+    state.resolution = response.content[0].text;
+    return state;
+}
+
+async function handleBilling(state: SupportTicketState): Promise<SupportTicketState> {
+    /** Billing support handler. */
+    // Different tools: access billing system
+    const customerId = extractCustomerId(state.message);
+    const billingInfo = billingApi.get(customerId);
+    
+    const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        messages: [{
+            role: "user",
+            content: `Handle billing inquiry.
+
+Issue: ${state.message}
+Billing: ${billingInfo}
+
+Explain charges clearly.`
+        }]
+    });
+    
+    state.resolution = response.content[0].text;
+    return state;
+}
+
+async function handleSales(state: SupportTicketState): Promise<SupportTicketState> {
+    /** Sales inquiry handler. */
+    const products = productCatalog.search(state.message);
+    
+    const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        messages: [{
+            role: "user",
+            content: `Handle sales inquiry.
+
+Question: ${state.message}
+Products: ${products}
+
+Recommend solutions.`
+        }]
+    });
+    
+    state.resolution = response.content[0].text;
+    return state;
+}
+
+function routeTicket(state: SupportTicketState): string {
+    /** Routing logic (deterministic). */
+    
+    // High priority always escalates
+    if (state.priority === "high") {
+        return "escalate";
+    }
+    
+    // Route by category
+    const routing: Record<string, string> = {
+        "technical": "technical",
+        "billing": "billing",
+        "sales": "sales"
+    };
+    
+    return routing[state.category];
+}
+
+// Build workflow with conditional routing (simplified sequential execution)
+async function executeWorkflow(initialState: SupportTicketState): Promise<SupportTicketState> {
+    let state = { ...initialState };
+    
+    // Classify ticket
+    state = await classifyTicket(state);
+    
+    // Route based on classification
+    const nextStep = routeTicket(state);
+    
+    // Execute appropriate handler
+    switch (nextStep) {
+        case "technical":
+            state = await handleTechnical(state);
+            break;
+        case "billing":
+            state = await handleBilling(state);
+            break;
+        case "sales":
+            state = await handleSales(state);
+            break;
+        case "escalate":
+            // state = await escalateToHuman(state);
+            break;
+    }
+    
+    return state;
+}
+```
+</CodeGroup>
+
 **Key Insight:** The `route_ticket` function is pure Python logic - 100% deterministic. No LLM makes routing decisions.
 
 ### 4. Loops and Iteration
@@ -375,7 +731,8 @@ app = workflow.compile()
 
 **Code Generation with Validation Loop:**
 
-```python
+<CodeGroup>
+```python Python
 class CodeGenState(TypedDict):
     """Code generation workflow state."""
     requirements: str
@@ -482,6 +839,134 @@ result = app.invoke({
 })
 ```
 
+```ts TypeScript
+// Note: LangGraph is a Python-specific library.
+// In TypeScript, you would use a workflow orchestration library or implement a similar pattern.
+
+interface CodeGenState {
+    requirements: string;
+    code: string;
+    test_results: {
+        syntax_valid: boolean;
+        tests_pass: boolean;
+        errors: string[];
+    };
+    iteration: number;
+    max_iterations: number;
+    success: boolean;
+}
+
+async function generateCode(state: CodeGenState): Promise<CodeGenState> {
+    /** Generate or refine code. */
+    
+    let prompt: string;
+    if (state.iteration === 0) {
+        // First attempt
+        prompt = `Write TypeScript code for: ${state.requirements}`;
+    } else {
+        // Refinement
+        prompt = `Previous code had issues: ${JSON.stringify(state.test_results)}
+
+Requirements: ${state.requirements}
+Previous code: ${state.code}
+
+Fix the issues.`;
+    }
+    
+    const response = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.2
+    });
+    
+    // Extract code
+    const code = extractCodeBlock(response.content[0].text);
+    
+    state.code = code;
+    state.iteration += 1;
+    return state;
+}
+
+async function validateCode(state: CodeGenState): Promise<CodeGenState> {
+    /** Run tests on generated code. */
+    
+    const results = { syntax_valid: false, tests_pass: false, errors: [] as string[] };
+    
+    // Syntax check (TypeScript would use a TypeScript compiler or linter)
+    try {
+        // In TypeScript, you would use a TypeScript compiler API or similar
+        // For demonstration, this is a placeholder
+        // const syntaxValid = await checkTypeScriptSyntax(state.code);
+        results.syntax_valid = true; // Placeholder
+    } catch (e: any) {
+        results.errors.push(`Syntax: ${e}`);
+        state.test_results = results;
+        return state;
+    }
+    
+    // Functional tests
+    try {
+        // In TypeScript, you would execute the code in a sandboxed environment
+        // For demonstration, this is a placeholder
+        // await executeCode(state.code);
+        results.tests_pass = true; // Placeholder
+    } catch (e: any) {
+        results.errors.push(`Runtime: ${e}`);
+    }
+    
+    state.test_results = results;
+    state.success = results.syntax_valid && results.tests_pass;
+    
+    return state;
+}
+
+function shouldRetry(state: CodeGenState): "retry" | "finish" {
+    /** Decide: retry or finish (deterministic). */
+    
+    if (state.success) {
+        return "finish";
+    }
+    
+    if (state.iteration >= state.max_iterations) {
+        return "finish";  // Give up
+    }
+    
+    return "retry";
+}
+
+// Build iterative workflow (simplified sequential execution)
+async function executeWorkflow(initialState: CodeGenState): Promise<CodeGenState> {
+    let state = { ...initialState };
+    
+    while (true) {
+        // Generate code
+        state = await generateCode(state);
+        
+        // Validate code
+        state = await validateCode(state);
+        
+        // Check if should retry
+        const decision = shouldRetry(state);
+        if (decision === "finish") {
+            break;
+        }
+    }
+    
+    return state;
+}
+
+// Execute with iteration limit
+const result = await executeWorkflow({
+    requirements: "Calculate fibonacci efficiently",
+    code: "",
+    test_results: { syntax_valid: false, tests_pass: false, errors: [] },
+    iteration: 0,
+    max_iterations: 3,  // Safety limit
+    success: false
+});
+```
+</CodeGroup>
+
 **Critical:** Always set `max_iterations` to prevent infinite loops. In production, also add cost/time limits.
 
 ## Combining Patterns
@@ -490,7 +975,8 @@ Real workflows combine multiple patterns:
 
 **Example: Document Processing with Quality Control**
 
-```python
+<CodeGroup>
+```python Python
 workflow = StateGraph(DocState)
 
 # Sequential: Parse → Extract → Summarize
@@ -533,6 +1019,61 @@ workflow.add_edge("approve", END)
 workflow.add_edge("human_review", END)
 ```
 
+```ts TypeScript
+// Note: LangGraph is a Python-specific library.
+// In TypeScript, you would use a workflow orchestration library or implement a similar pattern.
+
+interface DocState {
+    quality_score: number;
+    iteration: number;
+    // ... other state properties
+}
+
+function qualityRouter(state: DocState): "approve" | "retry" | "human_review" {
+    /** Deterministic routing. */
+    if (state.quality_score > 0.8) {
+        return "approve";
+    } else if (state.iteration < 3) {
+        return "retry";
+    } else {
+        return "human_review";
+    }
+}
+
+// Build workflow (simplified sequential execution)
+async function executeWorkflow(initialState: DocState): Promise<DocState> {
+    let state = { ...initialState };
+    
+    while (true) {
+        // Sequential: Parse → Extract → Summarize
+        state = await parseDocument(state);
+        state = await extractEntities(state);
+        state = await createSummary(state);
+        
+        // Quality check
+        state = await validateQuality(state);
+        
+        // Route based on quality
+        const route = qualityRouter(state);
+        
+        if (route === "approve") {
+            state = await approveDoc(state);
+            break;
+        } else if (route === "retry") {
+            state.iteration += 1;
+            // Loop back to parse
+            continue;
+        } else {
+            state = await flagForHuman(state);
+            break;
+        }
+    }
+    
+    return state;
+}
+```
+</CodeGroup>
+
 This combines:
 - **Sequential:** parse → extract → summarize
 - **Conditional:** approve vs retry vs escalate
@@ -544,7 +1085,8 @@ This combines:
 
 **Add logging at every node:**
 
-```python
+<CodeGroup>
+```python Python
 def extract_entities(state: DocumentState) -> DocumentState:
     """Step with logging."""
     
@@ -573,11 +1115,44 @@ def extract_entities(state: DocumentState) -> DocumentState:
         raise
 ```
 
+```ts TypeScript
+async function extractEntities(state: DocumentState): Promise<DocumentState> {
+    /** Step with logging. */
+    
+    const start = Date.now();
+    
+    try {
+        // Execute step
+        const response = await client.messages.create(/* ... */);
+        state.entities = parse(response);
+        
+        // Log success
+        // logger.info("Entity extraction succeeded", {
+        //     duration_ms: Date.now() - start,
+        //     entities_found: state.entities.length,
+        //     document_length: state.raw_text.length
+        // });
+        
+        return state;
+        
+    } catch (e: any) {
+        // Log failure
+        // logger.error("Entity extraction failed", {
+        //     duration_ms: Date.now() - start,
+        //     error: String(e)
+        // });
+        throw e;
+    }
+}
+```
+</CodeGroup>
+
 ### 2. Cost Tracking
 
 **Monitor token usage:**
 
-```python
+<CodeGroup>
+```python Python
 class CostTracker:
     """Track workflow costs."""
     
@@ -621,6 +1196,63 @@ def expensive_step(state):
     
     return state
 ```
+
+```ts TypeScript
+class CostTracker {
+    /** Track workflow costs. */
+    
+    private totalCost: number = 0;
+    private stepCosts: Record<string, number> = {};
+    
+    trackStep(stepName: string, tokens: number, model: string): void {
+        /** Track cost per step. */
+        
+        // Model pricing
+        const prices: Record<string, number> = {
+            "claude-sonnet-4": 0.003 / 1000,  // per token
+            "gpt-4o-mini": 0.00015 / 1000
+        };
+        
+        const cost = tokens * prices[model];
+        
+        this.totalCost += cost;
+        this.stepCosts[stepName] = (this.stepCosts[stepName] || 0) + cost;
+    }
+    
+    getReport(): {
+        total_cost: number;
+        by_step: Record<string, number>;
+        most_expensive: string;
+    } {
+        /** Cost breakdown. */
+        const mostExpensive = Object.keys(this.stepCosts).reduce((a, b) =>
+            this.stepCosts[a] > this.stepCosts[b] ? a : b
+        );
+        
+        return {
+            total_cost: this.totalCost,
+            by_step: this.stepCosts,
+            most_expensive: mostExpensive
+        };
+    }
+}
+
+// Usage
+const tracker = new CostTracker();
+
+async function expensiveStep(state: any): Promise<any> {
+    const response = await client.messages.create(/* ... */);
+    
+    tracker.trackStep(
+        "entity_extraction",
+        response.usage.total_tokens,
+        "claude-sonnet-4"
+    );
+    
+    return state;
+}
+```
+</CodeGroup>
 
 ### 3. Timeout Protection
 
