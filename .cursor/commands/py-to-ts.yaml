@@ -1,0 +1,9 @@
+name: py-to-ts
+description: Convert all Python code fences in MDX files into CodeGroups with TypeScript translations
+run: |
+  # Optional: Set certificate path if it exists (for macOS with custom certs)
+  [ -f /tmp/macos-certs.pem ] && export NODE_EXTRA_CA_CERTS=/tmp/macos-certs.pem
+  
+  # Run the translation script (Cursor runs from workspace root)
+  node ./scripts/translate-python-to-ts.mjs "$@"
+
