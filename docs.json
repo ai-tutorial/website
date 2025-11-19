@@ -79,8 +79,8 @@
     ]
   },
   "logo": {
-    "light": "/logo/logo-light-only.png",
-    "dark": "/logo/logo-only.png"
+    "light": "/logo/logo-light.png",
+    "dark": "/logo/logo-dark.png"
   },
   "navbar": {
     "links": [
