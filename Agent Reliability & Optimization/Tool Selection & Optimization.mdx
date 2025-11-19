@@ -1,0 +1,479 @@
+---
+title: "Tool Selection & Optimization"
+description: "Tool Selection & Optimization"
+sidebarTitle: "Tool Selection & Optimization"
+icon: "book"
+---
+## The Tool Selection Problem
+
+**Scenario:** You give your agent 20 tools. The agent uses wrong ones constantly.
+
+**Research shows:** Agent accuracy decreases with tool count:
+- 1-5 tools: 92% correct selection
+- 6-10 tools: 84% correct selection
+- 11-20 tools: 71% correct selection
+- 20+ tools: 58% correct selection
+
+**Why:** LLMs pattern-match descriptions. Large option spaces overwhelm them.
+
+## Challenge 1: Too Many Tools
+
+**Anti-pattern: Flat List**
+
+```python
+# Agent sees all 20 tools at once
+tools = [
+    search_customers, search_products, search_orders, search_tickets,
+    get_customer, get_product, get_order, get_ticket,
+    update_customer, update_product, update_order, update_ticket,
+    create_customer, create_product, create_order, create_ticket,
+    delete_customer, delete_product, delete_order, delete_ticket
+]
+
+# Result: 58% correct selection
+```
+
+**Solution 1: Hierarchical Organization**
+
+```python
+@tool()
+async def route_to_domain(
+    domain: Literal["customers", "products", "orders", "tickets"],
+    action: Literal["search", "get", "update", "create", "delete"]
+) -> str:
+    """Route to appropriate handler (Step 1 of 2).
+    
+    After calling this, use the specific tool returned.
+    """
+    
+    routing = {
+        ("customers", "search"): "search_customers",
+        ("customers", "get"): "get_customer",
+        ("products", "search"): "search_products",
+        # ... complete mapping
+    }
+    
+    tool_name = routing.get((domain, action))
+    
+    return {
+        "next_tool": tool_name,
+        "instructions": f"Now call {tool_name} with your parameters"
+    }
+
+# Agent workflow: 2 steps, 90%+ accuracy
+# Step 1: Route to correct domain/action
+# Step 2: Call specific tool
+```
+
+**Solution 2: Context-Based Tool Groups**
+
+```python
+def get_tools_for_phase(conversation_phase: str) -> list:
+    """Return only relevant tools for current phase."""
+    
+    tool_groups = {
+        "greeting": [
+            get_customer_history,
+            authenticate_customer
+        ],
+        "problem_diagnosis": [
+            search_knowledge_base,
+            check_system_status,
+            get_recent_tickets
+        ],
+        "resolution": [
+            provide_solution_steps,
+            create_ticket,
+            schedule_callback
+        ],
+        "closing": [
+            send_satisfaction_survey,
+            update_notes
+        ]
+    }
+    
+    return tool_groups[conversation_phase]
+
+# Agent only sees 2-4 tools at a time
+# Much higher accuracy
+```
+
+## Challenge 2: Overlapping Functionality
+
+**Problem:** Multiple similar tools confuse agent.
+
+**Bad: Ambiguous Tools**
+
+```python
+@mcp_server.tool()
+async def search_products(query: str):
+    """Search for products."""
+    pass
+
+@mcp_server.tool()
+async def find_products(query: str):
+    """Find products."""
+    pass
+
+@mcp_server.tool()
+async def product_lookup(query: str):
+    """Look up products."""
+    pass
+
+# Agent picks randomly or tries all three
+```
+
+**Good: Clear Differentiation**
+
+```python
+@tool()
+async def search_products_by_text(
+    text_query: str,
+    include_out_of_stock: bool = False
+) -> list[Product]:
+    """Full-text search across product catalog.
+    
+    Use when:
+    - Customer describes product ("red shoes", "laptop under $1000")
+    - Need fuzzy matching (typos, partial names)
+    
+    Do NOT use when:
+    - You have exact SKU (use get_product_by_sku)
+    - Need structured filtering (use filter_products_by_attributes)
+    
+    Example: "wireless headphones under $100"
+    """
+    pass
+
+@tool()
+async def get_product_by_sku(sku: str) -> Product:
+    """Get product by exact SKU.
+    
+    Use when:
+    - Customer provides SKU directly
+    - You extracted SKU from order/ticket
+    
+    Do NOT use for search (use search_products_by_text)
+    
+    Example: sku="PROD-12345"
+    """
+    pass
+
+@tool()
+async def filter_products_by_attributes(
+    category: Optional[str] = None,
+    price_min: Optional[float] = None,
+    price_max: Optional[float] = None,
+    brand: Optional[str] = None
+) -> list[Product]:
+    """Filter products by structured criteria.
+    
+    Use when:
+    - Customer specifies attributes (category, price, brand)
+    - Need structured filtering
+    
+    Examples:
+    - "Nike shoes under $100" → category="shoes", brand="Nike", price_max=100
+    - "Laptops in stock" → category="laptops"
+    """
+    pass
+```
+
+## Advanced Optimization Techniques
+
+### 1. Retrieval-Augmented Tool Selection
+
+**Pattern:** Use retrieval to pre-filter tools before agent selection.
+
+```python
+from sentence_transformers import SentenceTransformer
+
+class ToolRetriever:
+    """Retrieve relevant tools for query."""
+    
+    def __init__(self, all_tools: list[dict]):
+        self.tools = all_tools
+        self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
+        
+        # Pre-compute embeddings
+        self.tool_embeddings = self.embedder.encode([
+            f"{t['name']}: {t['description']}" 
+            for t in all_tools
+        ])
+    
+    def retrieve_relevant_tools(
+        self,
+        query: str,
+        top_k: int = 5
+    ) -> list[dict]:
+        """Get most relevant tools for query."""
+        
+        # Embed query
+        query_emb = self.embedder.encode([query])[0]
+        
+        # Calculate similarity
+        from sklearn.metrics.pairwise import cosine_similarity
+        similarities = cosine_similarity(
+            [query_emb],
+            self.tool_embeddings
+        )[0]
+        
+        # Get top-k
+        top_indices = similarities.argsort()[-top_k:][::-1]
+        
+        return [self.tools[i] for i in top_indices]
+
+# Usage
+retriever = ToolRetriever(all_100_tools)
+
+async def agent_with_retrieval(query: str):
+    # Stage 1: Retrieve relevant subset (fast)
+    relevant_tools = retriever.retrieve_relevant_tools(query, top_k=5)
+    
+    # Stage 2: Agent selects from small set (accurate)
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        messages=[{"role": "user", "content": query}],
+        tools=relevant_tools  # Only 5 tools vs 100
+    )
+    
+    # Result: 92% accuracy (vs 58% with all 100 tools)
+```
+
+*Research: "ToolRAG: Efficient Tool Retrieval for Large Language Model-Based Agents" ([arXiv:2509.20386v1](https://arxiv.org/pdf/2509.20386v1))*
+
+### 2. Dynamic Tool Subset Selection
+
+**Pattern:** Adapt tools based on conversation state.
+
+```python
+class AdaptiveToolSelector:
+    """Dynamically filter tools by context."""
+    
+    def get_tools(self, state: dict) -> list:
+        """Return appropriate tools for current state."""
+        
+        phase = state.get("phase")
+        user_role = state.get("user_role")
+        issue_type = state.get("issue_type")
+        
+        tools = []
+        
+        # Phase-based
+        if phase == "authentication":
+            tools.extend([verify_identity, send_verification_code])
+        
+        elif phase == "diagnosis":
+            tools.extend([
+                search_knowledge_base,
+                check_system_status,
+                get_customer_history
+            ])
+            
+            # Add role-specific tools
+            if user_role == "admin":
+                tools.append(access_system_logs)
+        
+        elif phase == "resolution":
+            tools.extend([create_ticket, schedule_callback])
+            
+            # Add issue-specific tools
+            if issue_type == "billing":
+                tools.append(process_refund)
+            elif issue_type == "technical":
+                tools.append(restart_service)
+        
+        return tools
+```
+
+### 3. Code Execution as Universal Tool
+
+**Pattern:** One flexible tool instead of many specific ones.
+
+```python
+@tool()
+async def execute_python_code(
+    code: str,
+    description: str
+) -> dict:
+    """Execute Python code for flexible operations.
+    
+    Use when:
+    - Need to perform calculations
+    - Transform data structures
+    - Call multiple APIs in sequence
+    - Implement custom logic not covered by other tools
+    
+    Available modules: requests, pandas, json, datetime, math
+    
+    Example:
+        code = '''
+        import requests
+        import pandas as pd
+        
+        # Fetch data
+        response = requests.get("https://api.example.com/data")
+        data = response.json()
+        
+        # Process with pandas
+        df = pd.DataFrame(data)
+        result = df.groupby('category').sum()
+        
+        return result.to_dict()
+        '''
+    """
+    
+    try:
+        # Execute in sandboxed environment
+        result = await code_executor.execute(
+            code,
+            timeout=10,
+            allowed_modules=['requests', 'pandas', 'json', 'datetime', 'math']
+        )
+        
+        return {
+            "success": True,
+            "result": result,
+            "code_executed": code
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "suggestion": "Check code syntax and available modules"
+        }
+```
+
+**Pros:**
+- Reduces tool count dramatically
+- Maximum flexibility
+- Agent can compose complex operations
+
+**Cons:**
+- Requires secure sandbox
+- Harder to validate/test
+- Security considerations
+
+*Research: Anthropic's "Code Execution with MCP" ([anthropic.com](https://www.anthropic.com/engineering/code-execution-with-mcp))*
+
+### 4. Tool Usage Analytics
+
+**Pattern:** Track and optimize based on actual usage.
+
+```python
+class ToolAnalytics:
+    """Monitor tool usage patterns."""
+    
+    def __init__(self):
+        self.stats = defaultdict(lambda: {
+            "calls": 0,
+            "successes": 0,
+            "failures": 0,
+            "avg_latency_ms": 0
+        })
+    
+    async def call_with_analytics(
+        self,
+        tool_name: str,
+        params: dict
+    ):
+        """Track metrics for every call."""
+        
+        start = time.time()
+        
+        try:
+            result = await execute_tool(tool_name, params)
+            
+            # Update stats
+            stats = self.stats[tool_name]
+            stats["calls"] += 1
+            stats["successes"] += 1
+            
+            latency = (time.time() - start) * 1000
+            stats["avg_latency_ms"] = (
+                (stats["avg_latency_ms"] * (stats["calls"] - 1) + latency) 
+                / stats["calls"]
+            )
+            
+            return result
+            
+        except Exception as e:
+            self.stats[tool_name]["failures"] += 1
+            raise
+    
+    def get_recommendations(self) -> list[str]:
+        """Analyze and suggest optimizations."""
+        
+        recommendations = []
+        
+        for tool, stats in self.stats.items():
+            # Unused tools
+            if stats["calls"] == 0:
+                recommendations.append(
+                    f"Remove unused tool: {tool}"
+                )
+            
+            # High failure rate
+            failure_rate = stats["failures"] / max(stats["calls"], 1)
+            if failure_rate > 0.3:
+                recommendations.append(
+                    f"Tool '{tool}' fails {failure_rate:.0%} of the time. "
+                    f"Review error handling or simplify parameters."
+                )
+            
+            # High latency
+            if stats["avg_latency_ms"] > 2000:
+                recommendations.append(
+                    f"Tool '{tool}' averages {stats['avg_latency_ms']:.0f}ms. "
+                    f"Consider caching or optimization."
+                )
+        
+        return recommendations
+```
+
+---
+
+## Check Your Understanding
+
+1. **Optimization:** You have 15 tools but only 5 are regularly used. What should you do?
+   
+   <details>
+   <summary>Answer</summary>
+   
+   **Options:**
+   
+   1. **Remove unused tools** (if truly unnecessary)
+   2. **Consolidate related tools** (merge similar functionality)
+   3. **Use tool retrieval** (dynamically select relevant 5)
+   4. **Phase-based filtering** (show different tools at different stages)
+   
+   Best approach: Combination of 1 and 2.
+   - Remove tools with 0 usage
+   - Consolidate tools with similar purpose
+   - Result: Smaller, clearer tool set with higher accuracy
+   </details>
+
+2. **Tool Selection:** Agent has 100 tools. How do you maintain high accuracy?
+   
+   <details>
+   <summary>Answer</summary>
+   
+   **Retrieval-augmented selection:**
+   
+   ```python
+   # Pre-filter tools by relevance
+   relevant_tools = retriever.retrieve_tools(query, top_k=5)
+   
+   # Agent selects from 5 (not 100)
+   response = agent.process(query, tools=relevant_tools)
+   
+   # Result: 92% accuracy vs 58% with all 100
+   ```
+   
+   Alternative: Hierarchical routing (route to domain first, then specific tool).
+   </details>
+---
+
+
+

@@ -1,0 +1,45 @@
+---
+title: "Hands-On Exercise"
+description: "Build a production-ready prompt"
+sidebarTitle: "Hands-On Exercise"
+icon: "dumbbell"
+---
+
+## Build a Complete, Production-Grade RAG System and Evaluate It Rigorously
+
+### Project Requirements
+
+**1. Document Corpus Selection (Choose one):**
+- Option A: Use provided corpus (technical documentation, 50 docs)
+- Option B: Bring your own (company docs, research papers, etc.)
+
+**2. Implementation Requirements:**
+
+Must implement:
+- [ ] Two-stage retrieval (first-pass + reranking)
+- [ ] Hybrid search (BM25 + semantic)
+- [ ] Appropriate chunking strategy with metadata
+- [ ] Error handling and fallbacks
+- [ ] Logging and observability
+
+Bonus (choose 1+):
+- [ ] Advanced pattern (GraphRAG, iterative, or agentic)
+- [ ] Unstructured data handling (PDFs, images, tables)
+- [ ] Query preprocessing/expansion
+- [ ] Result caching
+
+**3. Evaluation Requirements:**
+
+Must include:
+- [ ] Golden dataset (minimum 20 test cases)
+- [ ] Retrieval metrics (Recall@5, Precision@5, NDCG@10) — prefer LlamaIndex evaluations
+- [ ] Generation metrics (Faithfulness, Relevance) — prefer LlamaIndex evaluations
+- [ ] Component-level analysis (retrieval vs. generation failures)
+- [ ] Failure case analysis (identify and document 3 worst queries)
+
+**4. Optimization:**
+
+Must demonstrate:
+- [ ] Chunking strategy comparison (test 2+ strategies)
+- [ ] Search strategy comparison (BM25, semantic, hybrid)
+- [ ] Document optimization decisions with metrics

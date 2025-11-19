@@ -1,0 +1,439 @@
+---
+title: "Chunking & Metadata Strategies"
+description: "Different chunking strategies and how to use them"
+sidebarTitle: "Chunking & Metadata Strategies"
+icon: "book"
+---
+## The Chunking Problem
+
+Documents are long. LLM context windows are limited (even at 128K tokens). You must split documents into chunks, but how?
+
+**The core tension:**
+- **Small chunks (100-200 tokens):** Precise retrieval, but lose context
+- **Large chunks (1000+ tokens):** Keep context, but dilute relevance signal
+- **The sweet spot:** Depends on your use case
+
+## Chunking Strategies
+
+### 1. Fixed-Size Chunking (Simplest)
+
+Split by character or token count with overlap.
+
+```python
+def fixed_size_chunking(
+    text: str, 
+    chunk_size: int = 500,  # Characters
+    overlap: int = 50
+) -> list[str]:
+    """
+    Simple fixed-size chunking with overlap.
+    Overlap preserves context at boundaries.
+    """
+    chunks = []
+    start = 0
+    
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end]
+        chunks.append(chunk)
+        start += chunk_size - overlap  # Step back for overlap
+    
+    return chunks
+
+# Example
+doc = "RAG is a powerful technique. It combines retrieval with generation..." * 100
+chunks = fixed_size_chunking(doc, chunk_size=200, overlap=50)
+print(f"Created {len(chunks)} chunks from {len(doc)} characters")
+```
+
+**Pros:**
+- Simple to implement
+- Predictable chunk sizes
+- Fast
+
+**Cons:**
+- May split mid-sentence or mid-concept
+- Ignores document structure
+- Same strategy for all document types
+
+**Use when:** Prototyping, homogeneous documents, speed matters most
+
+### 2. Semantic Chunking (Better)
+
+Split at semantic boundaries (paragraphs, sections).
+
+```python
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+def semantic_chunking(
+    text: str,
+    chunk_size: int = 1000,  # Target size in characters
+    chunk_overlap: int = 200
+) -> list[str]:
+    """
+    Split at semantic boundaries (newlines, periods).
+    Respects document structure better than fixed-size.
+    """
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        length_function=len,
+        separators=[
+            "\n\n",  # Paragraph breaks (preferred)
+            "\n",    # Line breaks
+            ". ",    # Sentences
+            " ",     # Words
+            ""       # Characters (fallback)
+        ]
+    )
+    
+    chunks = splitter.split_text(text)
+    return chunks
+
+# Example with structured text
+doc = """
+# Introduction
+RAG combines retrieval and generation.
+
+## How It Works
+First, relevant documents are retrieved.
+Then, an LLM generates based on retrieved context.
+
+## Benefits
+- Grounds responses in source documents
+- Reduces hallucinations
+- Enables source citation
+"""
+
+chunks = semantic_chunking(doc, chunk_size=100)
+for i, chunk in enumerate(chunks):
+    print(f"Chunk {i + 1}:\n{chunk}\n")
+
+# Output preserves section boundaries
+```
+
+**Pros:**
+- Respects semantic boundaries
+- Keeps related content together
+- Better retrieval quality
+
+**Cons:**
+- Variable chunk sizes
+- More complex to implement
+- Still may split important concepts
+
+**Use when:** General-purpose RAG, varied document types, quality > speed
+
+### 3. Document Structure-Aware (Production)
+
+Use document structure (headers, sections, list items) to guide chunking.
+
+```python
+from bs4 import BeautifulSoup
+from typing import List, Dict
+
+def structure_aware_chunking(
+    html: str,
+    max_chunk_size: int = 800
+) -> List[Dict[str, str]]:
+    """
+    Chunk based on HTML structure (headers, sections).
+    Maintains hierarchical context for each chunk.
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    chunks = []
+    
+    # Track current section context
+    current_context = []
+    
+    for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li']):
+        # Update context when hitting headers
+        if element.name in ['h1', 'h2', 'h3']:
+            level = int(element.name[1])  # h1=1, h2=2, h3=3
+            current_context = current_context[:level-1]  # Trim deeper levels
+            current_context.append(element.get_text())
+        
+        # For content elements, create chunk with context
+        elif element.name in ['p', 'li']:
+            content = element.get_text()
+            
+            # Build chunk with hierarchical context
+            chunk_text = " > ".join(current_context) + "\n\n" + content
+            
+            chunks.append({
+                "content": chunk_text,
+                "metadata": {
+                    "section_path": " > ".join(current_context),
+                    "element_type": element.name
+                }
+            })
+    
+    return chunks
+
+# Example with technical documentation
+html = """
+<h1>API Reference</h1>
+<h2>Authentication</h2>
+<p>Use Bearer token in Authorization header.</p>
+<h2>Endpoints</h2>
+<h3>GET /users</h3>
+<p>Returns list of users. Requires admin role.</p>
+<h3>POST /users</h3>
+<p>Creates new user. Request body must include email and name.</p>
+"""
+
+chunks = structure_aware_chunking(html)
+for chunk in chunks:
+    print(f"Section: {chunk['metadata']['section_path']}")
+    print(f"Content: {chunk['content'][:100]}...")
+    print()
+
+# Output shows full context path for each chunk
+```
+
+**Pros:**
+- Preserves document hierarchy
+- Each chunk has full context path
+- Excellent for technical docs, APIs
+- Enables section-based filtering
+
+**Cons:**
+- Requires structured input (HTML, Markdown)
+- Complex implementation
+- Overhead of metadata storage
+
+**Use when:** Technical documentation, legal contracts, hierarchical content
+
+## Chunking Guidelines by Document Type
+
+| Document Type | Strategy | Chunk Size | Overlap | Why |
+|---------------|----------|------------|---------|-----|
+| Blog posts | Semantic | 800-1000 char | 200 | Respect paragraphs |
+| Technical docs | Structure-aware | 600-800 char | 150 | Maintain hierarchy |
+| Legal contracts | Structure-aware | 1000-1500 char | 300 | Keep clauses intact |
+| Chat transcripts | Semantic | 500-700 char | 100 | Conversation turns |
+| Research papers | Structure-aware | 1000-1200 char | 200 | Section context |
+| Product manuals | Structure-aware | 600-800 char | 150 | Step-by-step clarity |
+
+## Metadata: The Secret Weapon
+
+Good metadata transforms retrieval quality. Don't just store text—store context.
+
+### Essential Metadata Fields
+
+```python
+from datetime import datetime
+from typing import Dict, Any
+
+class DocumentChunk:
+    """Production-grade chunk with comprehensive metadata."""
+    
+    def __init__(
+        self,
+        content: str,
+        metadata: Dict[str, Any]
+    ):
+        self.content = content
+        self.metadata = metadata
+        self.validate_metadata()
+    
+    def validate_metadata(self):
+        """Ensure required metadata is present."""
+        required = ['source', 'chunk_id', 'created_at']
+        missing = [f for f in required if f not in self.metadata]
+        if missing:
+            raise ValueError(f"Missing metadata: {missing}")
+    
+    @classmethod
+    def from_document(
+        cls,
+        content: str,
+        source: str,
+        chunk_index: int,
+        total_chunks: int,
+        **extra_metadata
+    ) -> 'DocumentChunk':
+        """Factory method with standard metadata."""
+        metadata = {
+            # Required metadata
+            'source': source,  # e.g., "docs/api-guide.md"
+            'chunk_id': f"{source}_{chunk_index}",
+            'created_at': datetime.now().isoformat(),
+            
+            # Chunk context
+            'chunk_index': chunk_index,
+            'total_chunks': total_chunks,
+            
+            # Domain-specific (examples)
+            'document_type': extra_metadata.get('document_type'),
+            'author': extra_metadata.get('author'),
+            'last_modified': extra_metadata.get('last_modified'),
+            'section': extra_metadata.get('section'),
+            'language': extra_metadata.get('language', 'en'),
+            
+            # Quality signals
+            'word_count': len(content.split()),
+            'char_count': len(content)
+        }
+        
+        return cls(content, metadata)
+
+# Example: Processing a technical document
+chunk = DocumentChunk.from_document(
+    content="The /users endpoint returns a list of all users...",
+    source="docs/api-reference.md",
+    chunk_index=5,
+    total_chunks=42,
+    document_type="api_documentation",
+    section="Endpoints > User Management",
+    last_modified="2025-01-15"
+)
+
+# Now you can filter retrieval by metadata
+# e.g., "Only search API docs modified after 2025-01-01"
+```
+
+### Using Metadata for Filtered Retrieval
+
+```python
+# Filtered retrieval with Chroma
+collection.query(
+    query_texts=["How do I authenticate?"],
+    n_results=5,
+    where={
+        "$and": [
+            {"document_type": {"$eq": "api_documentation"}},
+            {"section": {"$in": ["Authentication", "Security"]}}
+        ]
+    }
+)
+
+# This dramatically improves precision:
+# - Excludes irrelevant document types
+# - Focuses on specific sections
+# - Enables domain-specific retrieval
+```
+
+## The Metadata Strategy
+
+**Always include:**
+- Source identifier (file path, URL, database ID)
+- Timestamp (creation/modification)
+- Chunk position (index, total chunks)
+
+**Include when relevant:**
+- Author/department (for access control)
+- Document type/category (for filtering)
+- Section/hierarchy (for context)
+- Language (for multilingual)
+- Quality scores (for ranking)
+- Version (for audit trails)
+
+**Storage overhead:** Small per chunk but depends on which metadata fields you persist
+**Retrieval benefit:** Good metadata filtering can substantially improve precision; impact varies by corpus and evaluation
+
+## In Production: Chunking Optimization
+
+**The Pipeline:**
+```python
+from typing import List, Iterator
+import hashlib
+
+class ProductionChunkingPipeline:
+    """End-to-end chunking with optimization."""
+    
+    def __init__(self, strategy: str = "semantic"):
+        self.strategy = strategy
+        self.chunk_cache = {}  # Cache for identical documents
+    
+    def process_document(
+        self,
+        content: str,
+        source: str,
+        **metadata
+    ) -> List[DocumentChunk]:
+        """Process a single document into optimized chunks."""
+        
+        # Step 1: Check cache (avoid reprocessing identical docs)
+        doc_hash = hashlib.md5(content.encode()).hexdigest()
+        if doc_hash in self.chunk_cache:
+            return self.chunk_cache[doc_hash]
+        
+        # Step 2: Apply chunking strategy
+        if self.strategy == "semantic":
+            raw_chunks = semantic_chunking(content)
+        elif self.strategy == "structure_aware":
+            raw_chunks = structure_aware_chunking(content)
+        else:
+            raw_chunks = fixed_size_chunking(content)
+        
+        # Step 3: Create DocumentChunk objects with metadata
+        chunks = [
+            DocumentChunk.from_document(
+                content=chunk,
+                source=source,
+                chunk_index=i,
+                total_chunks=len(raw_chunks),
+                **metadata
+            )
+            for i, chunk in enumerate(raw_chunks)
+        ]
+        
+        # Step 4: Quality filtering (remove tiny/empty chunks)
+        chunks = [c for c in chunks if c.metadata['word_count'] >= 20]
+        
+        # Step 5: Cache for reuse
+        self.chunk_cache[doc_hash] = chunks
+        
+        return chunks
+    
+    def process_batch(
+        self,
+        documents: Iterator[tuple[str, str]],  # (content, source)
+        batch_size: int = 100
+    ) -> Iterator[List[DocumentChunk]]:
+        """Process documents in batches for efficiency."""
+        batch = []
+        
+        for content, source in documents:
+            chunks = self.process_document(content, source)
+            batch.extend(chunks)
+            
+            # Yield batch when size reached
+            if len(batch) >= batch_size:
+                yield batch
+                batch = []
+        
+        # Yield remaining
+        if batch:
+            yield batch
+
+# Usage in production
+pipeline = ProductionChunkingPipeline(strategy="semantic")
+
+# Process large corpus
+documents = load_documents("./corpus")  # Generator, not list (memory efficient)
+
+for chunk_batch in pipeline.process_batch(documents):
+    # Store batch in vector DB
+    store_chunks(chunk_batch)
+    print(f"Processed {len(chunk_batch)} chunks")
+```
+
+## Practical Exercise (15 min)
+
+Experiment with chunking strategies:
+
+```python
+# Provided: starter/lesson_2.3/chunk_comparison.py
+# Your task:
+# 1. Load 'Assets/paul_graham_essay.txt'
+# 2. Chunk with: fixed-size (200 char), semantic (500 char), structure-aware (if converted to HTML/Markdown)
+# 3. For each strategy, evaluate:
+#    - How many chunks produced?
+#    - Are section boundaries respected?
+#    - Does any important info get split awkwardly?
+# 4. Pick best strategy for this document type and justify
+
+# Expected insight: Semantic chunking preserves paragraph/context well for essays; structure-aware helps if headings are available
+```

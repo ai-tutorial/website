@@ -1,0 +1,93 @@
+---
+title: "Reranking in Practice"
+description: "How to implement reranking in a RAG system"
+sidebarTitle: "Reranking in Practice"
+icon: "book"
+---
+## Why rerankers?
+- First-pass retrievers (BM25/vectors) maximize recall but include noise.
+- Cross-encoder rerankers rescore a small candidate set to maximize precision.
+- Pattern: fast recall → precise rerank. (Practitioner guidance, 2025)
+
+## Minimal rerank pipeline
+[Full runnable example of minimal rerank pipeline](https://colab.research.google.com/drive/12Kbj7Acd4rC3Ra1wW08_eBHWcohmZ8qa?usp=drive_link)
+
+```python
+# Requires: pip install sentence-transformers
+from sentence_transformers import CrossEncoder
+from typing import List, Dict
+
+class CrossEncoderReranker:
+    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
+        """
+        Lightweight cross-encoder (CPU-capable). Swap for larger models if you have GPU budget
+        e.g., "BAAI/bge-reranker-large" for higher precision at higher latency.
+        """
+        self.model = CrossEncoder(model_name)
+
+    def rerank(
+        self,
+        query: str,
+        candidates: List[Dict],   # [{document: str, score: float, rank: int}, ...]
+        top_k: int = 5
+    ) -> List[Dict]:
+        """Score (query, document) pairs and return top_k by cross-encoder score."""
+        pairs = [(query, c["document"]) for c in candidates]
+        ce_scores = self.model.predict(pairs).tolist()
+
+        rescored = []
+        for c, s in zip(candidates, ce_scores):
+            item = dict(c)
+            item["rerank_score"] = float(s)
+            rescored.append(item)
+
+        rescored.sort(key=lambda x: x["rerank_score"], reverse=True)
+        for i, item in enumerate(rescored[:top_k]):
+            item["rerank_rank"] = i + 1
+        return rescored[:top_k]
+```
+
+## Integrating with your retriever
+```python
+# Assume you have a first-pass retriever (BM25, Semantic, or Hybrid)
+# Example: use the HybridRetriever from Lesson 2.2 to get top-50
+def retrieve_then_rerank(query: str, hybrid_retriever, top_first_pass=50, top_final=5):
+    # Step 1: First-pass (maximize recall)
+    candidates = hybrid_retriever.search(query, top_k=top_first_pass)
+
+    # Step 2: Cross-encoder rerank (maximize precision)
+    reranker = CrossEncoderReranker()
+    top_docs = reranker.rerank(query, candidates, top_k=top_final)
+    return top_docs
+```
+
+**Latency/cost tips:**
+- Keep candidate pool small (e.g., 20-100) and final top_k small (3-5).
+- Run first-pass BM25+dense in parallel; batch rerank scoring for throughput.
+- Log latency and token/call costs during the lab.
+
+## Practical Exercise (15 min)
+```python
+# Your task:
+# 0) Corpus: use chunks from 'Assets/paul_graham_essay.txt' (treat each chunk as a doc)
+# 1) Use HybridRetriever to get top-50 for 5 queries.
+# 2) Rerank with CrossEncoderReranker to top-5.
+# 3) Compute NDCG@10, MRR before vs. after reranking.
+# 4) Record end-to-end latency; note candidate pool size impact.
+#
+# Expected insights:
+# - Reranking lifts precision-focused metrics.
+# - Most gains come from better ordering of already-relevant docs.
+# - Larger candidate pools help recall but increase latency.
+#
+# References:
+# - Pinecone Learn (2025): https://www.pinecone.io/learn/retrieval-augmented-generation/
+# - Practitioner write-up (2025): https://dj3dw.com/blog/the-power-of-reranking-in-retrieval-augmented-generation-rag-systems/
+```
+
+### Production checklist callout
+- Retrieve top-50 in parallel (BM25 + embeddings) → cross-encoder rerank top-20 → keep top-5 for generation.
+- Log per-stage latency and cost; adjust candidate pool and rerank depth to stay within budget.
+
+---
+

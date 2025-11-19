@@ -1,0 +1,242 @@
+---
+title: "Model Selection & Cost Optimization"
+description: "Select the appropriate model and optimize costs through caching"
+sidebarTitle: "Model Selection & Cost Optimization"
+icon: "book"
+---
+
+## Model Selection Decision Framework
+
+**The Model Landscape (January 2025):**
+
+| Model | Context | Cost (input/output per 1M tokens) | Best For |
+|-------|---------|-----------------------------------|----------|
+| GPT-4 Turbo | 128K | $10 / $30 | Complex reasoning, structured output |
+| GPT-3.5 Turbo | 16K | $0.50 / $1.50 | Simple tasks, high volume |
+| Claude Sonnet 4.5 | 200K | $3 / $15 | Long documents, nuanced analysis |
+| Claude Haiku | 200K | $0.25 / $1.25 | Fast classification, simple extraction |
+| Gemini Pro 1.5 | 2M | $1.25 / $5 | Massive context, multimodal |
+| Llama 3 70B | Varies | Self-hosted | On-premise requirements |
+
+**Decision Tree:**
+
+```
+Is the task simple (classification, basic extraction)?
+├─ Yes → Use fastest/cheapest (Haiku, GPT-3.5)
+└─ No → Continue
+
+Do you need >100K tokens of context?
+├─ Yes → Claude Sonnet or Gemini Pro
+└─ No → Continue
+
+Do you need structured JSON output?
+├─ Yes → GPT-4
+└─ No → Claude Sonnet (better prose)
+
+Is cost critical (high volume)?
+├─ Yes → Consider model cascading (section 5.3)
+└─ No → Use best model for quality
+```
+
+As of publication. Verify latest pricing/context on vendor pages: [OpenAI pricing](https://openai.com/api/pricing), [Anthropic pricing](https://www.anthropic.com/pricing), and [Google Gemini pricing/models](https://ai.google.dev/pricing).
+
+## Prompt Caching: 50-90% Cost Reduction
+
+**The Problem:**
+You're sending the same 50K token knowledge base with EVERY request.
+
+```python
+# Without caching
+for query in queries:  # 10,000 queries
+    prompt = f"{knowledge_base}\n\nQuery: {query}"  # 50K + 100 tokens
+    response = llm.generate(prompt)
+    
+# Cost: 10,000 * 50,100 tokens = 501M input tokens
+# At $3/1M: $1,503
+```
+
+**The Solution: Prompt Caching**
+
+Mark reusable parts of your prompt for caching:
+[Full runnable prompt caching with OpenAI notebook](https://colab.research.google.com/drive/1jmckN8ADg_J77eTMef1J-6w07d8O2B2o?usp=drive_link)
+```python
+# OpenAI Caching (GPT-4)
+# Automated caching when system prompts above 1024 tokens with customization options.
+# https://platform.openai.com/docs/guides/prompt-caching/how-it-works
+response = openai.chat.completions.create(
+    model="gpt-4-turbo",
+    messages=[
+        {
+            "role": "system",
+            "content": knowledge_base  # This gets cached
+        },
+        {
+            "role": "user",
+            "content": query  # This changes
+        }
+    ]
+)
+
+# First call: Full cost
+# Subsequent calls (within 5-10 min): 50% reduction on cached portion
+```
+
+[Full runnable prompt caching with Anthropic notebook](https://colab.research.google.com/drive/17lau05pMPdd6HBPv64_u0DFsl7cxoazk?usp=drive_link)
+```python
+# Anthropic Caching (Claude)
+# Cache control needs to be specified
+# https://docs.claude.com/en/docs/build-with-claude/prompt-caching
+
+response = anthropic.messages.create(
+    model="claude-sonnet-4.5-20250929",
+    system=[
+        {
+            "type": "text",
+            "text": knowledge_base,
+            "cache_control": {"type": "ephemeral"}  # Cache this
+        }
+    ],
+    messages=[{"role": "user", "content": query}]
+)
+
+# Cache hit: 90% reduction on cached tokens
+# TTL: 5 minutes (Anthropic) - can be extended to 1 hour
+```
+
+**Production Economics:**
+
+```python
+# Scenario: Customer support chatbot
+# - Knowledge base: 50K tokens
+# - Avg conversation: 5 queries
+# - Cache hit rate: 80% (users ask follow-ups quickly)
+
+without_caching = 10_000 queries * 50K tokens * $3/1M = $1,500
+with_caching = (
+    (10_000 * 0.2) * 50K  # Cache misses (20%)
+    + (10_000 * 0.8) * 5K  # Cache hits (90% reduction)
+) * $3/1M = $450
+
+savings = $1,050 (70% reduction)
+```
+
+**Best Practices:**
+1. Cache static content (knowledge bases, system prompts)
+2. Don't cache user input (changes every request)
+3. Structure prompts with cacheable parts first
+4. Monitor cache hit rates
+5. Adjust query patterns to maximize cache hits
+
+## Model Cascading: Using Cheap Models First
+
+**The Strategy:**
+- Try cheap/fast model first
+- If uncertain, escalate to expensive/smart model
+- Can reduce cost while maintaining quality when confidence gating is reliable
+
+**Implementation:**
+[Full runnable model cascading notebook](https://colab.research.google.com/drive/130IajWW66WiY2KbZ4p5fhi1P1ohokyTR?usp=drive_link)
+```python
+async def cascaded_classification(
+    message: str,
+    confidence_threshold: float = 0.85
+) -> dict:
+    """
+    Try Haiku first. If confident, done.
+    Otherwise, escalate to Sonnet.
+    """
+    
+    # Step 1: Fast model
+    haiku_prompt = f"""
+Classify sentiment: {message}
+Output: positive|neutral|negative
+Confidence: [0.0-1.0]
+"""
+    
+    haiku_response = await claude_haiku.generate(haiku_prompt)
+    
+    # Parse response
+    sentiment = extract_sentiment(haiku_response)
+    confidence = extract_confidence(haiku_response)
+    
+    # Step 2: Check confidence
+    if confidence >= confidence_threshold:
+        return {
+            "sentiment": sentiment,
+            "model": "haiku",
+            "cost": 0.0003  # Approximate
+        }
+    
+    # Step 3: Escalate to smart model
+    sonnet_prompt = f"""
+Classify sentiment: {message}
+
+The fast model was uncertain. Please provide a careful analysis.
+"""
+    
+    sonnet_response = await claude_sonnet.generate(sonnet_prompt)
+    sentiment = extract_sentiment(sonnet_response)
+    
+    return {
+        "sentiment": sentiment,
+        "model": "sonnet",
+        "cost": 0.005  # Approximate
+    }
+
+# Results from production:
+# - 70% handled by Haiku
+# - 30% escalated to Sonnet
+# - Average cost: (0.7 * $0.0003) + (0.3 * $0.005) = $0.0018
+# - vs. Sonnet only: $0.005
+# - Savings: 64%
+```
+
+**When Cascading Works:**
+- High-volume, similar tasks
+- Clear confidence signals (some models provide log probabilities)
+- Cost pressure but quality requirements
+
+**When to Avoid:**
+- Low latency requirements (cascading adds delay)
+- Tasks where confidence is hard to measure
+- Low volume (not worth complexity)
+
+**In Production:**
+
+| Factor | Single model | Cascading |
+|--------|--------------|-----------|
+| Accuracy | Stable, predictable | Depends on routing quality |
+| Latency | Lower (one call) | Higher (fallback adds calls) |
+| Cost | Higher per call | Lower on average if many low-cost wins |
+| Complexity | Lower | Higher (routing, monitoring) |
+
+Choose cascading when cost pressure is high and confidence signals are trustworthy; otherwise prefer simplicity.
+
+## TOON for Token-Efficient Context
+
+**Why:** For uniform arrays of objects with primitive fields, TOON reduces token usage (often 30-60% vs JSON) and is easy for LLMs to parse.
+
+**When TOON excels:**
+- Uniform tabular arrays (same keys, primitive values).  
+- Large lists where repeated JSON keys dominate cost.
+
+**When to prefer JSON:**
+- Mixed/nested structures, varying field sets, or complex types.
+
+**Example (input as TOON):**
+[Full runnable TOON notebook](https://colab.research.google.com/drive/15raJmSwjprLRf7BkfuhLU2srvZ88bhcB?usp=drive_link)
+```
+items[2]{sku,name,qty,price}:
+  A1,Widget,2,9.99
+  B2,Gadget,1,14.5
+```
+
+**Prompting the model to output TOON:**
+```
+Data is in TOON (2-space indent; arrays show [N]{fields}).
+Return ONLY TOON with the same header; set [N] to match rows.
+```
+
+**Practical exercise:** Convert your JSON examples to TOON and compare input token counts and task accuracy.
+
+See: [TOON repository](https://github.com/toon-format/toon) and [official site/spec](https://toonformat.dev)

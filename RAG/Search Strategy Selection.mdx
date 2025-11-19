@@ -1,0 +1,285 @@
+---
+title: "Search Strategy Selection"
+description: "Different search strategies and when to use them"
+sidebarTitle: "Search Strategy Selection"
+icon: "book"
+---
+
+## Full-Text Search (BM25)
+
+**How it works:** Statistical matching on exact terms and their frequencies.
+
+**Strengths:**
+- Low-latency on well-indexed corpora (actual latency depends on engine, index, and hardware)
+- Excellent for exact matches and rare terms
+- No model training required
+- Interpretable results
+
+**Weaknesses:**
+- Misses synonyms ("car" ≠ "automobile")
+- Struggles with conceptual queries
+- Language-specific (requires stemming/lemmatization)
+
+**Best for:**
+- Legal document search (exact statute numbers)
+- Code search (function names, error codes)
+- Product SKU lookup
+- Any domain with precise terminology
+
+[Full runnable example of BM25 retrieval](https://colab.research.google.com/drive/1tCa4TlqtYkgCBGw7bT2ynYwyFCiapyDo?usp=drive_link)
+
+```python
+# BM25 with rank-bm25 library
+from rank_bm25 import BM25Okapi
+import numpy as np
+
+class BM25Retriever:
+    def __init__(self, documents: list[str]):
+        """Initialize BM25 with document corpus."""
+        # Tokenize documents (simple whitespace for demo)
+        self.tokenized_corpus = [doc.lower().split() for doc in documents]
+        self.corpus = documents
+        self.bm25 = BM25Okapi(self.tokenized_corpus)
+    
+    def search(self, query: str, top_k: int = 5) -> list[dict]:
+        """Return top-k documents by BM25 score."""
+        tokenized_query = query.lower().split()
+        scores = self.bm25.get_scores(tokenized_query)
+        
+        # Get top-k indices
+        top_indices = np.argsort(scores)[-top_k:][::-1]
+        
+        return [
+            {
+                "document": self.corpus[i],
+                "score": scores[i],
+                "rank": rank + 1
+            }
+            for rank, i in enumerate(top_indices)
+        ]
+
+# Example: Legal search
+documents = [
+    "Section 230 of Communications Decency Act protects platforms...",
+    "The Digital Millennium Copyright Act (DMCA) Section 512...",
+    "GDPR Article 17 establishes the right to be forgotten..."
+]
+
+retriever = BM25Retriever(documents)
+results = retriever.search("Section 230 immunity")
+# Returns: High score for Section 230 document (exact match)
+```
+
+## Semantic Search (Embeddings)
+
+**How it works:** Converts text to vectors in semantic space; similar meaning = nearby vectors.
+
+**Strengths:**
+- Handles synonyms and paraphrasing
+- Works across languages (multilingual models)
+- Captures conceptual similarity
+- No query engineering needed
+
+**Weaknesses:**
+- Slower than BM25 (100-500ms for large collections)
+- Misses exact matches if semantically "boring"
+- Black box (hard to debug why something matched)
+- Requires GPU for large-scale indexing
+
+**Best for:**
+- Customer support (intent-based)
+- Research papers (conceptual queries)
+- Multilingual search
+- FAQ matching
+
+[Full runnable example of a simple RAG](https://colab.research.google.com/drive/15LHzIlsxR4W-bm-FOC2HKQCV5siKgK9P?usp=drive_link)
+
+```python
+# Semantic search with sentence-transformers
+from sentence_transformers import SentenceTransformer
+import chromadb
+
+class SemanticRetriever:
+    def __init__(self, documents: list[str], model_name: str = "all-MiniLM-L6-v2"):
+        """Initialize with embedding model and vector DB."""
+        self.model = SentenceTransformer(model_name)
+        self.client = chromadb.Client()
+        self.collection = self.client.create_collection(
+            name="semantic_search",
+            metadata={"hnsw:space": "cosine"}  # Cosine similarity
+        )
+        
+        # Embed and store documents
+        embeddings = self.model.encode(documents)
+        self.collection.add(
+            documents=documents,
+            embeddings=embeddings.tolist(),
+            ids=[f"doc_{i}" for i in range(len(documents))]
+        )
+    
+    def search(self, query: str, top_k: int = 5) -> list[dict]:
+        """Return top-k semantically similar documents."""
+        query_embedding = self.model.encode(query)
+        
+        results = self.collection.query(
+            query_embeddings=[query_embedding.tolist()],
+            n_results=top_k
+        )
+        
+        return [
+            {
+                "document": doc,
+                "score": 1 - dist,  # Convert distance to similarity
+                "rank": i + 1
+            }
+            for i, (doc, dist) in enumerate(
+                zip(results['documents'][0], results['distances'][0])
+            )
+        ]
+
+# Example: Customer support
+documents = [
+    "How to reset your password: Click 'Forgot Password' on login page",
+    "Password reset instructions: Visit login, select password recovery option",
+    "Refund policy: Returns accepted within 30 days with receipt"
+]
+
+retriever = SemanticRetriever(documents)
+results = retriever.search("I can't log in")
+# Returns: Both password reset docs (semantic match to login problem)
+```
+
+## Hybrid Search: Best of Both Worlds
+
+**The Production Standard:** Combine BM25 (precision) + embeddings (recall).
+
+**Why hybrid wins:**
+- Catches exact matches BM25 excels at
+- Catches semantic matches embeddings excel at
+- Often improves retrieval quality across diverse corpora (magnitude varies by dataset and metric)
+- Commonly used in production systems
+
+**Implementation approaches:**
+1. **Weighted fusion:** Combine scores with learned weights
+2. **Rank fusion:** Merge ranked lists (Reciprocal Rank Fusion)
+3. **Two-stage:** BM25 first pass → semantic reranking
+
+[Full runnable example of hybrid search with RRF](https://colab.research.google.com/drive/1v4V5IM0CBWJh5E27hBux4uS0lrvcXPtl?usp=drive_link) and [hybrid with RRF and cross-encoder](https://colab.research.google.com/drive/1tCa4TlqtYkgCBGw7bT2ynYwyFCiapyDo?usp=drive_link)
+
+```python
+# Hybrid search with reciprocal rank fusion
+class HybridRetriever:
+    def __init__(self, documents: list[str]):
+        """Initialize both BM25 and semantic retrievers."""
+        self.bm25 = BM25Retriever(documents)
+        self.semantic = SemanticRetriever(documents)
+        self.documents = documents
+    
+    def reciprocal_rank_fusion(
+        self, 
+        bm25_results: list[dict], 
+        semantic_results: list[dict],
+        k: int = 60  # RRF constant
+    ) -> list[dict]:
+        """
+        Fuse results using Reciprocal Rank Fusion.
+        RRF score = sum(1 / (k + rank)) for each result list.
+        """
+        scores = {}
+        
+        # Add BM25 scores
+        for result in bm25_results:
+            doc = result['document']
+            scores[doc] = scores.get(doc, 0) + 1 / (k + result['rank'])
+        
+        # Add semantic scores
+        for result in semantic_results:
+            doc = result['document']
+            scores[doc] = scores.get(doc, 0) + 1 / (k + result['rank'])
+        
+        # Sort by combined score
+        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        
+        return [
+            {"document": doc, "score": score, "rank": i + 1}
+            for i, (doc, score) in enumerate(ranked)
+        ]
+    
+    def search(self, query: str, top_k: int = 5) -> list[dict]:
+        """Hybrid search with RRF fusion."""
+        # Get results from both retrievers
+        bm25_results = self.bm25.search(query, top_k=20)
+        semantic_results = self.semantic.search(query, top_k=20)
+        
+        # Fuse and return top-k
+        fused = self.reciprocal_rank_fusion(bm25_results, semantic_results)
+        return fused[:top_k]
+
+# Example showing hybrid's advantage
+documents = [
+    "Python 3.11 introduced exception groups for better error handling",
+    "Error handling in Python uses try-except blocks",
+    "JavaScript has try-catch for exception management"
+]
+
+hybrid = HybridRetriever(documents)
+
+# Query 1: Exact match (BM25 wins)
+results = hybrid.search("Python 3.11 features")
+# Returns: Doc 1 ranked highest (exact version match)
+
+# Query 2: Conceptual (semantic wins)  
+results = hybrid.search("How do I handle errors in Python?")
+# Returns: Doc 2 ranked highest (semantic match to error handling)
+
+# Query 3: Hybrid helps
+results = hybrid.search("Python exception handling")
+# Returns: Docs 1 & 2 both highly ranked (BM25 + semantic agree)
+```
+
+## When to Use Each Strategy
+
+| Query Type | Best Strategy | Example |
+|------------|---------------|---------|
+| Exact terminology | BM25 | "ICD-10 code M54.5" (medical) |
+| Product codes/IDs | BM25 | "SKU-2847-B" |
+| Conceptual question | Semantic | "How do I improve sleep?" |
+| Paraphrased intent | Semantic | "Can't sign in" → password reset |
+| Mixed (most production) | Hybrid | "Latest Python security updates" |
+
+## In Production
+
+**Cost Impact:**
+- BM25: ~$0.0001 per query (compute only, no API calls)
+- Semantic: ~$0.001-0.01 per query (embedding API + vector DB)
+- Hybrid: ~$0.002-0.015 per query (both methods)
+
+**Performance:**
+- BM25: typically lower latency at moderate scales (engine- and hardware-dependent)
+- Semantic: generally higher latency than BM25; depends on index type and hardware  
+- Hybrid: adds overhead; parallel execution helps
+
+**Accuracy (typical):**
+- BM25 alone: 70-75% relevant results
+- Semantic alone: 72-78% relevant results
+- Hybrid: 85-92% relevant results
+
+**Recommendation:** Start with hybrid unless you have strict latency requirements (\<50ms) or very clear use case for BM25-only.
+
+## Practical Exercise
+
+Implement and compare all three approaches on the same dataset:
+
+```python
+# Provided starter code: starter/lesson_2.2/compare_search.py
+# Your task:
+# 1. Load and chunk the essay at 'Assets/paul_graham_essay.txt'
+# 2. Build a small corpus from chunks (treat each chunk as a document)
+# 3. Run 5 queries through BM25, Semantic, and Hybrid over the chunks
+# 4. Compare results per query; note where each strategy wins
+
+# Expected discoveries:
+# - BM25 excels on: exact phrases and names in the essay
+# - Semantic excels on: paraphrased concepts (e.g., motivations, themes)
+# - Hybrid consistently strong across query types
+```

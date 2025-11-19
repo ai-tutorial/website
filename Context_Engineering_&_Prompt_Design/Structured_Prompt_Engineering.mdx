@@ -1,0 +1,298 @@
+---
+title: "Structured Prompt Engineering"
+description: "Design structured prompts that often reduce hallucinations"
+sidebarTitle: "Structured Prompt Engineering"
+icon: "book"
+---
+
+## The Anatomy of a Production Prompt
+
+**The Core Components:**
+
+1. **Role/Persona** - Sets behavior and expertise level
+2. **Context** - Background information needed
+3. **Instructions** - What to do, step by step
+4. **Constraints** - What NOT to do, output format
+5. **Examples** - Few-shot demonstrations (optional)
+6. **Input** - The actual data to process
+
+**Basic Template:**
+[Full runnable structured prompt notebook](https://colab.research.google.com/drive/15hKw-5PONe0DKkDmYVfLviFJUoK3aBcn?usp=drive_link)
+```python
+prompt = """
+[ROLE]
+You are an experienced customer support specialist for AcmeCo.
+
+[CONTEXT]
+AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, 
+no questions asked. After 30 days, refunds require manager approval.
+
+[INSTRUCTIONS]
+Analyze the customer message below and:
+1. Identify the customer's primary issue
+2. Determine if this qualifies for automatic refund
+3. Suggest next steps for the support team
+
+[CONSTRAINTS]
+- Be empathetic but concise
+- Never promise refunds outside policy
+- If uncertain, recommend manager review
+
+[INPUT]
+Customer message: {customer_message}
+"""
+```
+
+**Practice Check:**
+- Write a prompt that includes role, context, instructions, constraints, examples, and input.
+- Expected: All 6 components present with explicit constraints and a clear output schema.
+
+**In Production:**
+- Cost impact: Clear output schemas reduce parsing errors and retries (5–15% fewer re-runs).
+- Reliability: Structured prompts are easier to validate and monitor.
+- Performance: Slight token overhead; mitigate with caching (see 5.2).
+
+## XML Tags: Your Secret Weapon
+
+**Why XML Tags Work:**
+- LLMs were trained on HTML/XML (web data)
+- Tags create clear boundaries in the context
+- 40-60% reduction in hallucinations in controlled studies
+
+**Before (Ambiguous):**
+```python
+prompt = f"""
+System: You are a helpful assistant.
+User question: {user_input}
+Background context: {knowledge_base}
+Previous conversation: {history}
+"""
+# LLM might confuse where context ends and question begins
+```
+
+**After (Clear):**
+[Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
+```python
+prompt = f"""
+<role>You are a helpful assistant</role>
+
+<context>
+<knowledge_base>
+{knowledge_base}
+</knowledge_base>
+
+<conversation_history>
+{history}
+</conversation_history>
+</context>
+
+<user_question>
+{user_input}
+</user_question>
+"""
+# Crystal clear boundaries
+```
+
+**In Production:**
+**Cost Impact:** Tagging adds tokens; mitigate with caching (50–90% on static parts).
+**Reliability:** Clear boundaries reduce off-context responses; improves evaluability.
+**Performance:** Slight overhead; offset by fewer retries and clearer parsing.
+**Real Example:** Teams report 40–60% fewer hallucinations when tags + validation are combined.
+
+**Pattern:**
+```python
+def format_docs(docs):
+    return "\n".join(f"- {doc}" for doc in docs)
+
+def build_support_prompt(query: str, customer_data: dict, relevant_docs: list) -> str:
+    return f"""
+<system_role>
+You are AcmeCo's senior customer support specialist.
+</system_role>
+
+<policy_documents>
+{format_docs(relevant_docs)}
+</policy_documents>
+
+<customer_context>
+<account_tier>{customer_data['tier']}</account_tier>
+<account_age_days>{customer_data['age_days']}</account_age_days>
+<previous_issues>{customer_data['issue_count']}</previous_issues>
+</customer_context>
+
+<customer_query>
+{query}
+</customer_query>
+
+<response_instructions>
+Analyze the query and provide:
+1. Issue category (billing, technical, account)
+2. Urgency level (low, medium, high)
+3. Recommended action
+4. Suggested response to customer
+
+Output as JSON with keys: category, urgency, action, response
+</response_instructions>
+"""
+```
+
+## Few-Shot Examples: Teaching by Showing
+
+**When to Use Few-Shot:**
+- Complex or subjective tasks
+- Specific output format required
+- Edge cases need clarification
+
+**Pattern:**
+[Full runnable few-shot examples notebook](https://colab.research.google.com/drive/1dCxVNAqgUY8bTiLXv32dvH5NyHSfZ67r?usp=drive_link)
+```python
+prompt = f"""
+<task>Classify customer sentiment</task>
+
+<examples>
+<example>
+<input>Your product is amazing! Best purchase ever.</input>
+<output>positive</output>
+</example>
+
+<example>
+<input>It's okay, does the job but nothing special.</input>
+<output>neutral</output>
+</example>
+
+<example>
+<input>Terrible quality. Broke after one week. Demanding refund!</input>
+<output>negative</output>
+</example>
+</examples>
+
+<input_to_classify>
+{customer_message}
+</input_to_classify>
+"""
+```
+
+**Quality Over Quantity:**
+- 3-5 examples usually enough
+- More examples = more tokens = higher cost
+- Examples should cover edge cases, not just obvious ones
+
+**Production Note:**
+Store examples separately and inject only relevant ones:
+
+```python
+example_db = {
+    "classification": [...],
+    "extraction": [...],
+    "summarization": [...]
+}
+
+def get_relevant_examples(task_type: str, limit: int = 3):
+    return example_db[task_type][:limit]
+```
+
+## Model-Specific Optimization
+
+Different models have different "personalities." Here's what works best for each:
+
+### GPT-4 / GPT-4 Turbo
+[Full runnable model-specific optimization notebook](https://colab.research.google.com/drive/19Ge-7okrUJ0mLOxAe0sY6QkV07X9njr0?usp=drive_link)
+```python
+# Strengths: Structured output, following complex instructions
+# Best practices:
+prompt = """
+{
+  "role": "senior_analyst",
+  "task": "financial_analysis",
+  "output_format": {
+    "summary": "string",
+    "key_metrics": ["string"],
+    "recommendation": "buy|hold|sell"
+  }
+}
+
+Input: {data}
+"""
+# GPT-4 excels at JSON, clear role definitions
+```
+
+### Claude (Sonnet/Opus)
+```python
+# Strengths: Natural language, complex reasoning, long context
+# Best practices:
+prompt = """
+<thinking>
+Let me work through this step by step...
+</thinking>
+
+[Your instructions here]
+"""
+# Claude benefits from explicit thinking blocks
+# Excellent with XML tags and markdown
+```
+
+### Gemini 1.5 Pro
+```python
+# Strengths: Massive context (2M tokens), multimodal
+# Best practices:
+prompt = """
+[Upload entire 500-page PDF]
+[Upload 10 images]
+[Provide conversation history]
+
+Based on ALL of the above context, answer: {query}
+"""
+# Many teams place the query at the end; validate per task (see Gemini prompting strategies)
+# Can handle entire codebases or document sets
+```
+
+## Structured Outputs with JSON Schemas
+
+**Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
+
+**Pattern:**
+[Full runnable structured outputs with JSON schemas notebook](https://colab.research.google.com/drive/1ivZiyimkc16BkvUYqEKtmd4xuvpLF8aU?usp=drive_link)
+```python
+import jsonschema
+
+CONTRACT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "parties": {"type": "array", "items": {"type": "string"}},
+        "key_dates": {"type": "array", "items": {"type": "string", "format": "date"}},
+        "obligations": {"type": "array", "items": {"type": "string"}},
+        "risk_flags": {"type": "array", "items": {"type": "string"}},
+        "summary": {"type": "string"}
+    },
+    "required": ["parties", "key_dates", "obligations", "risk_flags", "summary"],
+    "additionalProperties": False
+}
+
+PROMPT = f"""
+<task>Summarize and extract fields from the contract</task>
+
+<constraints>
+- Output valid JSON only (no markdown, no comments)
+- Conform EXACTLY to this JSON schema (no extra fields):
+{json.dumps(CONTRACT_SCHEMA, indent=2)}
+</constraints>
+
+<contract>
+{{contract_text}}
+</contract>
+"""
+
+def validate_output(json_text: str) -> dict:
+    data = json.loads(json_text)
+    jsonschema.validate(instance=data, schema=CONTRACT_SCHEMA)
+    return data
+```
+
+**Vendor features to explore:**
+- OpenAI structured outputs with `response_format` (JSON schema)
+- Anthropic tool-use/structure guidance
+- Gemini response schemas
+
+See: OpenAI Structured Outputs (2025), Anthropic Prompt Engineering (2025), Gemini Prompting Strategies (2025) in Additional Resources.
+
+---

@@ -1,0 +1,58 @@
+---
+title: "Recap & Resources"
+description: "Recap and resources for the Context Engineering & Prompt Design module"
+sidebarTitle: "Recap & Resources"
+icon: "cauldron"
+---
+## Key Takeaways
+
+1. **Context Engineering is Production Engineering**
+   - Structured prompts often reduce hallucinations (results vary)
+   - XML tags create clear boundaries
+   - Model selection and caching can materially reduce costs (magnitude depends on usage and pricing)
+
+2. **Advanced Techniques When They Matter**
+   - Chain-of-Thought: often improves reasoning; magnitude varies by task/model
+   - Self-Consistency: additional improvements reported; magnitude varies by task/model
+   - Extended Thinking: Enables debugging and transparency
+
+3. **Testing is Non-Negotiable**
+   - Create evaluation datasets
+   - Measure everything
+   - Iterate systematically
+   - A/B test in production
+
+4. **Production is Different from Prototyping**
+   - Versioning and rollback
+   - Monitoring and alerts
+   - Cost optimization
+   - Safety and validation
+
+## Common Pitfalls to Avoid
+
+❌ "Let me just try different prompts until something works"  
+✅ Create eval dataset first, then iterate systematically
+
+❌ "We'll optimize costs later"  
+✅ Design for caching from day one
+
+❌ "The model understands my intent"  
+✅ Be explicit. Models complete patterns, they don't read minds.
+
+❌ "This worked in testing, ship it"  
+✅ A/B test at 10%, then expand
+
+## Additional Resources
+
+### Essential Reading
+- DAIR.AI: [Prompt Engineering Guide](https://www.promptingguide.ai/) — Comprehensive reference
+- Manus: [Context Engineering for AI Agents](https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus)
+- Anthropic: [Prompt Engineering Techniques](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview)
+- OpenAI: [GPT Best Practices](https://platform.openai.com/docs/guides/prompt-engineering)
+- Google: [Gemini Prompting Strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies)
+
+### Tools to Explore
+- **LangSmith:** Prompt testing and evaluation
+- **LangFuse, Phoenix, Opik:** Monitoring and observability
+- **Weights & Biases:** Experiment tracking
+- **Helicone:** Cost monitoring and analytics

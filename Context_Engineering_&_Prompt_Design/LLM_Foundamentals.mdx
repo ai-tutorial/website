@@ -1,0 +1,147 @@
+---
+title: "LLM Fundamentals"
+description: "Understand what's actually happening when you call a model"
+sidebarTitle: "LLM Fundamentals"
+icon: "book"
+---
+## Hello World
+
+[Full runnable hello world notebook](https://colab.research.google.com/drive/1owGCyAAB5ptDKp2WfBg46zghbhFnn8sD?usp=sharing)
+```python
+
+response = completion(model="gpt-4o-mini", messages=[{"role": "user", "content": "Hello, how are you?"}])
+print(response)
+
+# Output:
+# {
+#   "choices": [
+#     {
+#       "message": {
+#         "content": "I'm doing great, thank you! How can I help you today?"
+#       }
+#     }
+#   ]
+# }
+```
+
+## How LLMs Process Your Input
+
+Before we write our first prompt, let's understand what's actually happening under the hood.
+
+**The Context Window: Your Working Memory**
+
+Think of an LLM's context window like RAM on your computer. Everything you send - your instructions, conversation history, documents - gets loaded into this window. The model can only "see" what fits inside.
+
+**Current Context Windows** (as of January 2025; verify latest on vendor pages below):
+- GPT-4: 128K tokens (~96K words)
+- Claude Sonnet 4.5: 200K tokens (~150K words)
+- Gemini 1.5 Pro: 2M tokens (~1.5M words)
+
+See vendor references: [OpenAI models](https://platform.openai.com/docs/models), [Anthropic pricing/models](https://www.anthropic.com/pricing), [Google Gemini models](https://ai.google.dev/gemini-api/docs/models).
+
+**Why This Matters:**
+A customer support agent handling a complex case might need:
+- 2K tokens: System instructions
+- 5K tokens: Company knowledge base excerpts
+- 10K tokens: Conversation history
+- 3K tokens: Customer account details
+
+That's 20K tokens before the LLM generates a single word. Multiply by thousands of requests, and you see why context management matters.
+
+**Token Economics:**
+```python
+# Real costs (approximate, as of Jan 2025)
+# GPT-4 pricing
+input_cost = 150_000 tokens * ($10 / 1M tokens) = $1.50
+output_cost = 3_000 tokens * ($30 / 1M tokens) = $0.09
+total_per_request = $1.59
+
+# At 10K requests/month: $15,900
+# Reduce input to 50K through caching: $5,300 (66% savings)
+```
+
+## LLM Limitations You Must Know
+
+**1. Hallucinations: Making Stuff Up**
+
+LLMs are trained to predict the next plausible token. They're not fact-checking databases.
+
+**Famous Failure:** Air Canada's chatbot hallucinated a bereavement discount policy that didn't exist. The airline had to honor it in court. Cost: Unknown, but significant legal precedent. ([BBC, 2024](https://www.bbc.com/news/world-us-canada-68267138), [CBC, 2024](https://www.cbc.ca/news/canada/british-columbia/air-canada-chatbot-compensation-1.7124924))
+
+**Why It Happens:**
+- Missing information → fills gaps with plausible-sounding text
+- Conflicting instructions → makes judgment calls
+- Outdated training data → invents current information
+
+**What Works in Production:**
+- Constrain to provided context: "Only use information from these documents"
+- Validate outputs: Check facts against source data
+- Add human review: For high-stakes decisions
+
+**2. Non-Determinism: Different Answers Every Time**
+
+Run the same prompt twice, get different answers. That's by design (temperature > 0).
+
+[Full runnable non-deterministic outputs notebook](non-deterministic-outputs.ipynb)
+```python
+# Same prompt, different responses
+prompt = "Summarize this customer complaint in 10 words"
+
+response_1 = "Customer angry about delayed shipment, demanding refund immediately"
+response_2 = "Shipment late, customer wants money back, very upset"
+response_3 = "Delayed delivery complaint with refund request, customer frustrated"
+```
+
+**Production Strategy:**
+- Temperature=0 for minimal creativity tasks (classification, extraction)
+- Temperature=0.3-0.7 for creative tasks (writing, brainstorming)
+- Run multiple times and vote (self-consistency, covered in 1.5)
+
+**3. Recency Bias: Recent Context Matters More**
+
+LLMs pay more attention to text at the beginning and end of the prompt. Middle content gets "lost."
+
+**Heuristic (Gemini):** Prompt structure and placement can affect results. Many teams place the specific query toward the end; validate with your use case. See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
+
+**Best Practice:**
+```
+Critical instructions at START
+[Large document content in MIDDLE]
+Specific query at END
+```
+
+## Mental Model: LLMs as Completion Engines
+
+**Wrong Mental Model:** "The AI understands my intent"  
+**Right Mental Model:** "The AI completes patterns it's seen in training"
+
+**Example:**
+```python
+# Prompt: "The capital of France is"
+# LLM completes: "Paris"
+# Not because it "knows" geography, but because it's seen this pattern millions of times
+
+# Prompt: "The capital of Atlantis is"
+# LLM completes: "unknown" or makes something up
+# It hasn't seen this pattern → hallucination risk
+```
+
+**Practical Implication:**
+When you want structured output, give the LLM a pattern to complete:
+
+```python
+# ❌ Vague: "Extract the customer's name and email"
+# LLM might respond in prose: "The customer's name is John and his email is..."
+
+# ✅ Pattern to complete:
+"""
+Extract customer information:
+
+Name: [the customer's name]
+Email: [the customer's email address]
+"""
+# LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
+```
+
+---
+

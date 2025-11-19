@@ -1,0 +1,716 @@
+---
+title: "Tool Design & Implementation"
+description: "Tool Design & Implementation"
+sidebarTitle: "Tool Design & Implementation"
+icon: "book"
+---
+
+## Why Tools Matter
+
+In the previous section, we saw a simple agent with one tool. Real applications need dozens or hundreds of tools. The quality of your tool design directly impacts agent reliability.
+
+**Poor tool design leads to:**
+- Agents selecting wrong tools
+- Excessive API calls (cost, latency)
+- Confusing error messages
+- Unpredictable behavior
+
+**Good tool design leads to:**
+- Accurate tool selection (>90%)
+- Minimal agent steps
+- Clear error handling
+- Predictable, testable behavior
+
+## Function Calling Basics
+
+Before we dive into advanced patterns, let's understand the mechanics.
+
+**How LLMs Use Tools:**
+
+1. **LLM receives tool descriptions** (names, descriptions, parameters)
+2. **LLM analyzes user query** and available tools
+3. **LLM decides** which tool(s) to use and with what parameters
+4. **LLM returns structured data** indicating tool choice
+5. **You execute the tool** and return results
+6. **LLM uses results** to continue or respond
+
+**Tool Definition Format:**
+
+[Full runnable example using LLMs, openai sdk, llamaindex, langchain, and googla adk](https://colab.research.google.com/drive/1-FeAz3P7uPZaclpGS0ZLdUduGfUMJ-Sq?usp=drive_link)
+[Full runnable example using koog AI in Kotlin](https://drive.google.com/file/d/1u93zy8jkYLMpS_l80khbIvjfhHnF62-I/view?usp=drive_link)
+
+```python
+tool_definition = {
+    "name": "tool_name",  # Snake_case, descriptive
+    "description": "What the tool does and when to use it",  # Critical!
+    "input_schema": {  # JSON Schema
+        "type": "object",
+        "properties": {
+            "param1": {
+                "type": "string",
+                "description": "What this parameter is"
+            },
+            "param2": {
+                "type": "number",
+                "description": "What this parameter is"
+            }
+        },
+        "required": ["param1"]  # Which params are mandatory
+    }
+}
+```
+
+**The description is everything.** The LLM only sees your description - make it count.
+
+## Model Context Protocol (MCP) Introduction
+
+**MCP** is an open standard for connecting AI systems to data sources and tools. Think of it as "USB for AI" - a universal connector.
+
+[Full runnable example using openai Agent SDK, Langgraph, googla adk, and Claude Agent SDK](https://drive.google.com/file/d/1KQG9dWPP3AH0jCwcdxx-UfKsB5eputbo/view?usp=drive_link) - Download and run locally (it's using an MCP stdio server)
+
+**Why MCP Matters:**
+
+Without MCP:
+```python
+# Agent needs to understand each API directly
+tools = [
+    salesforce_get_account,     # Salesforce-specific
+    zendesk_get_ticket,         # Zendesk-specific  
+    shopify_get_order,          # Shopify-specific
+    # ... every integration is unique
+]
+```
+
+With MCP:
+```python
+# Standard protocol across all tools
+mcp_server = MCPServer()
+
+@mcp_server.tool()
+async def get_customer_data(customer_id: str):
+    """Standard interface, internal complexity hidden."""
+    # Can call Salesforce, Zendesk, internal DB, whatever
+    # Agent doesn't need to know the details
+```
+
+**MCP Benefits:**
+
+1. **Standardization:** Same protocol for all tools
+2. **Tool Discovery:** Agents can list available tools dynamically
+3. **Error Handling:** Consistent error format
+4. **Security:** Built-in authentication/authorization
+5. **Composability:** Tools can call other tools
+
+**We'll use MCP for our tool examples going forward.**
+
+## Tool Design Principles
+
+### Principle 1: Clear, Descriptive Names
+
+**Bad names:**
+- `process` (process what?)
+- `fetch` (fetch what?)
+- `do_thing` (what thing?)
+
+**Good names:**
+```python
+get_customer_by_email
+search_products_by_category
+calculate_shipping_cost_for_order
+send_notification_to_user
+```
+
+**Naming convention:** `[verb]_[noun]_[context]`
+
+### Principle 2: Comprehensive Descriptions
+
+The description is the most important part of your tool. It must answer:
+- **What** does this tool do?
+- **When** should the agent use it?
+- **When NOT** to use it (distinguish from similar tools)
+- **What format** are inputs/outputs?
+
+**Bad description:**
+
+```python
+@mcp_server.tool()
+async def get_data(id: str):
+    """Get data."""
+    pass
+```
+
+**Good description:**
+
+```python
+@mcp_server.tool()
+async def get_customer_by_id(customer_id: str) -> dict:
+    """Retrieve customer account information by customer ID.
+    
+    Use this when:
+    - You have a customer ID and need their details
+    - User mentions "my account" (look up by context)
+    
+    Do NOT use for:
+    - Searching by name/email (use search_customers instead)
+    - Getting order history (use get_customer_orders instead)
+    
+    Args:
+        customer_id: Customer ID in format CUST-##### (e.g., "CUST-12345")
+    
+    Returns:
+        Customer object with: name, email, phone, address, account_status
+        
+    Example:
+        Input: customer_id="CUST-12345"
+        Output: {
+            "name": "Alice Johnson",
+            "email": "alice@example.com",
+            "account_status": "active"
+        }
+    """
+    # Implementation
+    pass
+```
+
+### Principle 3: Simple Parameter Schemas
+
+**Research shows:** Tool parameter complexity significantly affects agent accuracy.
+
+| Parameter Count | Agent Accuracy |
+|----------------|----------------|
+| 1-3 parameters | 90%+ correct usage |
+| 4-6 parameters | 75-85% correct usage |
+| 7+ parameters | 60-70% correct usage |
+
+**Why:** More parameters = more cognitive load = more confusion.
+
+**Design principle:** Prefer multiple simple tools over one complex tool.
+
+**Anti-pattern: Complex Tool**
+
+```python
+@mcp_server.tool()
+async def create_order(
+    customer_id: str,
+    product_ids: list[str],
+    quantities: list[int],
+    shipping_address: dict,
+    billing_address: dict,
+    payment_method: str,
+    promotional_code: str,
+    gift_wrap: bool,
+    gift_message: str,
+    shipping_speed: str
+):
+    """10 parameters - agent will struggle."""
+    pass
+```
+
+**Better: Multiple Simple Tools**
+
+```python
+@mcp_server.tool()
+async def create_order_cart(
+    customer_id: str,
+    items: list[dict]  # [{"product_id": "...", "quantity": 1}]
+) -> str:
+    """Create shopping cart. Returns cart_id.
+    
+    Use this as first step when customer wants to place an order.
+    """
+    pass
+
+@mcp_server.tool()
+async def set_cart_shipping(
+    cart_id: str,
+    address: dict,
+    speed: Literal["standard", "express", "overnight"]
+) -> bool:
+    """Set shipping details for cart.
+    
+    Call after create_order_cart, before finalize_order.
+    """
+    pass
+
+@mcp_server.tool()
+async def finalize_order(
+    cart_id: str,
+    payment_method: str
+) -> str:
+    """Complete order and charge payment. Returns order_id.
+    
+    Final step after cart is configured.
+    """
+    pass
+```
+
+**Result:** Three simple tools have higher success rate than one complex tool, even though they require more agent steps.
+
+*Source: "Tool Space Interference in the MCP Era" - Microsoft Research ([microsoft.com/research](https://www.microsoft.com/en-us/research/blog/tool-space-interference-in-the-mcp-era-designing-for-agent-compatibility-at-scale/))*
+
+### Principle 4: Consistent Return Formats
+
+**Standard response envelope:**
+
+```python
+from typing import TypedDict, Optional
+
+class ToolResponse(TypedDict):
+    """Standard format for all tool responses."""
+    success: bool
+    data: Optional[dict]
+    error: Optional[str]
+    message: str
+
+@mcp_server.tool()
+async def example_tool(param: str) -> ToolResponse:
+    """Tool with consistent response format."""
+    
+    try:
+        result = await process(param)
+        return {
+            "success": True,
+            "data": result,
+            "error": None,
+            "message": "Operation completed successfully"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": type(e).__name__,
+            "message": f"Failed: {str(e)}"
+        }
+```
+
+**Benefits:**
+- Agent knows what to expect
+- Easy to check success/failure
+- Consistent error handling
+
+## Practical Example: Building a Customer Support Tool Set
+
+Let's build a realistic set of tools for customer support:
+
+```python
+from mcp.server import MCPServer
+
+server = MCPServer("customer-support")
+
+@server.tool()
+async def search_knowledge_base(
+    query: str,
+    category: Optional[str] = None
+) -> dict:
+    """Search support articles and documentation.
+    
+    Use when:
+    - Customer has a question about product features
+    - Need troubleshooting steps
+    - Looking for how-to information
+    
+    Do NOT use for:
+    - Customer-specific data (use get_customer_info)
+    - Order status (use get_order_status)
+    
+    Args:
+        query: Search keywords (e.g., "reset password", "shipping costs")
+        category: Optional filter ("billing", "technical", "shipping")
+    
+    Returns:
+        Top 3 relevant articles with titles, summaries, and links
+    """
+    results = await knowledge_db.search(query, category=category, limit=3)
+    
+    return {
+        "success": True,
+        "data": {
+            "articles": [{
+                "title": r.title,
+                "summary": r.summary,
+                "url": r.url,
+                "relevance_score": r.score
+            } for r in results]
+        },
+        "error": None,
+        "message": f"Found {len(results)} articles"
+    }
+
+@server.tool()
+async def get_customer_info(email: str) -> dict:
+    """Get customer account details and history.
+    
+    Use when:
+    - Need to look up customer account
+    - Checking customer status/tier
+    - Understanding customer context before helping
+    
+    Args:
+        email: Customer email address
+    
+    Returns:
+        Customer profile including name, account status, order history summary
+    """
+    try:
+        customer = await customer_db.find_by_email(email)
+        
+        if not customer:
+            return {
+                "success": False,
+                "data": None,
+                "error": "not_found",
+                "message": f"No account found for {email}"
+            }
+        
+        return {
+            "success": True,
+            "data": {
+                "name": customer.name,
+                "email": customer.email,
+                "account_status": customer.status,
+                "total_orders": customer.order_count,
+                "lifetime_value": customer.lifetime_value,
+                "vip_status": customer.is_vip
+            },
+            "error": None,
+            "message": "Customer found"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": str(e),
+            "message": "Database error - try again"
+        }
+
+@server.tool()
+async def create_support_ticket(
+    customer_email: str,
+    subject: str,
+    description: str,
+    priority: Literal["low", "medium", "high"] = "medium"
+) -> dict:
+    """Create a support ticket for issues requiring human follow-up.
+    
+    Use when:
+    - Issue cannot be resolved immediately
+    - Customer requests human assistance
+    - Complex problem requiring investigation
+    
+    Args:
+        customer_email: Customer's email address
+        subject: Brief ticket summary (under 100 chars)
+        description: Detailed problem description
+        priority: Ticket priority level
+    
+    Returns:
+        Ticket ID and estimated response time
+    """
+    try:
+        ticket = await ticketing_api.create({
+            "customer_email": customer_email,
+            "subject": subject,
+            "description": description,
+            "priority": priority,
+            "source": "ai_agent"
+        })
+        
+        eta_hours = {"low": 48, "medium": 24, "high": 4}
+        
+        return {
+            "success": True,
+            "data": {
+                "ticket_id": ticket.id,
+                "ticket_url": ticket.url,
+                "estimated_response_hours": eta_hours[priority]
+            },
+            "error": None,
+            "message": f"Ticket {ticket.id} created"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": str(e),
+            "message": "Could not create ticket - escalating to supervisor"
+        }
+
+@server.tool()
+async def check_order_status(order_id: str) -> dict:
+    """Get current status and tracking for an order.
+    
+    Use when:
+    - Customer asks "where is my order"
+    - Checking delivery status
+    - Getting tracking information
+    
+    Args:
+        order_id: Order ID in format ORD-##### (e.g., "ORD-12345")
+    
+    Returns:
+        Order status, tracking number, estimated delivery
+    """
+    try:
+        order = await order_api.get(order_id)
+        
+        return {
+            "success": True,
+            "data": {
+                "order_id": order.id,
+                "status": order.status,
+                "tracking_number": order.tracking,
+                "carrier": order.carrier,
+                "estimated_delivery": order.estimated_delivery.isoformat(),
+                "items": [
+                    {"name": item.name, "quantity": item.quantity}
+                    for item in order.items
+                ]
+            },
+            "error": None,
+            "message": f"Order status: {order.status}"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": str(e),
+            "message": "Could not retrieve order - check order ID"
+        }
+```
+
+## Tool Implementation Patterns
+
+### Pattern 1: Tool Consolidation
+
+**Problem:** Agent has to make 5 sequential calls to get complete data.
+
+```python
+# Inefficient: 5 separate tools
+customer = await get_customer(email)
+orders = await get_customer_orders(customer.id)
+tickets = await get_customer_tickets(customer.id)
+preferences = await get_customer_preferences(customer.id)
+loyalty = await get_loyalty_status(customer.id)
+
+# Result: 5 agent steps, high latency
+```
+
+**Solution:** Consolidate related data into one tool.
+
+```python
+@server.tool()
+async def get_complete_customer_context(email: str) -> dict:
+    """Get comprehensive customer information in one call.
+    
+    Returns customer profile, recent orders, open tickets, preferences,
+    and loyalty status. Optimized for agent efficiency.
+    """
+    
+    # Fetch in parallel internally
+    customer, orders, tickets, prefs, loyalty = await asyncio.gather(
+        customer_db.find(email),
+        order_api.get_recent(email, limit=5),
+        ticket_api.get_open(email),
+        prefs_api.get(email),
+        loyalty_api.get_status(email),
+        return_exceptions=True
+    )
+    
+    return {
+        "success": True,
+        "data": {
+            "customer": {...},
+            "recent_orders": [...],
+            "open_tickets": [...],
+            "preferences": {...},
+            "loyalty_tier": "gold"
+        },
+        "error": None,
+        "message": "Complete context retrieved"
+    }
+
+# Result: 1 agent step, lower latency
+```
+
+**Real Case Study:** SaaS company reduced agent steps from 15 to 3 by consolidating Salesforce API calls. Cost per query dropped 93% ($2.20 → $0.15).
+
+*Source: "Stop Converting Your REST APIs to MCP" by Jeremiah Lowin ([jlowin.dev](https://www.jlowin.dev/blog/stop-converting-rest-apis-to-mcp))*
+
+### Pattern 2: Semantic Enrichment
+
+**Don't just return raw data - add context that helps the agent.**
+
+**Basic tool:**
+
+```python
+@server.tool()
+async def get_order(order_id: str) -> dict:
+    """Get order data."""
+    order = await db.get(order_id)
+    return {"order": order}  # Raw data
+```
+
+**Enriched tool:**
+
+```python
+@server.tool()
+async def get_order_with_context(order_id: str) -> dict:
+    """Get order with helpful context for customer service.
+    
+    Returns order data plus computed insights that help you
+    assist the customer effectively.
+    """
+    order = await db.get(order_id)
+    
+    # Add semantic enrichment
+    days_since_order = (datetime.now() - order.created).days
+    is_delayed = order.estimated_delivery < datetime.now()
+    can_cancel = order.status in ["pending", "processing"]
+    can_modify = order.status == "pending"
+    
+    return {
+        "success": True,
+        "data": {
+            "order": {
+                "id": order.id,
+                "status": order.status,
+                "total": order.total,
+                "items": order.items
+            },
+            "context": {
+                "days_since_order": days_since_order,
+                "is_delayed": is_delayed,
+                "delay_days": (datetime.now() - order.estimated_delivery).days if is_delayed else 0,
+                "can_cancel": can_cancel,
+                "can_modify": can_modify,
+                "next_actions": self._suggest_actions(order)
+            }
+        },
+        "error": None,
+        "message": f"Order {order_id} retrieved with context"
+    }
+    
+def _suggest_actions(self, order) -> list[str]:
+    """Suggest what agent should offer customer."""
+    actions = []
+    
+    if order.is_delayed:
+        actions.append("offer_apology_for_delay")
+        actions.append("provide_updated_delivery_estimate")
+    
+    if order.can_cancel:
+        actions.append("offer_cancellation_option")
+    
+    if order.status == "delivered" and order.days_since_delivery < 30:
+        actions.append("offer_return_if_unsatisfied")
+    
+    return actions
+```
+
+**Benefit:** Agent doesn't have to compute these insights. Tool provides actionable context.
+
+### Pattern 3: Graceful Error Handling
+
+**Tools should never throw exceptions to the agent.** Always return structured errors.
+
+```python
+@server.tool()
+async def send_email(
+    to: str,
+    subject: str,
+    body: str
+) -> dict:
+    """Send email to customer.
+    
+    Handles errors gracefully and suggests alternatives.
+    """
+    
+    # Validate email format
+    if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", to):
+        return {
+            "success": False,
+            "data": None,
+            "error": "invalid_email",
+            "message": f"Invalid email format: {to}. Ask customer for correct email."
+        }
+    
+    try:
+        # Attempt to send
+        result = await email_api.send(to, subject, body)
+        
+        return {
+            "success": True,
+            "data": {
+                "message_id": result.id,
+                "sent_at": result.timestamp
+            },
+            "error": None,
+            "message": f"Email sent to {to}"
+        }
+        
+    except RateLimitError:
+        return {
+            "success": False,
+            "data": None,
+            "error": "rate_limited",
+            "message": "Email rate limit exceeded. Create ticket for human follow-up instead."
+        }
+    
+    except SMTPError as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": "smtp_error",
+            "message": f"Email system unavailable. Alternative: Call customer at {get_customer_phone(to)}"
+        }
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": "unknown_error",
+            "message": "Could not send email. Create support ticket for manual outreach."
+        }
+```
+
+**Key principle:** Error messages should tell agent what to do next.
+
+---
+
+## Check Your Understanding
+
+1. **Tool Design:** You need a tool to search products. What should you name it and what should the description include?
+   
+   <details>
+   <summary>Answer</summary>
+   
+   **Good name:** `search_products_by_text` or `find_products_by_keyword`
+   
+   **Description must include:**
+   - What it does: "Full-text search across product names, descriptions, SKUs"
+   - When to use: "Use when customer describes product (red shoes, laptop under $1000)"
+   - When NOT to use: "Don't use if you have exact SKU (use get_product_by_sku instead)"
+   - Input format: "query: search text, include_out_of_stock: boolean"
+   - Output format: "List of matching products with name, price, availability"
+   - Example: Show concrete input/output
+   </details>
+
+2. **Parameter Complexity:** Your tool has 8 parameters. What should you do?
+   
+   <details>
+   <summary>Answer</summary>
+   
+   **Break it into multiple simple tools.**
+   
+   Research shows 7+ parameters = 60-70% accuracy.
+   
+   Example:
+   - One complex tool with 8 params → 65% success rate
+   - Three simple tools with 2-3 params each → 85% success rate
+   
+   Even though multiple tools require more agent steps, the higher accuracy makes them more reliable in production.
+   </details>
+

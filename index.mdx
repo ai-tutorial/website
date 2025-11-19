@@ -1,97 +1,153 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Practical AI Tutorial"
+description: "Building Production-Ready AI Agents - A comprehensive tutorial with hands-on code examples"
 ---
 
-## Setting up
+## Welcome
 
-Get your documentation site up and running in minutes.
+**You've probably noticed:** Building production-ready AI agents is harder than it looks. Tutorials show you the happy path, but real systems face cost constraints, reliability issues, and unexpected failures.
+
+**Here's why that happens:** Most learning resources focus on theory or simple demos. They skip the hard-won lessons from actual production deployments—the trade-offs, failure modes, and optimization patterns that separate working prototypes from production systems.
+
+**This tutorial is different.** We've built this course based on real-world experience deploying AI agents at scale. Every module includes runnable code examples, production patterns, and the tips and tricks we've learned solving actual challenges.
+
+**Real-world impact:** The patterns you'll learn here are used in production systems handling millions of requests. Teams using these approaches report 50-70% cost reductions, 10-20% accuracy improvements, and significantly better reliability.
+
+---
+
+## Why This Tutorial Exists
+
+We created this tutorial because we kept hitting the same walls when building AI agents:
+
+- **Finding working examples** was harder than it should be
+- **Production considerations** (cost, reliability, monitoring) were afterthoughts
+- **Failure cases** weren't discussed—until we hit them
+- **Best practices** were scattered across blog posts and documentation
+
+This course brings together everything we wish we'd known from the start: production-tested patterns, runnable code, and honest discussions about trade-offs and limitations.
+
+---
+
+## What Makes This Tutorial Practical
+
+### Full Code Examples
+
+Every concept comes with complete, runnable code. No hunting through GitHub repos or piecing together snippets. You can copy, run, and modify everything you see.
+
+### Production-Focused
+
+We don't just show you how things work—we explain why they matter in production. Cost implications, performance trade-offs, and reliability considerations are built into every lesson.
+
+### Real Challenges, Real Solutions
+
+Each module includes tips and tricks we've learned solving actual problems:
+- How to reduce costs by 50-70% with prompt caching
+- When to use orchestrated vs. autonomous agents (and why it matters)
+- How to handle the failure modes that break production systems
+- Evaluation patterns that catch issues before users do
+
+### Hands-On Exercises
+
+Every module includes guided exercises with starter code, success criteria, and common pitfalls pre-addressed. You'll build real systems, not just read about them.
+
+---
+
+## Get Started
 
 <Card
-  title="Start here"
+  title="Start with Context Engineering"
   icon="rocket"
-  href="/quickstart"
+  href="/Context_Engineering_&_Prompt_Design/Module Overview"
   horizontal
 >
-  Follow our three step quickstart guide.
+  Begin your journey with prompt design fundamentals. Learn structured prompting patterns that reduce hallucinations and lower costs.
 </Card>
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
+## Course Modules
 
 <Columns cols={2}>
   <Card
-    title="Edit locally"
+    title="Context Engineering & Prompt Design"
     icon="pen-to-square"
-    href="/development"
+    href="/Context_Engineering_&_Prompt_Design/Module Overview"
   >
-    Edit your docs locally and preview them in real time.
+    Master structured prompts, advanced techniques, and cost optimization. Foundation for everything else.
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Retrieval Augmented Generation (RAG)"
+    icon="magnifying-glass"
+    href="/RAG/Module Overview"
   >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+    Build RAG systems with hybrid search, reranking, and evaluation. Production patterns for connecting LLMs to your data.
   </Card>
   <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
+    title="AI Agents"
+    icon="robot"
+    href="/AI Agents/Module Overview"
   >
-    Auto-generate API documentation from OpenAPI specifications.
+    Design agents with tools, memory, and orchestration. Learn when to use autonomous vs. orchestrated patterns.
+  </Card>
+  <Card
+    title="Agent Reliability & Optimization"
+    icon="shield-halved"
+    href="/Agent Reliability & Optimization/Module Overview"
+  >
+    Implement guardrails, business rules, and optimization strategies. Make agents reliable enough for production.
+  </Card>
+  <Card
+    title="Multi-Agent Systems & Coordination"
+    icon="users"
+    href="/Multi-Agent Systems & Coordination/Module Overview"
+  >
+    Coordinate multiple agents with workflow and agent orchestration. Build complex systems that actually work.
   </Card>
 </Columns>
 
-## Create beautiful pages
+---
 
-Everything you need to create world-class documentation.
+## Contributors
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+This tutorial was created by:
 
-## Need inspiration?
+- **Pablo Luna** - 
+- **Paulo Veiga** - Contributor
+
+
+
+---
+
+## How to Use This Tutorial
+
+**For Beginners:** Start with Module 1 (Context Engineering) and work sequentially. Each module builds on previous concepts.
+
+**For Experienced Developers:** Jump to specific modules based on your needs. Each module is self-contained with clear prerequisites.
+
+**For Teams:** Use the hands-on exercises as team workshops. The production patterns and case studies work well for technical discussions.
+
+**Time Commitment:** Each module takes 6-8 hours to complete, including hands-on exercises. The full course is designed for 30-40 hours of learning.
+
+---
+
+## What You'll Build
+
+By the end of this course, you'll have:
+
+✅ Production-ready RAG pipelines with hybrid search and reranking  
+✅ Reliable AI agents with proper tooling and orchestration  
+✅ Multi-agent systems that coordinate effectively  
+✅ Evaluation and monitoring setups that catch issues early  
+✅ Cost-optimized systems that scale without breaking budgets  
+
+**This is production-grade infrastructure.** Many teams ship with less. You'll understand not just how to build these systems, but why each pattern exists and when to use it.
+
+---
+
+## Ready to Start?
 
 <Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
+  title="Begin with Module 1"
+  icon="arrow-right"
+  href="/Context_Engineering_&_Prompt_Design/Module Overview"
 >
-  Browse our showcase of exceptional documentation sites.
+  Start with Context Engineering & Prompt Design to build your foundation.
 </Card>

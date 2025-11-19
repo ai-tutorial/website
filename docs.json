@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "palm",
-  "name": "Practical Course on AI Foundations",
+  "name": "AI Tutorial",
   "colors": {
     "primary": "#CC5500",
     "light": "#07C983",
@@ -11,63 +11,88 @@
   "navigation": {
     "groups": [
       {
-        "group": "Introduction",
+        "group": "Home",
         "pages": [
-          "index",
-          "quickstart",
-          "development"
+          "index"
         ]
       },
       {
-        "group": "Prompting",
+        "group": "Context Engineering & Prompt Design",
         "pages": [
-          "prompting/settings",
-          "prompting/navigation"
+          "Context_Engineering_&_Prompt_Design/Module Overview",
+          "Context_Engineering_&_Prompt_Design/LLM_Foundamentals",
+          "Context_Engineering_&_Prompt_Design/Structured_Prompt_Engineering",
+          "Context_Engineering_&_Prompt_Design/Advanced Techniques",
+          "Context_Engineering_&_Prompt_Design/Prompt Optimization & Testing",
+          "Context_Engineering_&_Prompt_Design/Model Selection & Cost Optimization",
+          "Context_Engineering_&_Prompt_Design/Production Considerations",
+          "Context_Engineering_&_Prompt_Design/Hands-On Exercise",
+          "Context_Engineering_&_Prompt_Design/Recap & Resources"
         ]
       },
       {
         "group": "Retrieval Augmented Generation (RAG)",
         "pages": [
-          "rag/markdown",
-          "rag/code",
-          "rag/images",
-          "rag/reusable-snippets"
+          "RAG/Module Overview",
+          "RAG/RAG Fundamentals",
+          "RAG/Search Strategy Selection",
+          "RAG/Chunking & Metadata Strategies",
+          "RAG/Working with Unstructured Data",
+          "RAG/RAG Evaluation",
+          "RAG/Reranking in Practice",
+          "RAG/Advanced RAG Patterns",
+          "RAG/Recap & Resources"
         ]
       },
       {
-        "group": "Agents",
+        "group": "AI Agents",
         "pages": [
-          "ai-tools/cursor",
-          "ai-tools/claude-code",
-          "ai-tools/windsurf"
+          "AI Agents/Module Overview",
+          "AI Agents/Introduction to AI Agents",
+          "AI Agents/Tool Design & Implementation",
+          "AI Agents/Agent Memory",
+          "AI Agents/Hands-On Exercise",
+          "AI Agents/Recap & Resources"
+        ]
+      },
+      {
+        "group": "Agent Reliability & Optimization",
+        "pages": [
+          "Agent Reliability & Optimization/Module Overview",
+          "Agent Reliability & Optimization/Business Rules & Guardrails",
+          "Agent Reliability & Optimization/Tool Selection & Optimization",
+          "Agent Reliability & Optimization/Hands-On Exercise",
+          "Agent Reliability & Optimization/Recap & Resources"
+        ]
+      },
+      {
+        "group": "Multi-Agent Systems & Coordination",
+        "pages": [
+          "Multi-Agent Systems & Coordination/Module Overview",
+          "Multi-Agent Systems & Coordination/Multi-Agent with Workflow Orchestration",
+          "Multi-Agent Systems & Coordination/Multi-Agent with Agent Orchestration",
+          "Multi-Agent Systems & Coordination/Agent-to-Agent (A2A) Communication Protocols",
+          "Multi-Agent Systems & Coordination/Hands-On Exercise",
+          "Multi-Agent Systems & Coordination/Recap & Resources"
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "About this Tutor",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/logo-light-only.png",
+    "dark": "/logo/logo-only.png"
   },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        
+        
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "Contact",
+      "href": "mailto:pablo.luna@gmail.com"
     }
   },
   "contextual": {
@@ -84,9 +109,8 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/pluna/ai-tutorial",
+      "linkedin": "https://linkedin.com/in/luna-pablo"
     }
   }
 }
