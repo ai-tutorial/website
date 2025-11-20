@@ -16,9 +16,10 @@ icon: "book"
 5. **Examples** - Few-shot demonstrations (optional)
 6. **Input** - The actual data to process
 
-**Basic Template:**
-[Full runnable structured prompt notebook](https://colab.research.google.com/drive/15hKw-5PONe0DKkDmYVfLviFJUoK3aBcn?usp=drive_link)
+**Basic Template:** [Full runnable structured prompt notebook](https://colab.research.google.com/drive/15hKw-5PONe0DKkDmYVfLviFJUoK3aBcn?usp=drive_link)
+
 <CodeGroup>
+
 ```python Python
 prompt = """
 [ROLE]
@@ -44,6 +45,7 @@ Customer message: {customer_message}
 """
 ```
 
+
 ```ts TypeScript
 const prompt = `
 [ROLE]
@@ -68,13 +70,16 @@ Analyze the customer message below and:
 Customer message: ${customerMessage}
 `;
 ```
+
 </CodeGroup>
 
 **Practice Check:**
+
 - Write a prompt that includes role, context, instructions, constraints, examples, and input.
 - Expected: All 6 components present with explicit constraints and a clear output schema.
 
 **In Production:**
+
 - Cost impact: Clear output schemas reduce parsing errors and retries (5–15% fewer re-runs).
 - Reliability: Structured prompts are easier to validate and monitor.
 - Performance: Slight token overhead; mitigate with caching (see 5.2).
@@ -82,12 +87,15 @@ Customer message: ${customerMessage}
 ## XML Tags: Your Secret Weapon
 
 **Why XML Tags Work:**
+
 - LLMs were trained on HTML/XML (web data)
 - Tags create clear boundaries in the context
 - 40-60% reduction in hallucinations in controlled studies
 
 **Before (Ambiguous):**
+
 <CodeGroup>
+
 ```python Python
 prompt = f"""
 System: You are a helpful assistant.
@@ -98,6 +106,7 @@ Previous conversation: {history}
 # LLM might confuse where context ends and question begins
 ```
 
+
 ```ts TypeScript
 const prompt = `
 System: You are a helpful assistant.
@@ -107,11 +116,13 @@ Previous conversation: ${history}
 `;
 // LLM might confuse where context ends and question begins
 ```
+
 </CodeGroup>
 
-**After (Clear):**
-[Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
+**After (Clear):** [Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
+
 <CodeGroup>
+
 ```python Python
 prompt = f"""
 <role>You are a helpful assistant</role>
@@ -133,6 +144,7 @@ prompt = f"""
 # Crystal clear boundaries
 ```
 
+
 ```ts TypeScript
 const prompt = `
 <role>You are a helpful assistant</role>
@@ -153,16 +165,20 @@ ${userInput}
 `;
 // Crystal clear boundaries
 ```
+
 </CodeGroup>
 
 **In Production:**
-**Cost Impact:** Tagging adds tokens; mitigate with caching (50–90% on static parts).
-**Reliability:** Clear boundaries reduce off-context responses; improves evaluability.
-**Performance:** Slight overhead; offset by fewer retries and clearer parsing.
-**Real Example:** Teams report 40–60% fewer hallucinations when tags + validation are combined.
+
+- **Cost Impact:** Tagging adds tokens; mitigate with caching (50–90% on static parts).
+- **Reliability:** Clear boundaries reduce off-context responses; improves evaluability.
+- **Performance:** Slight overhead; offset by fewer retries and clearer parsing.
+- **Real Example:** Teams report 40–60% fewer hallucinations when tags + validation are combined.
 
 **Pattern:**
+
 <CodeGroup>
+
 ```python Python
 def format_docs(docs):
     return "\n".join(f"- {doc}" for doc in docs)
@@ -198,6 +214,7 @@ Output as JSON with keys: category, urgency, action, response
 </response_instructions>
 """
 ```
+
 
 ```ts TypeScript
 function formatDocs(docs: string[]): string {
@@ -240,18 +257,21 @@ Output as JSON with keys: category, urgency, action, response
 `;
 }
 ```
+
 </CodeGroup>
 
 ## Few-Shot Examples: Teaching by Showing
 
 **When to Use Few-Shot:**
+
 - Complex or subjective tasks
 - Specific output format required
 - Edge cases need clarification
 
-**Pattern:**
-[Full runnable few-shot examples notebook](https://colab.research.google.com/drive/1dCxVNAqgUY8bTiLXv32dvH5NyHSfZ67r?usp=drive_link)
+**Pattern:** [Full runnable few-shot examples notebook](https://colab.research.google.com/drive/1dCxVNAqgUY8bTiLXv32dvH5NyHSfZ67r?usp=drive_link)
+
 <CodeGroup>
+
 ```python Python
 prompt = f"""
 <task>Classify customer sentiment</task>
@@ -279,6 +299,7 @@ prompt = f"""
 """
 ```
 
+
 ```ts TypeScript
 const prompt = `
 <task>Classify customer sentiment</task>
@@ -305,17 +326,19 @@ ${customerMessage}
 </input_to_classify>
 `;
 ```
+
 </CodeGroup>
 
 **Quality Over Quantity:**
+
 - 3-5 examples usually enough
 - More examples = more tokens = higher cost
 - Examples should cover edge cases, not just obvious ones
 
-**Production Note:**
-Store examples separately and inject only relevant ones:
+**Production Note:** Store examples separately and inject only relevant ones:
 
 <CodeGroup>
+
 ```python Python
 example_db = {
     "classification": [...],
@@ -326,6 +349,7 @@ example_db = {
 def get_relevant_examples(task_type: str, limit: int = 3):
     return example_db[task_type][:limit]
 ```
+
 
 ```ts TypeScript
 const exampleDb: Record<string, any[]> = {
@@ -338,6 +362,7 @@ function getRelevantExamples(taskType: string, limit: number = 3): any[] {
     return exampleDb[taskType].slice(0, limit);
 }
 ```
+
 </CodeGroup>
 
 ## Model-Specific Optimization
@@ -345,8 +370,11 @@ function getRelevantExamples(taskType: string, limit: number = 3): any[] {
 Different models have different "personalities." Here's what works best for each:
 
 ### GPT-4 / GPT-4 Turbo
+
 [Full runnable model-specific optimization notebook](https://colab.research.google.com/drive/19Ge-7okrUJ0mLOxAe0sY6QkV07X9njr0?usp=drive_link)
+
 <CodeGroup>
+
 ```python Python
 # Strengths: Structured output, following complex instructions
 # Best practices:
@@ -366,6 +394,7 @@ Input: {data}
 # GPT-4 excels at JSON, clear role definitions
 ```
 
+
 ```ts TypeScript
 // Strengths: Structured output, following complex instructions
 // Best practices:
@@ -384,10 +413,13 @@ Input: ${data}
 `;
 // GPT-4 excels at JSON, clear role definitions
 ```
+
 </CodeGroup>
 
 ### Claude (Sonnet/Opus)
+
 <CodeGroup>
+
 ```python Python
 # Strengths: Natural language, complex reasoning, long context
 # Best practices:
@@ -402,6 +434,7 @@ Let me work through this step by step...
 # Excellent with XML tags and markdown
 ```
 
+
 ```ts TypeScript
 // Strengths: Natural language, complex reasoning, long context
 // Best practices:
@@ -415,10 +448,13 @@ Let me work through this step by step...
 // Claude benefits from explicit thinking blocks
 // Excellent with XML tags and markdown
 ```
+
 </CodeGroup>
 
 ### Gemini 1.5 Pro
+
 <CodeGroup>
+
 ```python Python
 # Strengths: Massive context (2M tokens), multimodal
 # Best practices:
@@ -433,6 +469,7 @@ Based on ALL of the above context, answer: {query}
 # Can handle entire codebases or document sets
 ```
 
+
 ```ts TypeScript
 // Strengths: Massive context (2M tokens), multimodal
 // Best practices:
@@ -446,15 +483,17 @@ Based on ALL of the above context, answer: ${query}
 // Many teams place the query at the end; validate per task (see Gemini prompting strategies)
 // Can handle entire codebases or document sets
 ```
+
 </CodeGroup>
 
 ## Structured Outputs with JSON Schemas
 
 **Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
 
-**Pattern:**
-[Full runnable structured outputs with JSON schemas notebook](https://colab.research.google.com/drive/1ivZiyimkc16BkvUYqEKtmd4xuvpLF8aU?usp=drive_link)
+**Pattern:** [Full runnable structured outputs with JSON schemas notebook](https://colab.research.google.com/drive/1ivZiyimkc16BkvUYqEKtmd4xuvpLF8aU?usp=drive_link)
+
 <CodeGroup>
+
 ```python Python
 import jsonschema
 
@@ -490,6 +529,7 @@ def validate_output(json_text: str) -> dict:
     jsonschema.validate(instance=data, schema=CONTRACT_SCHEMA)
     return data
 ```
+
 
 ```ts TypeScript
 import * as Ajv from "ajv";
@@ -531,9 +571,11 @@ function validateOutput(jsonText: string): any {
     return data;
 }
 ```
+
 </CodeGroup>
 
 **Vendor features to explore:**
+
 - OpenAI structured outputs with `response_format` (JSON schema)
 - Anthropic tool-use/structure guidance
 - Gemini response schemas
