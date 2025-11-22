@@ -18,71 +18,51 @@ icon: "book"
 
 **Basic Template:** [Full runnable structured prompt notebook](https://colab.research.google.com/drive/15hKw-5PONe0DKkDmYVfLviFJUoK3aBcn?usp=drive_link)
 
-<CodeGroup>
+<Card title="Prompt Structure" icon="sparkles">
+  **[ROLE]**
 
-```python Python
-prompt = """
-[ROLE]
-You are an experienced customer support specialist for AcmeCo.
+  You are an experienced customer support specialist for AcmeCo.
 
-[CONTEXT]
-AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, 
-no questions asked. After 30 days, refunds require manager approval.
+  **[CONTEXT]**
 
-[INSTRUCTIONS]
-Analyze the customer message below and:
-1. Identify the customer's primary issue
-2. Determine if this qualifies for automatic refund
-3. Suggest next steps for the support team
+  AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, 
 
-[CONSTRAINTS]
-- Be empathetic but concise
-- Never promise refunds outside policy
-- If uncertain, recommend manager review
+  no questions asked. After 30 days, refunds require manager approval.
 
-[INPUT]
-Customer message: {customer_message}
-"""
-```
+  **[INSTRUCTIONS]**
 
+  Analyze the customer message below and:
 
-```ts TypeScript
-const prompt = `
-[ROLE]
-You are an experienced customer support specialist for AcmeCo.
+  1. Identify the customer's primary issue
 
-[CONTEXT]
-AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, 
-no questions asked. After 30 days, refunds require manager approval.
+  2. Determine if this qualifies for automatic refund
 
-[INSTRUCTIONS]
-Analyze the customer message below and:
-1. Identify the customer's primary issue
-2. Determine if this qualifies for automatic refund
-3. Suggest next steps for the support team
+  3. Suggest next steps for the support team
 
-[CONSTRAINTS]
-- Be empathetic but concise
-- Never promise refunds outside policy
-- If uncertain, recommend manager review
+  **[CONSTRAINTS]**
 
-[INPUT]
-Customer message: ${customerMessage}
-`;
-```
+  - Be empathetic but concise
 
-</CodeGroup>
+  - Never promise refunds outside policy
+
+  - If uncertain, recommend manager review
+
+  **[INPUT]**
+
+  Customer message: {customer_message}
+</Card>
 
 **Practice Check:**
 
 - Write a prompt that includes role, context, instructions, constraints, examples, and input.
 - Expected: All 6 components present with explicit constraints and a clear output schema.
+- **Try this too:** Compare the outputs if you remove the structure and use less powerful models
 
 **In Production:**
 
-- Cost impact: Clear output schemas reduce parsing errors and retries (5–15% fewer re-runs).
+- Cost impact: Clear output schemas reduce parsing errors and retries (fewer re-runs).
 - Reliability: Structured prompts are easier to validate and monitor.
-- Performance: Slight token overhead; mitigate with caching (see 5.2).
+- Performance: Slight token overhead; mitigate with caching (see Model Selection & Cost Optimization)
 
 ## XML Tags: Your Secret Weapon
 
@@ -90,13 +70,11 @@ Customer message: ${customerMessage}
 
 - LLMs were trained on HTML/XML (web data)
 - Tags create clear boundaries in the context
-- 40-60% reduction in hallucinations in controlled studies
+- Reduced hallucinations in controlled studies
 
 **Before (Ambiguous):**
 
-<CodeGroup>
-
-```python Python
+```python
 prompt = f"""
 System: You are a helpful assistant.
 User question: {user_input}
@@ -106,24 +84,9 @@ Previous conversation: {history}
 # LLM might confuse where context ends and question begins
 ```
 
+**After (Clear):**
 
-```ts TypeScript
-const prompt = `
-System: You are a helpful assistant.
-User question: ${userInput}
-Background context: ${knowledgeBase}
-Previous conversation: ${history}
-`;
-// LLM might confuse where context ends and question begins
-```
-
-</CodeGroup>
-
-**After (Clear):** [Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
-
-<CodeGroup>
-
-```python Python
+```python
 prompt = f"""
 <role>You are a helpful assistant</role>
 
@@ -144,38 +107,16 @@ prompt = f"""
 # Crystal clear boundaries
 ```
 
-
-```ts TypeScript
-const prompt = `
-<role>You are a helpful assistant</role>
-
-<context>
-<knowledge_base>
-${knowledgeBase}
-</knowledge_base>
-
-<conversation_history>
-${history}
-</conversation_history>
-</context>
-
-<user_question>
-${userInput}
-</user_question>
-`;
-// Crystal clear boundaries
-```
-
-</CodeGroup>
-
 **In Production:**
 
-- **Cost Impact:** Tagging adds tokens; mitigate with caching (50–90% on static parts).
+- **Cost Impact:** Tagging adds tokens; mitigate with caching .
 - **Reliability:** Clear boundaries reduce off-context responses; improves evaluability.
 - **Performance:** Slight overhead; offset by fewer retries and clearer parsing.
 - **Real Example:** Teams report 40–60% fewer hallucinations when tags + validation are combined.
 
 **Pattern:**
+
+ [Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
 
 <CodeGroup>
 
