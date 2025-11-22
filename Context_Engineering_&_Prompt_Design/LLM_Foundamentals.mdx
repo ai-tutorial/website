@@ -4,10 +4,13 @@ description: "Understand what's actually happening when you call a model"
 sidebarTitle: "LLM Fundamentals"
 icon: "book"
 ---
+
 ## Hello World
 
 [Full runnable hello world notebook](https://colab.research.google.com/drive/1owGCyAAB5ptDKp2WfBg46zghbhFnn8sD?usp=sharing)
+
 <CodeGroup>
+
 ```python Python
 
 response = completion(model="gpt-4o-mini", messages=[{"role": "user", "content": "Hello, how are you?"}])
@@ -25,11 +28,8 @@ print(response)
 # }
 ```
 
+
 ```ts TypeScript
-import OpenAI from "openai";
-
-const openai = new OpenAI();
-
 const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: "Hello, how are you?" }]
@@ -48,6 +48,7 @@ console.log(response);
 //   ]
 // }
 ```
+
 </CodeGroup>
 
 ## How LLMs Process Your Input
@@ -59,14 +60,15 @@ Before we write our first prompt, let's understand what's actually happening und
 Think of an LLM's context window like RAM on your computer. Everything you send - your instructions, conversation history, documents - gets loaded into this window. The model can only "see" what fits inside.
 
 **Current Context Windows** (as of January 2025; verify latest on vendor pages below):
+
 - GPT-4: 128K tokens (~96K words)
 - Claude Sonnet 4.5: 200K tokens (~150K words)
 - Gemini 1.5 Pro: 2M tokens (~1.5M words)
 
 See vendor references: [OpenAI models](https://platform.openai.com/docs/models), [Anthropic pricing/models](https://www.anthropic.com/pricing), [Google Gemini models](https://ai.google.dev/gemini-api/docs/models).
 
-**Why This Matters:**
-A customer support agent handling a complex case might need:
+**Why This Matters:** A customer support agent handling a complex case might need:
+
 - 2K tokens: System instructions
 - 5K tokens: Company knowledge base excerpts
 - 10K tokens: Conversation history
@@ -75,7 +77,9 @@ A customer support agent handling a complex case might need:
 That's 20K tokens before the LLM generates a single word. Multiply by thousands of requests, and you see why context management matters.
 
 **Token Economics:**
+
 <CodeGroup>
+
 ```python Python
 # Real costs (approximate, as of Jan 2025)
 # GPT-4 pricing
@@ -87,6 +91,7 @@ total_per_request = $1.59
 # Reduce input to 50K through caching: $5,300 (66% savings)
 ```
 
+
 ```ts TypeScript
 // Real costs (approximate, as of Jan 2025)
 // GPT-4 pricing
@@ -97,6 +102,7 @@ const totalPerRequest = 1.59;
 // At 10K requests/month: $15,900
 // Reduce input to 50K through caching: $5,300 (66% savings)
 ```
+
 </CodeGroup>
 
 ## LLM Limitations You Must Know
@@ -108,21 +114,25 @@ LLMs are trained to predict the next plausible token. They're not fact-checking 
 **Famous Failure:** Air Canada's chatbot hallucinated a bereavement discount policy that didn't exist. The airline had to honor it in court. Cost: Unknown, but significant legal precedent. ([BBC, 2024](https://www.bbc.com/news/world-us-canada-68267138), [CBC, 2024](https://www.cbc.ca/news/canada/british-columbia/air-canada-chatbot-compensation-1.7124924))
 
 **Why It Happens:**
+
 - Missing information → fills gaps with plausible-sounding text
 - Conflicting instructions → makes judgment calls
 - Outdated training data → invents current information
 
 **What Works in Production:**
+
 - Constrain to provided context: "Only use information from these documents"
 - Validate outputs: Check facts against source data
 - Add human review: For high-stakes decisions
 
 **2. Non-Determinism: Different Answers Every Time**
 
-Run the same prompt twice, get different answers. That's by design (temperature > 0).
+Run the same prompt twice, get different answers. That's by design (temperature \> 0).
 
 [Full runnable non-deterministic outputs notebook](non-deterministic-outputs.ipynb)
+
 <CodeGroup>
+
 ```python Python
 # Same prompt, different responses
 prompt = "Summarize this customer complaint in 10 words"
@@ -132,6 +142,7 @@ response_2 = "Shipment late, customer wants money back, very upset"
 response_3 = "Delayed delivery complaint with refund request, customer frustrated"
 ```
 
+
 ```ts TypeScript
 // Same prompt, different responses
 const prompt = "Summarize this customer complaint in 10 words";
@@ -140,9 +151,11 @@ const response1 = "Customer angry about delayed shipment, demanding refund immed
 const response2 = "Shipment late, customer wants money back, very upset";
 const response3 = "Delayed delivery complaint with refund request, customer frustrated";
 ```
+
 </CodeGroup>
 
 **Production Strategy:**
+
 - Temperature=0 for minimal creativity tasks (classification, extraction)
 - Temperature=0.3-0.7 for creative tasks (writing, brainstorming)
 - Run multiple times and vote (self-consistency, covered in 1.5)
@@ -154,6 +167,7 @@ LLMs pay more attention to text at the beginning and end of the prompt. Middle c
 **Heuristic (Gemini):** Prompt structure and placement can affect results. Many teams place the specific query toward the end; validate with your use case. See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
 
 **Best Practice:**
+
 ```
 Critical instructions at START
 [Large document content in MIDDLE]
@@ -162,11 +176,13 @@ Specific query at END
 
 ## Mental Model: LLMs as Completion Engines
 
-**Wrong Mental Model:** "The AI understands my intent"  
+**Wrong Mental Model:** "The AI understands my intent"\
 **Right Mental Model:** "The AI completes patterns it's seen in training"
 
 **Example:**
+
 <CodeGroup>
+
 ```python Python
 # Prompt: "The capital of France is"
 # LLM completes: "Paris"
@@ -177,6 +193,7 @@ Specific query at END
 # It hasn't seen this pattern → hallucination risk
 ```
 
+
 ```ts TypeScript
 // Prompt: "The capital of France is"
 // LLM completes: "Paris"
@@ -186,12 +203,13 @@ Specific query at END
 // LLM completes: "unknown" or makes something up
 // It hasn't seen this pattern → hallucination risk
 ```
+
 </CodeGroup>
 
-**Practical Implication:**
-When you want structured output, give the LLM a pattern to complete:
+**Practical Implication:** When you want structured output, give the LLM a pattern to complete:
 
 <CodeGroup>
+
 ```python Python
 # ❌ Vague: "Extract the customer's name and email"
 # LLM might respond in prose: "The customer's name is John and his email is..."
@@ -206,6 +224,7 @@ Email: [the customer's email address]
 # LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
 ```
 
+
 ```ts TypeScript
 // ❌ Vague: "Extract the customer's name and email"
 // LLM might respond in prose: "The customer's name is John and his email is..."
@@ -219,7 +238,7 @@ Email: [the customer's email address]
 `;
 // LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
 ```
+
 </CodeGroup>
 
 ---
-
