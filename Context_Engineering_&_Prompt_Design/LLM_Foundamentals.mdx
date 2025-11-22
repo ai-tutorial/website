@@ -78,32 +78,9 @@ That's 20K tokens before the LLM generates a single word. Multiply by thousands 
 
 **Token Economics:**
 
-<CodeGroup>
-
-```python Python
-# Real costs (approximate, as of Jan 2025)
-# GPT-4 pricing
-input_cost = 150_000 tokens * ($10 / 1M tokens) = $1.50
-output_cost = 3_000 tokens * ($30 / 1M tokens) = $0.09
-total_per_request = $1.59
-
-# At 10K requests/month: $15,900
-# Reduce input to 50K through caching: $5,300 (66% savings)
-```
-
-
-```ts TypeScript
-// Real costs (approximate, as of Jan 2025)
-// GPT-4 pricing
-const inputCost = 150_000 * (10 / 1_000_000);  // $1.50
-const outputCost = 3_000 * (30 / 1_000_000);  // $0.09
-const totalPerRequest = 1.59;
-
-// At 10K requests/month: $15,900
-// Reduce input to 50K through caching: $5,300 (66% savings)
-```
-
-</CodeGroup>
+$$
+input\,cost = 150K\,tokens * (\$10\,/\,1M\,tokens) = \$1.50 \newline output\,cost = 3K\,tokens * (\$30\,/\,1M\,tokens) = \$0.09 \newline total\,per\,request = \$1.59
+$$
 
 ## LLM Limitations You Must Know
 
@@ -123,6 +100,7 @@ LLMs are trained to predict the next plausible token. They're not fact-checking 
 
 - Constrain to provided context: "Only use information from these documents"
 - Validate outputs: Check facts against source data
+- Ground the answer in knowledge (throughout the tutorial).
 - Add human review: For high-stakes decisions
 
 **2. Non-Determinism: Different Answers Every Time**
@@ -131,9 +109,7 @@ Run the same prompt twice, get different answers. That's by design (temperature 
 
 [Full runnable non-deterministic outputs notebook](non-deterministic-outputs.ipynb)
 
-<CodeGroup>
-
-```python Python
+```python
 # Same prompt, different responses
 prompt = "Summarize this customer complaint in 10 words"
 
@@ -142,31 +118,31 @@ response_2 = "Shipment late, customer wants money back, very upset"
 response_3 = "Delayed delivery complaint with refund request, customer frustrated"
 ```
 
-
-```ts TypeScript
-// Same prompt, different responses
-const prompt = "Summarize this customer complaint in 10 words";
-
-const response1 = "Customer angry about delayed shipment, demanding refund immediately";
-const response2 = "Shipment late, customer wants money back, very upset";
-const response3 = "Delayed delivery complaint with refund request, customer frustrated";
-```
-
-</CodeGroup>
-
 **Production Strategy:**
+
+Control the creativity of the model with the Temperature parameter.
 
 - Temperature=0 for minimal creativity tasks (classification, extraction)
 - Temperature=0.3-0.7 for creative tasks (writing, brainstorming)
 - Run multiple times and vote (self-consistency, covered in 1.5)
 
+<Note>
+  GPT-5 models do **not** support the temperature parameter, and using it will raise an error. This breaks backward compatibility with earlier OpenAI models.
+
+  Instead, GPT-5 introduces a new way to control output variability: reasoning depth, via:To achieve similar results with reasoning effort set higher, or with another GPT-5 family model, try these alternative parameters:
+
+  ```python
+  Reasoning depth: reasoning: { effort: "none" | "low" | "medium" | "high" }
+  ```
+</Note>
+
 **3. Recency Bias: Recent Context Matters More**
 
 LLMs pay more attention to text at the beginning and end of the prompt. Middle content gets "lost."
 
-**Heuristic (Gemini):** Prompt structure and placement can affect results. Many teams place the specific query toward the end; validate with your use case. See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
+**Heuristic:** Prompt structure and placement can affect results. Many teams place the specific query toward the end; validate with your use case. 
 
-**Best Practice:**
+**Best Practice for Gemini: **See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
 
 ```
 Critical instructions at START
@@ -181,30 +157,15 @@ Specific query at END
 
 **Example:**
 
-<CodeGroup>
-
-```python Python
-# Prompt: "The capital of France is"
-# LLM completes: "Paris"
+```python
+prompt = "The capital of France is"
+result = "Paris"
 # Not because it "knows" geography, but because it's seen this pattern millions of times
 
-# Prompt: "The capital of Atlantis is"
-# LLM completes: "unknown" or makes something up
+prompt = "The capital of Atlantis is"
+result = "unknown" or makes something up
 # It hasn't seen this pattern → hallucination risk
 ```
-
-
-```ts TypeScript
-// Prompt: "The capital of France is"
-// LLM completes: "Paris"
-// Not because it "knows" geography, but because it's seen this pattern millions of times
-
-// Prompt: "The capital of Atlantis is"
-// LLM completes: "unknown" or makes something up
-// It hasn't seen this pattern → hallucination risk
-```
-
-</CodeGroup>
 
 **Practical Implication:** When you want structured output, give the LLM a pattern to complete:
 
