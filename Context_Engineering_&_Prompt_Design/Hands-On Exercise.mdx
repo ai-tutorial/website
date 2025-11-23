@@ -1,0 +1,488 @@
+---
+title: "Hands-On Exercise"
+description: "Build a production-ready prompt"
+sidebarTitle: "Hands-On Exercise"
+icon: "dumbbell"
+---
+
+## Build a Production-Ready Prompt
+
+**Scenario:** You're building a document summarizer for legal contracts. 
+
+Requirements:
+- Extract key terms (parties, dates, obligations)
+- Flag unusual or risky clauses
+- Provide 3-sentence executive summary
+- Must be accurate (hallucinations unacceptable)
+
+**Golden data-set:**
+
+<CodeGroup>
+```python Python
+
+# Evaluation dataset provided
+eval_contracts = [
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective March 1, 2024 between Tech Solutions LLC (\"Provider\") and GreenField Enterprises (\"Client\"). Provider will deliver cloud storage solutions quarterly. Client shall pay $4,500 per quarter, net 45 days. Either party may terminate with 60 days' written notice. Liability is limited to fees paid in the last 6 months. Unusual clause: Provider warrants that the services will meet industry standards.",
+    "extracted_data": {
+      "parties": [
+        "Tech Solutions LLC",
+        "GreenField Enterprises"
+      ],
+      "key_dates": [
+        "2024-03-01"
+      ],
+      "obligations": [
+        "Provider will deliver cloud storage solutions quarterly.",
+        "Client shall pay $4,500 per quarter, net 45 days.",
+        "Either party may terminate with 60 days' written notice."
+      ],
+      "risk_flags": [
+        "Liability is limited to fees paid in the last 6 months.",
+        "Provider warrants that the services will meet industry standards."
+      ],
+      "summary": "This Services Agreement is between Tech Solutions LLC and GreenField Enterprises, effective March 1, 2024. The Provider will deliver cloud storage solutions quarterly for a fee of $4,500 per quarter. The Agreement includes a termination clause and limits liability to fees paid in the last 6 months."
+    }
+  },
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective April 10, 2025 between Bright Innovations Inc (\"Provider\") and Stellar Dynamics (\"Client\"). Provider will provide website development services as requested. Client shall pay $2,000 per project, net 30 days. Either party may terminate with 15 days' written notice. Liability is unlimited for gross negligence. Unusual clause: Client agrees to keep all project details confidential for a period of 3 years.",
+    "extracted_data": {
+      "parties": [
+        "Bright Innovations Inc",
+        "Stellar Dynamics"
+      ],
+      "key_dates": [
+        "2025-04-10"
+      ],
+      "obligations": [
+        "Provider will provide website development services as requested.",
+        "Client shall pay $2,000 per project, net 30 days.",
+        "Client agrees to keep all project details confidential for a period of 3 years."
+      ],
+      "risk_flags": [
+        "unlimited liability for gross negligence",
+        "termination with 15 days' written notice"
+      ],
+      "summary": "This Services Agreement is between Bright Innovations Inc and Stellar Dynamics, effective April 10, 2025. The Provider will deliver website development services for a fee of $2,000 per project, with payment due in 30 days. The Client must maintain confidentiality of project details for three years and either party can terminate the agreement with 15 days' notice."
+    }
+  },
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective June 20, 2023 between Data Insights Ltd (\"Provider\") and Quantum Tech Corp (\"Client\"). Provider will perform data analytics services annually. Client shall pay $10,000 per year, net 30 days. Either party may terminate with 90 days' written notice. Liability is limited to fees paid in the last 12 months. Unusual clause: In the event of a force majeure, neither party shall be liable for delays.",
+    "extracted_data": {
+      "parties": [
+        "Data Insights Ltd",
+        "Quantum Tech Corp"
+      ],
+      "key_dates": [
+        "2023-06-20"
+      ],
+      "obligations": [
+        "Provider will perform data analytics services annually.",
+        "Client shall pay $10,000 per year, net 30 days."
+      ],
+      "risk_flags": [
+        "termination notice period",
+        "liability limitation",
+        "force majeure clause"
+      ],
+      "summary": "This Services Agreement is between Data Insights Ltd and Quantum Tech Corp, effective June 20, 2023. The Provider will deliver annual data analytics services for a fee of $10,000, payable within 30 days. The Agreement includes a 90-day termination notice and limits liability to fees paid in the last 12 months."
+    }
+  },
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective January 1, 2026 between Creative Minds Agency (\"Provider\") and NextGen Solutions (\"Client\"). Provider will deliver marketing services bi-monthly. Client shall pay $3,500 every two months, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to $10,000. Unusual clause: Provider retains ownership of all creative materials developed during the contract.",
+    "extracted_data": {
+      "parties": [
+        "Creative Minds Agency",
+        "NextGen Solutions"
+      ],
+      "key_dates": [
+        "2026-01-01"
+      ],
+      "obligations": [
+        "Provider will deliver marketing services bi-monthly.",
+        "Client shall pay $3,500 every two months, net 30 days.",
+        "Either party may terminate with 30 days' written notice."
+      ],
+      "risk_flags": [
+        "Liability limited to $10,000",
+        "Provider retains ownership of all creative materials"
+      ],
+      "summary": "This Services Agreement is between Creative Minds Agency and NextGen Solutions, effective January 1, 2026. The Provider will deliver marketing services bi-monthly for a fee of $3,500 every two months. Notably, the Provider retains ownership of all creative materials developed during the contract."
+    }
+  },
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective February 15, 2025 between Alpha Tech Group (\"Provider\") and Omega Systems (\"Client\"). Provider will provide IT consulting services monthly. Client shall pay $6,000 per month, net 30 days. Either party may terminate with 45 days' written notice. Liability is limited to fees paid in the last 18 months. Unusual clause: Both parties agree to resolve disputes through mediation before pursuing litigation.",
+    "extracted_data": {
+      "parties": [
+        "Alpha Tech Group",
+        "Omega Systems"
+      ],
+      "key_dates": [
+        "2025-02-15"
+      ],
+      "obligations": [
+        "Provider will provide IT consulting services monthly.",
+        "Client shall pay $6,000 per month, net 30 days.",
+        "Either party may terminate with 45 days' written notice."
+      ],
+      "risk_flags": [
+        "Liability limited to fees paid in the last 18 months.",
+        "Disputes resolved through mediation before litigation."
+      ],
+      "summary": "This Services Agreement is between Alpha Tech Group and Omega Systems, effective February 15, 2025. The Provider will deliver IT consulting services for a monthly fee of $6,000, with a termination notice period of 45 days. Notably, liability is capped at fees paid in the last 18 months, and disputes must be mediated before any litigation."
+    }
+  },
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective May 5, 2024 between SecureNet Services (\"Provider\") and CyberSafe Inc (\"Client\"). Provider will deliver cybersecurity assessment services twice a year. Client shall pay $8,000 per assessment, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to fees paid in the last 6 months. Unusual clause: Client shall indemnify Provider against third-party claims arising from the services.",
+    "extracted_data": {
+      "parties": [
+        "SecureNet Services",
+        "CyberSafe Inc"
+      ],
+      "key_dates": [
+        "2024-05-05"
+      ],
+      "obligations": [
+        "Provider will deliver cybersecurity assessment services twice a year.",
+        "Client shall pay $8,000 per assessment, net 30 days.",
+        "Either party may terminate with 30 days' written notice.",
+        "Client shall indemnify Provider against third-party claims arising from the services."
+      ],
+      "risk_flags": [
+        "Liability limited to fees paid in the last 6 months.",
+        "Indemnification clause for third-party claims."
+      ],
+      "summary": "This Services Agreement is between SecureNet Services and CyberSafe Inc, effective May 5, 2024. Provider will conduct cybersecurity assessments biannually for a fee of $8,000 per assessment. The agreement includes a termination clause and an unusual indemnification requirement for the Client."
+    }
+  },
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective August 1, 2023 between Future Tech Solutions (\"Provider\") and Visionary Enterprises (\"Client\"). Provider will conduct training sessions quarterly. Client shall pay $3,000 per session, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to the total fees paid under the Agreement. Unusual clause: Provider warrants that training materials will be up-to-date and relevant.",
+    "extracted_data": {
+      "parties": [
+        "Future Tech Solutions",
+        "Visionary Enterprises"
+      ],
+      "key_dates": [
+        "2023-08-01"
+      ],
+      "obligations": [
+        "Provider will conduct training sessions quarterly.",
+        "Client shall pay $3,000 per session, net 30 days.",
+        "Either party may terminate with 30 days' written notice."
+      ],
+      "risk_flags": [
+        "Liability limited to total fees paid under the Agreement.",
+        "Provider warrants that training materials will be up-to-date and relevant."
+      ],
+      "summary": "This Services Agreement is between Future Tech Solutions and Visionary Enterprises, effective August 1, 2023. Provider will conduct quarterly training sessions for which Client will pay $3,000 per session. The Agreement includes a termination clause and limits liability to the total fees paid."
+    }
+  },
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective September 15, 2025 between Horizon Analytics (\"Provider\") and EcoTech Co (\"Client\"). Provider will perform environmental impact assessments annually. Client shall pay $12,000 per assessment, net 30 days. Either party may terminate with 60 days' written notice. Liability is limited to fees paid in the last 24 months. Unusual clause: Client acknowledges that results may vary due to external factors beyond Provider's control.",
+    "extracted_data": {
+      "parties": [
+        "Horizon Analytics",
+        "EcoTech Co"
+      ],
+      "key_dates": [
+        "2025-09-15"
+      ],
+      "obligations": [
+        "Provider will perform environmental impact assessments annually.",
+        "Client shall pay $12,000 per assessment, net 30 days."
+      ],
+      "risk_flags": [
+        "Termination with 60 days' written notice",
+        "Liability limited to fees paid in the last 24 months",
+        "Results may vary due to external factors beyond Provider's control"
+      ],
+      "summary": "This Services Agreement is between Horizon Analytics and EcoTech Co, effective September 15, 2025. The Provider will conduct annual environmental impact assessments for a fee of $12,000 per assessment. The Agreement includes clauses on termination, liability limitations, and acknowledges that results may vary due to external factors."
+    }
+  },
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective December 1, 2024 between Quantum Innovations (\"Provider\") and Apex Corporation (\"Client\"). Provider will deliver mobile app development services per project. Client shall pay $15,000 per project, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to $20,000. Unusual clause: Both parties agree to share intellectual property developed during the project.",
+    "extracted_data": {
+      "parties": [
+        "Quantum Innovations",
+        "Apex Corporation"
+      ],
+      "key_dates": [
+        "2024-12-01"
+      ],
+      "obligations": [
+        "Provider will deliver mobile app development services per project.",
+        "Client shall pay $15,000 per project, net 30 days.",
+        "Either party may terminate with 30 days' written notice."
+      ],
+      "risk_flags": [
+        "Liability is limited to $20,000.",
+        "Both parties agree to share intellectual property developed during the project."
+      ],
+      "summary": "This Services Agreement is between Quantum Innovations and Apex Corporation for mobile app development services. The Client will pay $15,000 per project, with a termination notice of 30 days required by either party. Notably, both parties will share the intellectual property developed during the project."
+    }
+  },
+  {
+    "original_contract": "This Services Agreement (the \"Agreement\") is made effective January 10, 2025 between NextWave Technologies (\"Provider\") and Horizon Builders (\"Client\"). Provider will provide construction project management services on an as-needed basis. Client shall pay $5,500 per month, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to fees paid in the last 3 months. Unusual clause: Client waives the right to seek punitive damages against Provider.",
+    "extracted_data": {
+      "parties": [
+        "NextWave Technologies",
+        "Horizon Builders"
+      ],
+      "key_dates": [
+        "2025-01-10"
+      ],
+      "obligations": [
+        "Provider will provide construction project management services on an as-needed basis.",
+        "Client shall pay $5,500 per month, net 30 days.",
+        "Either party may terminate with 30 days' written notice."
+      ],
+      "risk_flags": [
+        "Liability limited to fees paid in the last 3 months.",
+        "Client waives the right to seek punitive damages against Provider."
+      ],
+      "summary": "This Services Agreement is between NextWave Technologies and Horizon Builders, effective January 10, 2025. Provider will offer construction project management services for a monthly fee of $5,500, with a termination notice period of 30 days. The agreement includes limitations on liability and a waiver of punitive damages by the Client."
+    }
+  }
+]
+
+# Your goal: 90%+ accuracy
+```
+
+```ts TypeScript
+
+// Evaluation dataset provided
+const evalContracts = [
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective March 1, 2024 between Tech Solutions LLC (\"Provider\") and GreenField Enterprises (\"Client\"). Provider will deliver cloud storage solutions quarterly. Client shall pay $4,500 per quarter, net 45 days. Either party may terminate with 60 days' written notice. Liability is limited to fees paid in the last 6 months. Unusual clause: Provider warrants that the services will meet industry standards.",
+    extractedData: {
+      parties: [
+        "Tech Solutions LLC",
+        "GreenField Enterprises"
+      ],
+      keyDates: [
+        "2024-03-01"
+      ],
+      obligations: [
+        "Provider will deliver cloud storage solutions quarterly.",
+        "Client shall pay $4,500 per quarter, net 45 days.",
+        "Either party may terminate with 60 days' written notice."
+      ],
+      riskFlags: [
+        "Liability is limited to fees paid in the last 6 months.",
+        "Provider warrants that the services will meet industry standards."
+      ],
+      summary: "This Services Agreement is between Tech Solutions LLC and GreenField Enterprises, effective March 1, 2024. The Provider will deliver cloud storage solutions quarterly for a fee of $4,500 per quarter. The Agreement includes a termination clause and limits liability to fees paid in the last 6 months."
+    }
+  },
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective April 10, 2025 between Bright Innovations Inc (\"Provider\") and Stellar Dynamics (\"Client\"). Provider will provide website development services as requested. Client shall pay $2,000 per project, net 30 days. Either party may terminate with 15 days' written notice. Liability is unlimited for gross negligence. Unusual clause: Client agrees to keep all project details confidential for a period of 3 years.",
+    extractedData: {
+      parties: [
+        "Bright Innovations Inc",
+        "Stellar Dynamics"
+      ],
+      keyDates: [
+        "2025-04-10"
+      ],
+      obligations: [
+        "Provider will provide website development services as requested.",
+        "Client shall pay $2,000 per project, net 30 days.",
+        "Client agrees to keep all project details confidential for a period of 3 years."
+      ],
+      riskFlags: [
+        "unlimited liability for gross negligence",
+        "termination with 15 days' written notice"
+      ],
+      summary: "This Services Agreement is between Bright Innovations Inc and Stellar Dynamics, effective April 10, 2025. The Provider will deliver website development services for a fee of $2,000 per project, with payment due in 30 days. The Client must maintain confidentiality of project details for three years and either party can terminate the agreement with 15 days' notice."
+    }
+  },
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective June 20, 2023 between Data Insights Ltd (\"Provider\") and Quantum Tech Corp (\"Client\"). Provider will perform data analytics services annually. Client shall pay $10,000 per year, net 30 days. Either party may terminate with 90 days' written notice. Liability is limited to fees paid in the last 12 months. Unusual clause: In the event of a force majeure, neither party shall be liable for delays.",
+    extractedData: {
+      parties: [
+        "Data Insights Ltd",
+        "Quantum Tech Corp"
+      ],
+      keyDates: [
+        "2023-06-20"
+      ],
+      obligations: [
+        "Provider will perform data analytics services annually.",
+        "Client shall pay $10,000 per year, net 30 days."
+      ],
+      riskFlags: [
+        "termination notice period",
+        "liability limitation",
+        "force majeure clause"
+      ],
+      summary: "This Services Agreement is between Data Insights Ltd and Quantum Tech Corp, effective June 20, 2023. The Provider will deliver annual data analytics services for a fee of $10,000, payable within 30 days. The Agreement includes a 90-day termination notice and limits liability to fees paid in the last 12 months."
+    }
+  },
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective January 1, 2026 between Creative Minds Agency (\"Provider\") and NextGen Solutions (\"Client\"). Provider will deliver marketing services bi-monthly. Client shall pay $3,500 every two months, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to $10,000. Unusual clause: Provider retains ownership of all creative materials developed during the contract.",
+    extractedData: {
+      parties: [
+        "Creative Minds Agency",
+        "NextGen Solutions"
+      ],
+      keyDates: [
+        "2026-01-01"
+      ],
+      obligations: [
+        "Provider will deliver marketing services bi-monthly.",
+        "Client shall pay $3,500 every two months, net 30 days.",
+        "Either party may terminate with 30 days' written notice."
+      ],
+      riskFlags: [
+        "Liability limited to $10,000",
+        "Provider retains ownership of all creative materials"
+      ],
+      summary: "This Services Agreement is between Creative Minds Agency and NextGen Solutions, effective January 1, 2026. The Provider will deliver marketing services bi-monthly for a fee of $3,500 every two months. Notably, the Provider retains ownership of all creative materials developed during the contract."
+    }
+  },
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective February 15, 2025 between Alpha Tech Group (\"Provider\") and Omega Systems (\"Client\"). Provider will provide IT consulting services monthly. Client shall pay $6,000 per month, net 30 days. Either party may terminate with 45 days' written notice. Liability is limited to fees paid in the last 18 months. Unusual clause: Both parties agree to resolve disputes through mediation before pursuing litigation.",
+    extractedData: {
+      parties: [
+        "Alpha Tech Group",
+        "Omega Systems"
+      ],
+      keyDates: [
+        "2025-02-15"
+      ],
+      obligations: [
+        "Provider will provide IT consulting services monthly.",
+        "Client shall pay $6,000 per month, net 30 days.",
+        "Either party may terminate with 45 days' written notice."
+      ],
+      riskFlags: [
+        "Liability limited to fees paid in the last 18 months.",
+        "Disputes resolved through mediation before litigation."
+      ],
+      summary: "This Services Agreement is between Alpha Tech Group and Omega Systems, effective February 15, 2025. The Provider will deliver IT consulting services for a monthly fee of $6,000, with a termination notice period of 45 days. Notably, liability is capped at fees paid in the last 18 months, and disputes must be mediated before any litigation."
+    }
+  },
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective May 5, 2024 between SecureNet Services (\"Provider\") and CyberSafe Inc (\"Client\"). Provider will deliver cybersecurity assessment services twice a year. Client shall pay $8,000 per assessment, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to fees paid in the last 6 months. Unusual clause: Client shall indemnify Provider against third-party claims arising from the services.",
+    extractedData: {
+      parties: [
+        "SecureNet Services",
+        "CyberSafe Inc"
+      ],
+      keyDates: [
+        "2024-05-05"
+      ],
+      obligations: [
+        "Provider will deliver cybersecurity assessment services twice a year.",
+        "Client shall pay $8,000 per assessment, net 30 days.",
+        "Either party may terminate with 30 days' written notice.",
+        "Client shall indemnify Provider against third-party claims arising from the services."
+      ],
+      riskFlags: [
+        "Liability limited to fees paid in the last 6 months.",
+        "Indemnification clause for third-party claims."
+      ],
+      summary: "This Services Agreement is between SecureNet Services and CyberSafe Inc, effective May 5, 2024. Provider will conduct cybersecurity assessments biannually for a fee of $8,000 per assessment. The agreement includes a termination clause and an unusual indemnification requirement for the Client."
+    }
+  },
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective August 1, 2023 between Future Tech Solutions (\"Provider\") and Visionary Enterprises (\"Client\"). Provider will conduct training sessions quarterly. Client shall pay $3,000 per session, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to the total fees paid under the Agreement. Unusual clause: Provider warrants that training materials will be up-to-date and relevant.",
+    extractedData: {
+      parties: [
+        "Future Tech Solutions",
+        "Visionary Enterprises"
+      ],
+      keyDates: [
+        "2023-08-01"
+      ],
+      obligations: [
+        "Provider will conduct training sessions quarterly.",
+        "Client shall pay $3,000 per session, net 30 days.",
+        "Either party may terminate with 30 days' written notice."
+      ],
+      riskFlags: [
+        "Liability limited to total fees paid under the Agreement.",
+        "Provider warrants that training materials will be up-to-date and relevant."
+      ],
+      summary: "This Services Agreement is between Future Tech Solutions and Visionary Enterprises, effective August 1, 2023. Provider will conduct quarterly training sessions for which Client will pay $3,000 per session. The Agreement includes a termination clause and limits liability to the total fees paid."
+    }
+  },
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective September 15, 2025 between Horizon Analytics (\"Provider\") and EcoTech Co (\"Client\"). Provider will perform environmental impact assessments annually. Client shall pay $12,000 per assessment, net 30 days. Either party may terminate with 60 days' written notice. Liability is limited to fees paid in the last 24 months. Unusual clause: Client acknowledges that results may vary due to external factors beyond Provider's control.",
+    extractedData: {
+      parties: [
+        "Horizon Analytics",
+        "EcoTech Co"
+      ],
+      keyDates: [
+        "2025-09-15"
+      ],
+      obligations: [
+        "Provider will perform environmental impact assessments annually.",
+        "Client shall pay $12,000 per assessment, net 30 days."
+      ],
+      riskFlags: [
+        "Termination with 60 days' written notice",
+        "Liability limited to fees paid in the last 24 months",
+        "Results may vary due to external factors beyond Provider's control"
+      ],
+      summary: "This Services Agreement is between Horizon Analytics and EcoTech Co, effective September 15, 2025. The Provider will conduct annual environmental impact assessments for a fee of $12,000 per assessment. The Agreement includes clauses on termination, liability limitations, and acknowledges that results may vary due to external factors."
+    }
+  },
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective December 1, 2024 between Quantum Innovations (\"Provider\") and Apex Corporation (\"Client\"). Provider will deliver mobile app development services per project. Client shall pay $15,000 per project, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to $20,000. Unusual clause: Both parties agree to share intellectual property developed during the project.",
+    extractedData: {
+      parties: [
+        "Quantum Innovations",
+        "Apex Corporation"
+      ],
+      keyDates: [
+        "2024-12-01"
+      ],
+      obligations: [
+        "Provider will deliver mobile app development services per project.",
+        "Client shall pay $15,000 per project, net 30 days.",
+        "Either party may terminate with 30 days' written notice."
+      ],
+      riskFlags: [
+        "Liability is limited to $20,000.",
+        "Both parties agree to share intellectual property developed during the project."
+      ],
+      summary: "This Services Agreement is between Quantum Innovations and Apex Corporation for mobile app development services. The Client will pay $15,000 per project, with a termination notice of 30 days required by either party. Notably, both parties will share the intellectual property developed during the project."
+    }
+  },
+  {
+    originalContract: "This Services Agreement (the \"Agreement\") is made effective January 10, 2025 between NextWave Technologies (\"Provider\") and Horizon Builders (\"Client\"). Provider will provide construction project management services on an as-needed basis. Client shall pay $5,500 per month, net 30 days. Either party may terminate with 30 days' written notice. Liability is limited to fees paid in the last 3 months. Unusual clause: Client waives the right to seek punitive damages against Provider.",
+    extractedData: {
+      parties: [
+        "NextWave Technologies",
+        "Horizon Builders"
+      ],
+      keyDates: [
+        "2025-01-10"
+      ],
+      obligations: [
+        "Provider will provide construction project management services on an as-needed basis.",
+        "Client shall pay $5,500 per month, net 30 days.",
+        "Either party may terminate with 30 days' written notice."
+      ],
+      riskFlags: [
+        "Liability limited to fees paid in the last 3 months.",
+        "Client waives the right to seek punitive damages against Provider."
+      ],
+      summary: "This Services Agreement is between NextWave Technologies and Horizon Builders, effective January 10, 2025. Provider will offer construction project management services for a monthly fee of $5,500, with a termination notice period of 30 days. The agreement includes limitations on liability and a waiver of punitive damages by the Client."
+    }
+  }
+];
+
+// Your goal: 90%+ accuracy
+```
+</CodeGroup>
+
+**Success Criteria:**
+
+✓ At least 90% accuracy
+
+
+
+

@@ -1,0 +1,753 @@
+---
+title: "RAG Evaluation"
+description: "How to evaluate the performance of a RAG system"
+sidebarTitle: "RAG Evaluation"
+icon: "book"
+---
+
+## Why Evaluation is Non-Negotiable
+
+You've built an incredible, multi-stage RAG pipeline. Now for the hard truth: it's failing. In production, RAG systems usually fail not because the LLM is bad, but because the context it receives is subtly wrong. A poor retrieval result, even if ranked fifth, can derail the answer. Without a clear evaluation framework, you're debugging blind, relying on "vibe checks" that fail in production.
+
+**What Problem It Solves:** Systematic evaluation isolates failures. It answers: Did the system hallucinate because the relevant document wasn't found (Retrieval Failure), or because the LLM ignored the document that was found (Generation Failure)? This single distinction saves countless hours of wasted effort on prompt tuning when the real fix is adjusting your chunking strategy.
+
+**Real-World Example:** Teams often spend weeks trying to fix LLM hallucination with better prompts, only to discover the root cause was a weak embedding model missing critical, domain-specific documents. We'll learn to diagnose the real issue upfront.
+
+## The Two-Part Evaluation
+
+The RAG pipeline has two core components that must be evaluated and debugged independently: Retrieval and Generation
+
+1. **Retrieval Quality:** Did we find the right documents?
+2. **Generation Quality:** Did the LLM use them correctly?
+
+```
+Query: "What's our refund policy?"
+                  │
+                  v
+          +---------------+
+          │   Retrieval   │ ← Evaluate: Are docs relevant?
+          +---------------+
+                  │
+        Retrieved: Doc A, Doc B, Doc C
+                  │
+                  v
+          +---------------+
+          │  Generation   │ ← Evaluate: Is answer faithful?
+          +---------------+
+                  │
+                  v
+          Answer: "30-day returns..."
+```
+
+
+### The ARES Framework for Failure Attribution
+We'll use a simplified version of the ARES framework (Answer Relevance, Evidence Support) to diagnose every failure based on three component checks:
+
+| Check | Component | Goal | Metric Type |
+| :--- | :--- | :--- | :--- |
+| **Context Relevance** | Retrieval | Did we retrieve the necessary ground-truth document(s)? | Recall@k, NDCG@k |
+| **Answer Faithfulness** | Generation | Is the answer grounded *only* in the retrieved context? | LLM-as-Judge (Faithfulness) |
+| **Answer Relevance** | Generation | Does the answer address the original query? | LLM-as-Judge (Relevance) |
+
+If you get a wrong answer, you run this checklist: If Context Relevance is low, fix the retriever. If Context Relevance is high but Faithfulness or Relevance are low, fix the generator's prompt or the reranker.
+
+## Part 1: Retrieval Metrics  (Did we find it?)
+
+**Recall@k: Are the relevant docs in the top-k?**
+
+* **Definition:** What fraction of relevant documents did we retrieve?
+
+* **When to use:** Measuring if all important docs are findable
+
+* **Target:** Recall@10 > 0.90 (catch 90%+ relevant docs in first 10)
+
+**Precision@k: Are the retrieved docs relevant?**
+
+* **Definition:** What fraction of retrieved documents are actually relevant?
+
+* **When to use:** Measuring retrieval noise/irrelevance
+
+* **Target:** Precision@5 > 0.80 (80%+ of top-5 are useful)
+
+**NDCG@k: Are relevant docs ranked higher?**
+
+* **Definition:** Normalized Discounted Cumulative Gain - considers ranking order.
+
+* **Why it matters:** Getting relevant doc at position 1 is better than position 10.
+
+* **When to use:** Measuring overall retrieval quality (position matters)
+
+* **Target:** NDCG@10 > 0.80 (strong ranking)
+
+**Mean Reciprocal Rank (MRR): How quickly do we find relevance?**
+
+* **Definition:** Average of 1/rank for first relevant doc.
+
+* **When to use:** User-focused metric (fast discovery matters)
+
+* **Target:** MRR > 0.80 (relevant doc in top ~1-2 results)
+
+### Setup and Metric Calculation
+
+We'll use hit_rate (a simple form of recall), MRR, Precision, and NDCG.
+
+[Full runnable example of retrieval metrics](https://colab.research.google.com/drive/1Fs35g5ngII4TKpE7jk-9M2e9nOIlsxUL?usp=drive_link)
+
+<CodeGroup>
+```python Python
+# pip install llama-index-llms-openai llama-index-embeddings-openai llama-index
+from llama_index.evaluation import RetrieverEvaluator
+from llama_index.evaluation.retrieval.metrics import RetrievalMetric
+from llama_index.llms import OpenAI
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
+import os
+
+# Set your API Key (required for LLM-based query generation and embeddings)
+# os.environ["OPENAI_API_KEY"] = "sk-..." 
+
+# --- Setup: Index and Retriever ---
+# 1. Load data and create a simple index (assuming local files are present)
+documents = SimpleDirectoryReader(input_files=["Assets/paul_graham_essay.txt"]).load_data()
+index = VectorStoreIndex.from_documents(documents)
+retriever = index.as_retriever(similarity_top_k=5)
+
+# --- Metric Calculation (Simplified) ---
+
+# 2. Define the metrics we want to calculate
+# LlamaIndex Metrics are classes, not functions
+metrics = [
+    RetrievalMetric.HIT_RATE,  # Measures if a relevant document is in top k (Recall-like)
+    RetrievalMetric.MRR,       # Mean Reciprocal Rank
+    RetrievalMetric.PRECISION, # Precision@k
+    RetrievalMetric.NDCG,      # NDCG@k
+    RetrievalMetric.AVERAGE_RECALL, # Average Recall
+]
+
+# 3. Create the Evaluator
+# NOTE: This Evaluator requires a dataset containing queries and ground_truth_nodes
+# For simplicity, we assume 'test_dataset' is loaded with these fields.
+evaluator = RetrieverEvaluator(
+    metrics=metrics,
+    retriever=retriever
+)
+
+# 4. Run the Evaluation (Requires a test dataset)
+# evaluation_results = await evaluator.evaluate_dataset(test_dataset)
+# print(evaluation_results.average_scores) 
+```
+
+```ts TypeScript
+// npm install llama-index
+import { RetrieverEvaluator, RetrievalMetric } from "llama-index/evaluation";
+import { OpenAI } from "llama-index/llms";
+import { SimpleDirectoryReader, VectorStoreIndex } from "llama-index";
+
+// Set your API Key (required for LLM-based query generation and embeddings)
+// process.env.OPENAI_API_KEY = "sk-...";
+
+// --- Setup: Index and Retriever ---
+// 1. Load data and create a simple index (assuming local files are present)
+const documents = await SimpleDirectoryReader.loadData({
+    inputFiles: ["Assets/paul_graham_essay.txt"]
+});
+const index = await VectorStoreIndex.fromDocuments(documents);
+const retriever = index.asRetriever({ similarityTopK: 5 });
+
+// --- Metric Calculation (Simplified) ---
+
+// 2. Define the metrics we want to calculate
+// LlamaIndex Metrics are classes, not functions
+const metrics = [
+    RetrievalMetric.HIT_RATE,  // Measures if a relevant document is in top k (Recall-like)
+    RetrievalMetric.MRR,       // Mean Reciprocal Rank
+    RetrievalMetric.PRECISION, // Precision@k
+    RetrievalMetric.NDCG,      // NDCG@k
+    RetrievalMetric.AVERAGE_RECALL, // Average Recall
+];
+
+// 3. Create the Evaluator
+// NOTE: This Evaluator requires a dataset containing queries and ground_truth_nodes
+// For simplicity, we assume 'test_dataset' is loaded with these fields.
+const evaluator = new RetrieverEvaluator({
+    metrics: metrics,
+    retriever: retriever
+});
+
+// 4. Run the Evaluation (Requires a test dataset)
+// const evaluationResults = await evaluator.evaluateDataset(testDataset);
+// console.log(evaluationResults.averageScores);
+```
+</CodeGroup>
+
+## Part 2: Generation Quality
+
+Now evaluate if the LLM used retrieved context correctly.
+
+[Full runnable example of response evaluation](https://colab.research.google.com/drive/1Fs35g5ngII4TKpE7jk-9M2e9nOIlsxUL?usp=drive_link)
+
+### Faithfulness: Is the answer grounded in context?
+
+**Definition:** Does the answer only contain info from retrieved docs?
+
+**Target:** Faithfulness > 0.90 (less than 10% hallucination)
+
+### Relevance: Does the answer address the query?
+
+**Definition:** Is the answer on-topic and helpful for the question?
+
+**Target:** Relevance > 0.85 (answers actually helpful)
+
+## LLM-as-Judge
+
+Traditional evaluation metrics require labeled ground truth, but for generation quality—measuring faithfulness and relevance—we can leverage LLMs themselves as evaluators. The **LLM-as-Judge** approach uses a separate, more capable LLM (like GPT-4) to act as an impartial judge that scores whether a response is faithful to the retrieved context and relevant to the original query.
+
+**Main advantage:** The primary benefit of LLM-as-Judge is that it can be used in **production environments where there is no ground truth**. Unlike retrieval metrics that require manually labeled relevant documents, or traditional answer evaluation that needs expected answers, LLM-as-Judge can evaluate any query-response pair in real-time by comparing the response against the retrieved context. This makes it ideal for continuous monitoring of production RAG systems.
+
+**Why it works:** Modern LLMs are remarkably good at understanding semantic relationships and detecting inconsistencies. When given a query, a response, and the source context, a judge LLM can reliably determine if the answer is grounded in the provided documents (faithfulness) and if it actually addresses what was asked (relevance).
+
+**Critical requirement:** Before deploying LLM-as-Judge in production, you must **evaluate and optimize the judge itself using ground truth data**. Create a validation set with human-annotated examples (e.g., 50-100 cases where you know the correct faithfulness/relevance scores), run the judge on these cases, and measure its accuracy against human labels. If the judge's scores don't align with ground truth (>85% agreement), adjust the judge model, prompts, or temperature settings. This calibration step ensures your judge is actually judging correctly before you rely on it for production monitoring.
+
+**Trade-offs:** While faster and more scalable than human evaluation, LLM-as-Judge has costs (API calls to the judge model) and can occasionally disagree with human annotators on edge cases. Use it for continuous monitoring and initial evaluation, but validate critical failures with human review.
+
+<CodeGroup>
+```python Python
+# pip install llama-index-llms-openai llama-index-core
+from llama_index.llms import OpenAI
+from llama_index.evaluation import ResponseEvaluator
+from llama_index.evaluation.base import EvaluationResult
+from typing import List
+
+# 1. Define the LLM-as-Judge model 
+# This is the "impartial judge" that determines the scores.
+judge_llm = OpenAI(model="gpt-4o") 
+
+# 2. Create the Response Evaluator instance
+# The evaluator is set up to use the judge_llm for scoring.
+evaluator = ResponseEvaluator(llm=judge_llm)
+
+# --- Metric Definitions ---
+
+def evaluate_response_quality(
+        query: str,
+    response: str, 
+    source_nodes: List[str] # List of text chunks retrieved
+) -> EvaluationResult:
+    """
+    Evaluates response faithfulness and relevancy using LlamaIndex LLM-as-Judge.
+    
+    Args:
+        query: The original user question.
+        response: The LLM's final synthesized answer.
+        source_nodes: The retrieved contexts used for generation.
+        
+    Returns: EvaluationResult object containing scores and reasoning.
+    """
+    
+    # 3. Define the metrics and run the evaluation
+    # LlamaIndex's ResponseEvaluator requires passing both the query and source nodes.
+    # It automatically runs the LLM-as-Judge against internal prompts for:
+    #   - Faithfulness (Response is supported by Source Nodes)
+    #   - Relevancy (Response directly answers the Query)
+    
+    evaluation_result = evaluator.evaluate(
+        query=query, 
+        response=response, 
+        contexts=source_nodes # Corresponds to the retrieved 'context' from the trace
+    )
+    
+    return evaluation_result
+
+# --- Example Usage ---
+
+# Simulate data from a production trace
+sample_query = "What is the capital of Texas, and where is the population data stored?"
+sample_response = "The capital of Texas is Austin. The population data is stored in the PostgreSQL database."
+sample_nodes = [
+    "Austin is the capital of Texas.",
+    "Population figures are maintained in the PostgreSQL DB schema 'public.census_data'."
+]
+
+# Run the evaluation
+results = evaluate_response_quality(
+    query=sample_query,
+    response=sample_response,
+    source_nodes=sample_nodes
+)
+
+print(f"\nResponse Faithfulness Score: {results.passing}: {results.feedback}")
+print(f"Full Evaluation Report: {results.json()}")
+```
+
+```ts TypeScript
+// npm install llama-index
+import { OpenAI } from "llama-index/llms";
+import { ResponseEvaluator, EvaluationResult } from "llama-index/evaluation";
+
+// 1. Define the LLM-as-Judge model
+// This is the "impartial judge" that determines the scores.
+const judgeLLM = new OpenAI({ model: "gpt-4o" });
+
+// 2. Create the Response Evaluator instance
+// The evaluator is set up to use the judge_llm for scoring.
+const evaluator = new ResponseEvaluator({ llm: judgeLLM });
+
+// --- Metric Definitions ---
+
+async function evaluateResponseQuality(
+    query: string,
+    response: string,
+    sourceNodes: string[]  // List of text chunks retrieved
+): Promise<EvaluationResult> {
+    /**
+     * Evaluates response faithfulness and relevancy using LlamaIndex LLM-as-Judge.
+     * 
+     * @param query - The original user question.
+     * @param response - The LLM's final synthesized answer.
+     * @param sourceNodes - The retrieved contexts used for generation.
+     * 
+     * @returns EvaluationResult object containing scores and reasoning.
+     */
+    
+    // 3. Define the metrics and run the evaluation
+    // LlamaIndex's ResponseEvaluator requires passing both the query and source nodes.
+    // It automatically runs the LLM-as-Judge against internal prompts for:
+    //   - Faithfulness (Response is supported by Source Nodes)
+    //   - Relevancy (Response directly answers the Query)
+    
+    const evaluationResult = await evaluator.evaluate({
+        query: query,
+        response: response,
+        contexts: sourceNodes  // Corresponds to the retrieved 'context' from the trace
+    });
+    
+    return evaluationResult;
+}
+
+// --- Example Usage ---
+
+// Simulate data from a production trace
+const sampleQuery = "What is the capital of Texas, and where is the population data stored?";
+const sampleResponse = "The capital of Texas is Austin. The population data is stored in the PostgreSQL database.";
+const sampleNodes = [
+    "Austin is the capital of Texas.",
+    "Population figures are maintained in the PostgreSQL DB schema 'public.census_data'."
+];
+
+// Run the evaluation
+const results = await evaluateResponseQuality(
+    query: sampleQuery,
+    response: sampleResponse,
+    sourceNodes: sampleNodes
+);
+
+console.log(`\nResponse Faithfulness Score: ${results.passing}: ${results.feedback}`);
+console.log(`Full Evaluation Report: ${JSON.stringify(results, null, 2)}`);
+```
+</CodeGroup>
+
+## Building a Golden Dataset
+
+**The most important step:** You need ground truth test cases.
+
+### How to Create Golden Dataset
+
+<CodeGroup>
+```python Python
+# 1. Collect real user queries
+real_queries = [
+    "How do I reset my password?",
+    "What's the return policy?",
+    "Do you ship internationally?",
+    # ... 50-100 real queries
+]
+
+# 2. For each query, manually identify relevant docs
+golden_dataset = []
+for query in real_queries:
+    # Human annotators review and mark relevant docs (text content is needed here)
+    relevant_node_texts = annotate_relevant_docs_texts(query, corpus) # Must return node TEXT
+    
+    # Optionally: write expected answer (still useful for the ResponseEvaluator ground truth)
+    expected_answer = write_expected_answer(query, relevant_node_texts)
+    
+    # LlamaIndex RetrieverEvaluator requires this exact format:
+    golden_dataset.append({
+        "query": query,
+        "ground_truth_nodes": relevant_node_texts, # List of Node Texts (the relevant chunks)
+        "expected_answer": expected_answer          
+    })
+
+# 3. Save for repeated evaluation
+import json
+with open('golden_dataset.json', 'w') as f:
+    json.dump(golden_dataset, f, indent=2)
+
+# Now you can evaluate ANY RAG system against this benchmark
+```
+
+```ts TypeScript
+// 1. Collect real user queries
+const realQueries = [
+    "How do I reset my password?",
+    "What's the return policy?",
+    "Do you ship internationally?",
+    // ... 50-100 real queries
+];
+
+// 2. For each query, manually identify relevant docs
+const goldenDataset: Array<{
+    query: string;
+    ground_truth_nodes: string[];
+    expected_answer: string;
+}> = [];
+
+for (const query of realQueries) {
+    // Human annotators review and mark relevant docs (text content is needed here)
+    const relevantNodeTexts = annotateRelevantDocsTexts(query, corpus); // Must return node TEXT
+    
+    // Optionally: write expected answer (still useful for the ResponseEvaluator ground truth)
+    const expectedAnswer = writeExpectedAnswer(query, relevantNodeTexts);
+    
+    // LlamaIndex RetrieverEvaluator requires this exact format:
+    goldenDataset.push({
+        query: query,
+        ground_truth_nodes: relevantNodeTexts, // List of Node Texts (the relevant chunks)
+        expected_answer: expectedAnswer
+    });
+}
+
+// 3. Save for repeated evaluation
+import * as fs from "fs";
+fs.writeFileSync('golden_dataset.json', JSON.stringify(goldenDataset, null, 2));
+
+// Now you can evaluate ANY RAG system against this benchmark
+```
+</CodeGroup>
+
+**Golden dataset best practices:**
+- **Size:** 50-100 queries minimum, 500+ ideal
+- **Diversity:** Cover all query types (factual, conceptual, multi-hop)
+- **Difficulty:** Include easy and hard cases
+- **Updates:** Refresh quarterly as corpus changes
+- **Multiple annotators:** Inter-annotator agreement > 0.80
+
+## Debugging RAG Failures
+
+When evaluation reveals problems, debug systematically.
+
+<CodeGroup>
+```python Python
+def debug_rag_failure_with_scores(
+    query: str, 
+    retrieval_scores: dict, # Output from RetrieverEvaluator.average_scores (e.g., {'hit_rate': 0.5, 'mrr': 0.7})
+    response_results: EvaluationResult # Output from ResponseEvaluator
+):
+    """
+    Systematic debugging of RAG failures using LlamaIndex metric scores.
+    Isolates: retrieval problem vs. generation problem.
+    """
+    
+    print("=== RAG Failure Analysis ===")
+    print(f"Query: {query}\n")
+    
+    # 1. Check Retrieval Failure (Layer 1)
+    # We check if a key retrieval metric (Hit Rate or MRR) falls below the target.
+    hit_rate = retrieval_scores.get(RetrievalMetric.HIT_RATE, 0)
+    mrr_score = retrieval_scores.get(RetrievalMetric.MRR, 0)
+
+    # Check against targets (Recall@10 > 0.90, MRR > 0.80)
+    if hit_rate < 0.80 or mrr_score < 0.70:
+        print(f"\n❌ RETRIEVAL PROBLEM (Hit Rate: {hit_rate:.2f}, MRR: {mrr_score:.2f})")
+        print("— Fix: Focus on tuning chunking, reranking, or embedding model.")
+        return "retrieval_failure"
+    
+    # 2. Check Generation Failure (Layer 2)
+    # Check Faithfulness and Relevancy directly from the ResponseEvaluator output.
+    
+    # NOTE: LlamaIndex returns True/False for 'passing' and the reason in 'feedback'
+    if not response_results.passing:
+        print("\n❌ GENERATION PROBLEM (LLM-as-Judge Failure)")
+        
+        # We need to parse the feedback to diagnose Faithfulness vs. Relevancy failure
+        feedback = response_results.feedback
+        
+        if "Faithfulness" in feedback or "support" in feedback:
+            print(f"— Failure Type: Hallucination/Misinterpretation (Faithfulness)")
+            print(f"— Feedback: {feedback}")
+            print("— Fix: Constrain LLM prompt, adjust temperature, or improve reranker quality to reduce noise.")
+            return "generation_faithfulness_failure"
+    
+        if "Relevance" in feedback or "query" in feedback:
+            print(f"— Failure Type: Off-Topic/Irrelevance (Relevancy)")
+            print(f"— Feedback: {feedback}")
+            print("— Fix: Clarify LLM system prompt on staying concise and relevant.")
+            return "generation_relevancy_failure"
+    
+    # If both layers pass
+    print("\n✓ Both retrieval and generation meet automated targets.")
+    return "evaluation_passed"
+```
+
+```ts TypeScript
+function debugRAGFailureWithScores(
+    query: string,
+    retrievalScores: Record<string, number>, // Output from RetrieverEvaluator.averageScores (e.g., {'hit_rate': 0.5, 'mrr': 0.7})
+    responseResults: EvaluationResult // Output from ResponseEvaluator
+): string {
+    /**
+     * Systematic debugging of RAG failures using LlamaIndex metric scores.
+     * Isolates: retrieval problem vs. generation problem.
+     */
+    
+    console.log("=== RAG Failure Analysis ===");
+    console.log(`Query: ${query}\n`);
+    
+    // 1. Check Retrieval Failure (Layer 1)
+    // We check if a key retrieval metric (Hit Rate or MRR) falls below the target.
+    const hitRate = retrievalScores[RetrievalMetric.HIT_RATE] || 0;
+    const mrrScore = retrievalScores[RetrievalMetric.MRR] || 0;
+
+    // Check against targets (Recall@10 > 0.90, MRR > 0.80)
+    if (hitRate < 0.80 || mrrScore < 0.70) {
+        console.log(`\n❌ RETRIEVAL PROBLEM (Hit Rate: ${hitRate.toFixed(2)}, MRR: ${mrrScore.toFixed(2)})`);
+        console.log("— Fix: Focus on tuning chunking, reranking, or embedding model.");
+        return "retrieval_failure";
+    }
+    
+    // 2. Check Generation Failure (Layer 2)
+    // Check Faithfulness and Relevancy directly from the ResponseEvaluator output.
+    
+    // NOTE: LlamaIndex returns True/False for 'passing' and the reason in 'feedback'
+    if (!responseResults.passing) {
+        console.log("\n❌ GENERATION PROBLEM (LLM-as-Judge Failure)");
+        
+        // We need to parse the feedback to diagnose Faithfulness vs. Relevancy failure
+        const feedback = responseResults.feedback;
+        
+        if (feedback.includes("Faithfulness") || feedback.includes("support")) {
+            console.log(`— Failure Type: Hallucination/Misinterpretation (Faithfulness)`);
+            console.log(`— Feedback: ${feedback}`);
+            console.log("— Fix: Constrain LLM prompt, adjust temperature, or improve reranker quality to reduce noise.");
+            return "generation_faithfulness_failure";
+        }
+    
+        if (feedback.includes("Relevance") || feedback.includes("query")) {
+            console.log(`— Failure Type: Off-Topic/Irrelevance (Relevancy)`);
+            console.log(`— Feedback: ${feedback}`);
+            console.log("— Fix: Clarify LLM system prompt on staying concise and relevant.");
+            return "generation_relevancy_failure";
+        }
+    }
+    
+    // If both layers pass
+    console.log("\n✓ Both retrieval and generation meet automated targets.");
+    return "evaluation_passed";
+}
+```
+</CodeGroup>
+
+## Continuous Evaluation
+
+<CodeGroup>
+```python Python
+import random
+import numpy as np
+from llama_index.evaluation import RetrieverEvaluator, ResponseEvaluator
+
+# Assume setup from previous sections:
+# - evaluator_retrieval (RetrieverEvaluator instance with metrics configured)
+# - evaluator_response (ResponseEvaluator instance with judge_llm configured)
+# - rag_system (your end-to-end RAG pipeline)
+
+class ProductionRAGMonitor:
+    """Continuous evaluation using LlamaIndex modules in production."""
+    
+    def __init__(self, golden_dataset: list, sample_rate: float = 0.1):
+        # The golden_dataset now contains {'query', 'ground_truth_nodes', 'expected_answer'}
+        self.golden_dataset = golden_dataset
+        self.sample_rate = sample_rate
+        # Evaluators are configured outside this class and passed in (or initialized)
+        self.ret_evaluator = RetrieverEvaluator(retriever=rag_system.retriever, metrics=metrics)
+        self.res_evaluator = ResponseEvaluator(llm=judge_llm)
+    
+    def should_evaluate(self) -> bool:
+        """Sample queries for evaluation (to manage cost)."""
+        return random.random() < self.sample_rate
+    
+    def log_and_evaluate(
+        self,
+        query: str,
+        retrieved_nodes_text: list[str], # Text list of the nodes returned by the RAG system
+        answer: str
+    ):
+        """Log every query, evaluate sample against a golden case if found."""
+        log_query(query, retrieved_nodes_text, answer)
+        
+        if self.should_evaluate():
+            # Find matching golden case (requires exact query match for simplicity here)
+            golden_case = next(
+                (c for c in self.golden_dataset if c['query'] == query),
+                None
+            )
+            
+            if golden_case:
+                # --- Step 1: Evaluate Retrieval (Layer 1) ---
+                # This requires constructing a mini-dataset for the RetrieverEvaluator
+                # In a real system, you'd evaluate the original retriever component.
+                
+                # --- Step 2: Evaluate Generation (Layer 2) ---
+                res_eval = self.res_evaluator.evaluate(
+                    query=query, 
+                    response=answer, 
+                    contexts=retrieved_nodes_text 
+                )
+                
+                # Check critical metrics (Faithfulness and Relevance)
+                # NOTE: ResponseEvaluator's result.passing often checks Faithfulness
+                if not res_eval.passing:
+                    alert(f"Hallucination/Irrelevance Detected: {res_eval.feedback}")
+    
+    def weekly_report(self):
+        """Aggregate metrics from week's queries and flag degradation."""
+        # Analyze logged queries, check averages of NDCG, MRR, Faithfulness, etc. 
+        # against historical baseline metrics.
+        pass
+
+# Integration in the RAG endpoint remains the same, ensuring the monitor is called 
+# with the output of the unified LlamaIndex RAG system.
+```
+
+```ts TypeScript
+import * as random from "random";
+import { RetrieverEvaluator, ResponseEvaluator } from "llama-index/evaluation";
+
+// Assume setup from previous sections:
+// - evaluatorRetrieval (RetrieverEvaluator instance with metrics configured)
+// - evaluatorResponse (ResponseEvaluator instance with judgeLLM configured)
+// - ragSystem (your end-to-end RAG pipeline)
+
+class ProductionRAGMonitor {
+    private goldenDataset: Array<{
+        query: string;
+        ground_truth_nodes: string[];
+        expected_answer: string;
+    }>;
+    private sampleRate: number;
+    private retEvaluator: RetrieverEvaluator;
+    private resEvaluator: ResponseEvaluator;
+
+    /**
+     * Continuous evaluation using LlamaIndex modules in production.
+     */
+    constructor(goldenDataset: Array<{ query: string; ground_truth_nodes: string[]; expected_answer: string }>, sampleRate: number = 0.1) {
+        // The goldenDataset now contains {'query', 'ground_truth_nodes', 'expected_answer'}
+        this.goldenDataset = goldenDataset;
+        this.sampleRate = sampleRate;
+        // Evaluators are configured outside this class and passed in (or initialized)
+        this.retEvaluator = new RetrieverEvaluator({
+            retriever: ragSystem.retriever,
+            metrics: metrics
+        });
+        this.resEvaluator = new ResponseEvaluator({ llm: judgeLLM });
+    }
+
+    shouldEvaluate(): boolean {
+        // Sample queries for evaluation (to manage cost)
+        return random.float(0, 1) < this.sampleRate;
+    }
+
+    async logAndEvaluate(
+        query: string,
+        retrievedNodesText: string[], // Text list of the nodes returned by the RAG system
+        answer: string
+    ): Promise<void> {
+        // Log every query, evaluate sample against a golden case if found
+        logQuery(query, retrievedNodesText, answer);
+
+        if (this.shouldEvaluate()) {
+            // Find matching golden case (requires exact query match for simplicity here)
+            const goldenCase = this.goldenDataset.find(c => c.query === query);
+
+            if (goldenCase) {
+                // --- Step 1: Evaluate Retrieval (Layer 1) ---
+                // This requires constructing a mini-dataset for the RetrieverEvaluator
+                // In a real system, you'd evaluate the original retriever component.
+
+                // --- Step 2: Evaluate Generation (Layer 2) ---
+                const resEval = await this.resEvaluator.evaluate({
+                    query: query,
+                    response: answer,
+                    contexts: retrievedNodesText
+                });
+
+                // Check critical metrics (Faithfulness and Relevance)
+                // NOTE: ResponseEvaluator's result.passing often checks Faithfulness
+                if (!resEval.passing) {
+                    alert(`Hallucination/Irrelevance Detected: ${resEval.feedback}`);
+                }
+            }
+        }
+    }
+
+    weeklyReport(): void {
+        // Aggregate metrics from week's queries and flag degradation.
+        // Analyze logged queries, check averages of NDCG, MRR, Faithfulness, etc.
+        // against historical baseline metrics.
+    }
+}
+
+// Integration in the RAG endpoint remains the same, ensuring the monitor is called
+// with the output of the unified LlamaIndex RAG system.
+```
+</CodeGroup>
+
+**Monitoring frequency:**
+- Log 100% of queries (for debugging)
+- Evaluate 10% of queries (cost management)
+- Full golden dataset evaluation weekly
+- Alert on >10% metric drops
+
+## Practical Exercise (20 min)
+
+Evaluate your RAG system:
+
+<CodeGroup>
+```python Python
+# Provided: starter/lesson_2.6/rag_system.py (working RAG)
+# Provided: starter/lesson_2.6/test_cases.json (20 test cases)
+
+# Your task:
+# 0. Corpus: use chunks from 'Assets/paul_graham_essay.txt' for retrieval
+# 1. Load test cases (or create 20 Q/A pairs about the essay if missing)
+# 2. Run RAG system on all queries
+# 3. Use LlamaIndex evaluations to compute retrieval metrics (Recall@5, Precision@5, NDCG@10)
+# 4. Use LlamaIndex evaluations for generation (Faithfulness, Relevance)
+# 5. Identify 3 worst-performing queries
+# 6. Debug: Is failure in retrieval or generation?
+
+# Expected insights:
+# - Retrieval usually bottleneck (70% of failures)
+# - Multi-hop queries hardest
+# - Ambiguous queries need query refinement
+```
+
+```ts TypeScript
+// Provided: starter/lesson_2.6/rag_system.ts (working RAG)
+// Provided: starter/lesson_2.6/test_cases.json (20 test cases)
+
+// Your task:
+// 0. Corpus: use chunks from 'Assets/paul_graham_essay.txt' for retrieval
+// 1. Load test cases (or create 20 Q/A pairs about the essay if missing)
+// 2. Run RAG system on all queries
+// 3. Use LlamaIndex evaluations to compute retrieval metrics (Recall@5, Precision@5, NDCG@10)
+// 4. Use LlamaIndex evaluations for generation (Faithfulness, Relevance)
+// 5. Identify 3 worst-performing queries
+// 6. Debug: Is failure in retrieval or generation?
+
+// Expected insights:
+// - Retrieval usually bottleneck (70% of failures)
+// - Multi-hop queries hardest
+// - Ambiguous queries need query refinement
+```
+</CodeGroup>
+```

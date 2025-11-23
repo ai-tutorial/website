@@ -1,0 +1,220 @@
+---
+title: "RAG Fundamentals"
+description: "The core RAG pattern and how it works"
+sidebarTitle: "RAG Fundamentals"
+icon: "book"
+---
+## The Core RAG Pattern
+
+RAG isn't just "search + LLM." It's a carefully designed pipeline with specific stages, each solving a distinct problem.
+
+```
++------------------+
+│    User Query    │
++------------------+
+        |
+        v
++------------------+
+│  Stage 1:        │
+│  Fast Retrieval  │  ← Get 10-50 candidates quickly
+│  (BM25/Vectors)  │     (prioritize recall over precision)
++------------------+
+        |
+        v
++------------------+
+│  Stage 2:        │
+│  Reranking       │  ← Narrow to top 3-5 precisely
+│  (Cross-Encoder) │     (prioritize precision over speed)
++------------------+
+        |
+        v
++------------------+
+│  Stage 3:        │
+│  LLM Generation  │  ← Use retrieved context to generate
+│  (GPT-4/Claude)  │     grounded response
++------------------+
+        |
+        v
++------------------+
+│    Response      │
++------------------+
+```
+
+### Why Two-Stage Retrieval?
+
+**The Fundamental Trade-off:**
+- Fast retrieval methods (embeddings, BM25) can process 100K+ documents in milliseconds
+- Accurate ranking methods (cross-encoders) can only handle ~100 documents in reasonable time
+- Solution: Use fast method to filter, accurate method to rank
+
+**Latency in practice (varies by system):**
+- First-pass retrieval returns a small candidate set quickly (implementation-, scale-, and hardware-dependent).
+- Cross-encoder reranking narrows to top results but adds additional latency.
+- Production systems typically target interactive end-to-end latency budgets on available hardware.
+
+## Basic RAG Implementation
+
+Let's start with the simplest working version: 
+[Full runnable example of a simple RAG](https://colab.research.google.com/drive/15LHzIlsxR4W-bm-FOC2HKQCV5siKgK9P?usp=drive_link)
+
+<CodeGroup>
+```python Python
+# Single-stage RAG: Good enough for prototypes
+import openai
+from chromadb import Client
+
+class SimpleRAG:
+    def __init__(self, documents):
+        """Initialize with a list of text documents."""
+        self.client = Client()
+        self.collection = self.client.create_collection("docs")
+        
+        # Store documents with embeddings
+        self.collection.add(
+            documents=documents,
+            ids=[f"doc_{i}" for i in range(len(documents))]
+        )
+    
+    def query(self, question: str, top_k: int = 3) -> str:
+        """Retrieve relevant docs and generate answer."""
+        # Step 1: Retrieve relevant documents
+        results = self.collection.query(
+            query_texts=[question],
+            n_results=top_k
+        )
+        
+        context = "\n\n".join(results['documents'][0])
+        
+        # Step 2: Generate answer using retrieved context
+        response = openai.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Answer based only on the provided context. If the context doesn't contain the answer, say so."
+                },
+                {
+                    "role": "user",
+                    "content": f"Context:\n{context}\n\nQuestion: {question}"
+                }
+            ],
+            temperature=0  # Deterministic for consistency
+        )
+        
+        return response.choices[0].message.content
+
+# Usage
+documents = [
+    "RAG combines retrieval with generation...",
+    "Two-stage retrieval improves precision...",
+    # ... more docs
+]
+
+rag = SimpleRAG(documents)
+answer = rag.query("What is two-stage retrieval?")
+print(answer)
+```
+
+```ts TypeScript
+import OpenAI from "openai";
+import { ChromaClient } from "chromadb";
+
+const openai = new OpenAI();
+
+class SimpleRAG {
+    private client: ChromaClient;
+    private collection: any;
+
+    constructor(documents: string[]) {
+        this.client = new ChromaClient();
+        this.collection = this.client.createCollection({ name: "docs" });
+        
+        // Store documents with embeddings
+        this.collection.add({
+            documents: documents,
+            ids: documents.map((_, i) => `doc_${i}`)
+        });
+    }
+    
+    async query(question: string, topK: number = 3): Promise<string> {
+        // Step 1: Retrieve relevant documents
+        const results = await this.collection.query({
+            queryTexts: [question],
+            nResults: topK
+        });
+        
+        const context = results.documents[0].join("\n\n");
+        
+        // Step 2: Generate answer using retrieved context
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "system",
+                    content: "Answer based only on the provided context. If the context doesn't contain the answer, say so."
+                },
+                {
+                    role: "user",
+                    content: `Context:\n${context}\n\nQuestion: ${question}`
+                }
+            ],
+            temperature: 0  // Deterministic for consistency
+        });
+        
+        return response.choices[0].message.content || "";
+    }
+}
+
+// Usage
+const documents = [
+    "RAG combines retrieval with generation...",
+    "Two-stage retrieval improves precision...",
+    // ... more docs
+];
+
+const rag = new SimpleRAG(documents);
+const answer = await rag.query("What is two-stage retrieval?");
+console.log(answer);
+```
+</CodeGroup>
+
+**What Makes This Production-Ready?**
+
+Not much yet! This prototype has several problems:
+- ❌ No error handling
+- ❌ No caching (repeated queries waste $$$)
+- ❌ No retrieval quality measurement
+- ❌ Single-stage retrieval (accuracy suffers)
+- ❌ No metadata or filtering
+
+We'll fix these throughout the module.
+
+## Production RAG: Key Components
+
+A production RAG system needs:
+
+1. **Document Processing Pipeline**
+   - Chunking strategy (size, overlap)
+   - Metadata extraction (title, date, source)
+   - Quality filtering
+
+2. **Two-Stage Retrieval**
+   - First-pass: Fast, broad recall (BM25 or vectors)
+   - Reranking: Slow, precise scoring
+
+3. **Context Engineering**
+   - Prompt design for grounding
+   - Citation formatting
+   - Handling insufficient context
+
+4. **Evaluation Framework**
+   - Retrieval metrics (Recall@k, NDCG)
+   - Generation metrics (faithfulness, relevance)
+   - Component-level debugging
+
+5. **Observability**
+   - Retrieval quality monitoring
+   - Latency tracking
+   - Cost per query
+
+We'll build each component step by step.

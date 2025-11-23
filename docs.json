@@ -1,0 +1,121 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "palm",
+  "name": "AI Tutorial",
+  "colors": {
+    "primary": "#CC5500",
+    "light": "#07C983",
+    "dark": "#15803D"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Home",
+        "pages": [
+          "index"
+        ]
+      },
+      {
+        "group": "Context Engineering & Prompt Design",
+        "pages": [
+          "Context_Engineering_&_Prompt_Design/Module Overview",
+          "Context_Engineering_&_Prompt_Design/LLM_Foundamentals",
+          "Context_Engineering_&_Prompt_Design/Structured_Prompt_Engineering",
+          "Context_Engineering_&_Prompt_Design/Advanced Techniques",
+          "Context_Engineering_&_Prompt_Design/Prompt Optimization & Testing",
+          "Context_Engineering_&_Prompt_Design/Model Selection & Cost Optimization",
+          "Context_Engineering_&_Prompt_Design/Production Considerations",
+          "Context_Engineering_&_Prompt_Design/Hands-On Exercise",
+          "Context_Engineering_&_Prompt_Design/Recap & Resources"
+        ]
+      },
+      {
+        "group": "Retrieval Augmented Generation (RAG)",
+        "pages": [
+          "RAG/Module Overview",
+          "RAG/RAG Fundamentals",
+          "RAG/Search Strategy Selection",
+          "RAG/Chunking and Metadata Strategies",
+          "RAG/Working with Unstructured Data",
+          "RAG/RAG Evaluation",
+          "RAG/Reranking in Practice",
+          "RAG/Advanced RAG Patterns",
+          "RAG/Recap & Resources"
+        ]
+      },
+      {
+        "group": "AI Agents",
+        "pages": [
+          "AI Agents/Module Overview",
+          "AI Agents/Introduction to AI Agents",
+          "AI Agents/Tool Design & Implementation",
+          "AI Agents/Agent Memory",
+          "AI Agents/Hands-On Exercise",
+          "AI Agents/Recap & Resources"
+        ]
+      },
+      {
+        "group": "Agent Reliability & Optimization",
+        "pages": [
+          "Agent Reliability & Optimization/Module Overview",
+          "Agent Reliability & Optimization/Business Rules & Guardrails",
+          "Agent Reliability & Optimization/Tool Selection & Optimization",
+          "Agent Reliability & Optimization/Hands-On Exercise",
+          "Agent Reliability & Optimization/Recap & Resources"
+        ]
+      },
+      {
+        "group": "Multi-Agent Systems & Coordination",
+        "pages": [
+          "Multi-Agent Systems & Coordination/Module Overview",
+          "Multi-Agent Systems & Coordination/Multi-Agent with Workflow Orchestration",
+          "Multi-Agent Systems & Coordination/Multi-Agent with Agent Orchestration",
+          "Multi-Agent Systems & Coordination/Agent-to-Agent (A2A) Communication Protocols",
+          "Multi-Agent Systems & Coordination/Hands-On Exercise",
+          "Multi-Agent Systems & Coordination/Recap & Resources"
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/logo-light-full.svg",
+    "dark": "/logo/logo-dark-full.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        
+        
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Contact",
+      "href": "mailto:pablo.luna@gmail.com"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "integrations": {
+    "ga4": {
+      "measurementId": "G-TPP644G79L"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/pluna/ai-tutorial",
+      "linkedin": "https://linkedin.com/in/luna-pablo"
+    }
+  }
+}
