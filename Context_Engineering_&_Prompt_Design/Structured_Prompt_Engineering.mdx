@@ -18,39 +18,29 @@ icon: "book"
 
 **Basic Template:** [Full runnable structured prompt notebook](https://colab.research.google.com/drive/15hKw-5PONe0DKkDmYVfLviFJUoK3aBcn?usp=drive_link)
 
-<Card title="Prompt Structure" icon="sparkles">
-  **[ROLE]**
+```python
+prompt = """
+[ROLE]
+You are an experienced customer support specialist for AcmeCo.
 
-  You are an experienced customer support specialist for AcmeCo.
+[CONTEXT]
+AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, no questions asked. After 30 days, refunds require manager approval.
 
-  **[CONTEXT]**
+[INSTRUCTIONS]
+Analyze the customer message below and:
+- Identify the customer's primary issue
+- Determine if this qualifies for automatic refund
+- Suggest next steps for the support team
 
-  AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, 
+[CONSTRAINTS]
+- Be empathetic but concise
+- Never promise refunds outside policy
+- If uncertain, recommend manager review
 
-  no questions asked. After 30 days, refunds require manager approval.
-
-  **[INSTRUCTIONS]**
-
-  Analyze the customer message below and:
-
-  1. Identify the customer's primary issue
-
-  2. Determine if this qualifies for automatic refund
-
-  3. Suggest next steps for the support team
-
-  **[CONSTRAINTS]**
-
-  - Be empathetic but concise
-
-  - Never promise refunds outside policy
-
-  - If uncertain, recommend manager review
-
-  **[INPUT]**
-
-  Customer message: {customer_message}
-</Card>
+[INPUT]
+Customer message: customer_message
+"""
+```
 
 **Practice Check:**
 
@@ -116,7 +106,7 @@ prompt = f"""
 
 **Pattern:**
 
- [Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
+[Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
 
 <CodeGroup>
 
