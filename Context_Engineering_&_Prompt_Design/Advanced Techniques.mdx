@@ -250,14 +250,8 @@ async function selfConsistentAnswer(
 
 ```python Python
 prompt = """
-<thinking>
-Let me analyze this complex legal document...
-- First, I'll identify the key clauses
-- Then, I'll look for any conflicting terms
-- Finally, I'll assess risk level
-</thinking>
-
-[Your actual task here]
+Analyze this complex legal document...
+Think before you write the analysis report in <thinking> tags.
 """
 ```
 
@@ -283,7 +277,7 @@ Let me analyze this complex legal document...
 2. **Quality:** Forces model to think before answering
 3. **Transparency:** Clients can audit AI decisions
 
-**Production Example: Document Analysis:**
+**Thinking tags can also be used to guide Claude steps:**
 
 <CodeGroup>
 
@@ -457,6 +451,6 @@ async function handleSupportTicket(ticket: string): Promise<string> {
 
 - More latency (sequential calls)
 - More complex code
-- Multiple API calls (but often cheaper overall)
+- Multiple LLM calls (but often cheaper overall)
 
 ---
