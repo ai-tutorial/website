@@ -7,24 +7,35 @@ icon: "book"
 
 ## Chain-of-Thought (CoT): Making Reasoning Visible
 
+<Note>
+  Chain-of-Thought (CoT) is less common with reasoning models, since they already perform an explicit reasoning step. With SLMs and other non-reasoning models, however, CoT can still make a meaningful difference.
+
+  That said, it’s still valuable to learn CoT techniques—they help you understand how these models think and how to effectively influence their behavior.
+</Note>
+
 **The Problem:**
+
 <CodeGroup>
+
 ```python Python
 prompt = "What's 15% tip on a $47.83 bill?"
 response = "$7.17"  # Correct
 ```
 
+
 ```ts TypeScript
 const prompt = "What's 15% tip on a $47.83 bill?";
 const response = "$7.17";  // Correct
 ```
+
 </CodeGroup>
 
 But what if you need to debug a wrong answer? You can't see the reasoning.
 
-**The Solution: CoT:**
-[Full runnable chain-of-thought notebook](https://colab.research.google.com/drive/1CobAOn09WNGCP_u5lpC540QveepLPb7J#scrollTo=ED506cVi7H8S&line=14&uniqifier=1)
+**The Solution: CoT:** [Full runnable chain-of-thought notebook](https://colab.research.google.com/drive/1CobAOn09WNGCP_u5lpC540QveepLPb7J#scrollTo=ED506cVi7H8S&line=14&uniqifier=1)
+
 <CodeGroup>
+
 ```python Python
 prompt = """
 Calculate 15% tip on a $47.83 bill.
@@ -41,6 +52,7 @@ Answer: $7.17
 """
 ```
 
+
 ```ts TypeScript
 const prompt = `
 Calculate 15% tip on a $47.83 bill.
@@ -56,20 +68,25 @@ Step 3: Round to cents: $7.17
 Answer: $7.17
 `;
 ```
+
 </CodeGroup>
 
 **In Production:**
+
 - Use CoT for complex reasoning; avoid for deterministic extraction/classification at temperature=0.
 - Consider privacy/compliance: avoid logging sensitive intermediate reasoning.
 - Cost/latency rise with longer outputs—use selectively.
 
 **Why It Works:**
+
 - Often improves performance on reasoning tasks (magnitude varies by task/model)
 - Creates "intermediate tokens" that guide the model
 - Makes errors debuggable
 
 **Production Pattern:**
+
 <CodeGroup>
+
 ```python Python
 def cot_prompt(question: str) -> str:
     return f"""
@@ -93,6 +110,7 @@ Solve this step by step:
 </final_answer>
 """
 ```
+
 
 ```ts TypeScript
 function cotPrompt(question: string): string {
@@ -118,21 +136,25 @@ Solve this step by step:
 `;
 }
 ```
+
 </CodeGroup>
 
 **Real-World Impact:**
+
 - Code generation: 35% fewer bugs with CoT
 - Math problems: 50-70% accuracy improvement
 - Medical diagnosis: More reliable clinical reasoning
 
 ## Self-Consistency: Voting for Reliability
 
-**The Problem:** One response might be wrong due to non-determinism.
+**The Problem:** One response might be wrong due to non-determinism, ambiguous tasks, and/or valid solution paths.
 
 **The Solution:** Generate multiple responses and vote.
 
 [Full runnable self-consistency notebook](https://colab.research.google.com/drive/1CobAOn09WNGCP_u5lpC540QveepLPb7J#scrollTo=ED506cVi7H8S&line=14&uniqifier=1)
+
 <CodeGroup>
+
 ```python Python
 async def self_consistent_answer(
     prompt: str,
@@ -160,6 +182,7 @@ async def self_consistent_answer(
     
     return most_common
 ```
+
 
 ```ts TypeScript
 async function selfConsistentAnswer(
@@ -199,28 +222,32 @@ async function selfConsistentAnswer(
     return mostCommon;
 }
 ```
+
 </CodeGroup>
 
 **When to Use:**
+
 - High-stakes decisions (medical, financial, legal)
 - Complex reasoning where errors are costly
 - Classification tasks where confidence matters
 
 **Cost Consideration:**
-- 5x API calls = 5x cost
+
+- 5x Agent tasks = 5x cost
 - Use only when accuracy justifies expense
 
 **Performance Data:**
+
 - CoT often improves performance on reasoning benchmarks; magnitude varies by task/model (see Wei et al., 2022)
 - Combining CoT + Self-Consistency can yield additional gains; magnitude varies by task/model (see Wang et al., 2022)
 - Always validate on your evaluation set; do not assume universal gains
 
 ## Extended Thinking: Anthropic's Secret Weapon
 
-**Claude-Specific Feature:**
-Claude can expose its "thinking" before answering using special tags.
+**Claude-Specific Feature:** Claude can expose its "thinking" before answering using special tags.
 
 <CodeGroup>
+
 ```python Python
 prompt = """
 <thinking>
@@ -234,6 +261,7 @@ Let me analyze this complex legal document...
 """
 ```
 
+
 ```ts TypeScript
 const prompt = `
 <thinking>
@@ -246,15 +274,19 @@ Let me analyze this complex legal document...
 [Your actual task here]
 `;
 ```
+
 </CodeGroup>
 
 **Why This Matters:**
+
 1. **Debugging:** See where reasoning went wrong
 2. **Quality:** Forces model to think before answering
 3. **Transparency:** Clients can audit AI decisions
 
 **Production Example: Document Analysis:**
+
 <CodeGroup>
+
 ```python Python
 def analyze_contract(contract_text: str) -> dict:
     prompt = f"""
@@ -289,6 +321,7 @@ Provide a JSON response with:
         "reasoning": thinking,  # Store for compliance/review
     }
 ```
+
 
 ```ts TypeScript
 async function analyzeContract(contractText: string): Promise<{
@@ -328,18 +361,19 @@ Provide a JSON response with:
     };
 }
 ```
+
 </CodeGroup>
 
 ## Prompt Chaining: Breaking Complex Tasks
 
 **Single Prompt Limitations:**
+
 - Context window fills up
 - Errors compound
 - Hard to debug
 - Expensive to retry
 
-**Chaining Solution:**
-Break one complex task into sequential simple tasks.
+**Chaining Solution:** Break one complex task into sequential simple tasks.
 
 ```mermaid
 flowchart LR
@@ -352,9 +386,10 @@ flowchart LR
     style D fill:#c8e6c9
 ```
 
-**Example: Customer Support Automation:**
-[Full runnable customer support automation notebook](https://colab.research.google.com/drive/1CcvRKX8KdzHVwh5XRG2vWhzA-15-zWna?usp=drive_link)
+**Example: Customer Support Automation:** [Full runnable customer support automation notebook](https://colab.research.google.com/drive/1CcvRKX8KdzHVwh5XRG2vWhzA-15-zWna?usp=drive_link)
+
 <CodeGroup>
+
 ```python Python
 async def handle_support_ticket(ticket: str):
     # Step 1: Classify urgency
@@ -379,6 +414,7 @@ async def handle_support_ticket(ticket: str):
     
     return response
 ```
+
 
 ```ts TypeScript
 async function handleSupportTicket(ticket: string): Promise<string> {
@@ -407,18 +443,20 @@ async function handleSupportTicket(ticket: string): Promise<string> {
     return response;
 }
 ```
+
 </CodeGroup>
 
 **Benefits:**
+
 - Each step is simple → fewer errors
 - Failed steps can retry independently
 - Cheaper: Only call expensive steps when needed
 - Easier to evaluate and improve
 
 **Trade-off:**
+
 - More latency (sequential calls)
 - More complex code
 - Multiple API calls (but often cheaper overall)
 
 ---
-
