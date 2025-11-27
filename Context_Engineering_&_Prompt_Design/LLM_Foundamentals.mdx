@@ -5,16 +5,17 @@ sidebarTitle: "LLM Fundamentals"
 icon: "book"
 ---
 
+import CodeEmbed from '/snippets/CodeEmbed.jsx';
+
 ## Hello World
 
 After configuring your OpenAI API key, you can run this example by executing `npm llm:sample1` in the terminal. Give a try !
 
-<iframe
-  src="https://stackblitz.com/github/veigap/ai-example-wip?embed=1&file=src/hello_world.ts:L9-L17&view=editor"
-  style={{ width: "100%", height: "650px", border: "0", borderRadius: "8px", overflow: "hidden" }}
-  title="LLM Fundamentals StackBlitz Example"
-  allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr; clipboard-write">
-</iframe>
+<CodeEmbed 
+  file="src/hello_world.ts" 
+  lines="9-17"
+  title="LLM Fundamentals - Hello World"
+/>
 
 ## How LLMs Process Your Input
 
