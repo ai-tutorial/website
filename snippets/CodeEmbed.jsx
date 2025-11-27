@@ -24,7 +24,8 @@ export const CodeEmbed = ({ file = 'src/hello_world.ts', lines, title = 'Code Ex
   }
 
   // Build the StackBlitz URL
-  const url = `https://stackblitz.com/github/veigap/ai-example-wip?embed=1&file=${fileParam}${lineSuffix}&view=editor&theme=dark`;
+  // keepalive=1 prevents the iframe from reloading when navigating between pages
+  const url = `https://stackblitz.com/github/veigap/ai-example-wip?embed=1&keepalive=1&file=${fileParam}${lineSuffix}&view=editor&theme=dark`;
 
   return (
     <iframe
