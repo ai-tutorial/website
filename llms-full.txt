@@ -1,0 +1,1748 @@
+# AI Tutorial.dev - Complete Documentation
+
+> An Interactive AI Tutorial With Concepts and Leassons Learned. Learn by experimenting with real code in an interactive sandbox. No setup, no dependencies—just open your browser and start building. Every concept includes runnable examples across multiple frameworks, so you can try things immediately and see what actually works.
+> Last Updated: 6b9cc28e19f403b60aa6b77e43216dcd923c7eb5 2025-11-24 07:41:21 -0800
+> Site: https://aitutorial.dev
+
+## Table of Contents
+
+### Home
+- [What Makes This Different](https://aitutorial.dev)
+
+### Context Engineering & Prompt Design
+- [Module Overview](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Module%20Overview)
+- [LLM Fundamentals](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/LLM_Foundamentals)
+- [Structured Prompt Engineering](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Structured_Prompt_Engineering)
+- [Advanced Techniques](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Advanced%20Techniques)
+- [Prompt Optimization & Testing](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Prompt%20Optimization%20%26%20Testing)
+- [Model Selection & Cost Optimization](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Model%20Selection%20%26%20Cost%20Optimization)
+- [Production Considerations](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Production%20Considerations)
+- [Hands-On Exercise](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Hands-On%20Exercise)
+- [Recap & Resources](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Recap%20%26%20Resources)
+
+### Retrieval Augmented Generation (RAG)
+- [Module Overview](https://aitutorial.dev/RAG/Module%20Overview)
+- [RAG Fundamentals](https://aitutorial.dev/RAG/RAG%20Fundamentals)
+- [Search Strategy Selection](https://aitutorial.dev/RAG/Search%20Strategy%20Selection)
+- [Chunking and Metadata Strategies](https://aitutorial.dev/RAG/Chunking%20and%20Metadata%20Strategies)
+- [Working with Unstructured Data](https://aitutorial.dev/RAG/Working%20with%20Unstructured%20Data)
+- [RAG Evaluation](https://aitutorial.dev/RAG/RAG%20Evaluation)
+- [Reranking in Practice](https://aitutorial.dev/RAG/Reranking%20in%20Practice)
+- [Advanced RAG Patterns](https://aitutorial.dev/RAG/Advanced%20RAG%20Patterns)
+- [Hands-On Exercise](https://aitutorial.dev/RAG/Hands-On%20Exercise)
+- [Recap & Resources](https://aitutorial.dev/RAG/Recap%20%26%20Resources)
+
+### AI Agents
+- [Module Overview](https://aitutorial.dev/AI%20Agents/Module%20Overview)
+- [Introduction to AI Agents](https://aitutorial.dev/AI%20Agents/Introduction%20to%20AI%20Agents)
+- [Tool Design & Implementation](https://aitutorial.dev/AI%20Agents/Tool%20Design%20%26%20Implementation)
+- [Agent Memory](https://aitutorial.dev/AI%20Agents/Agent%20Memory)
+- [Hands-On Exercise](https://aitutorial.dev/AI%20Agents/Hands-On%20Exercise)
+- [Recap & Resources](https://aitutorial.dev/AI%20Agents/Recap%20%26%20Resources)
+
+---
+
+## Home - What Makes This Different
+
+Learn by experimenting with real code in an interactive sandbox. No setup, no dependencies—just open your browser and start building.
+
+### Interactive Sandbox - Code in Your Browser
+Every example runs in an embedded sandbox or Google Colab:
+- **No installation required** - Start coding in seconds
+- **Multiple frameworks** - LangChain, Google ADK, OpenAI Agent SDK, LlamaIndex, Claude Agent SDK, CrewAI, LangGraph
+- **Instant feedback** - Modify code, run it, see results
+- **Fork and experiment** - Break things safely, learn by doing
+
+### Beyond the Basics
+Advanced techniques for production-ready AI systems:
+- Prompt caching strategies for significant cost reduction
+- Hybrid search and reranking for RAG systems
+- Agent orchestration patterns for reliable autonomous systems
+- Evaluation frameworks to catch issues before production
+- Cost optimization without sacrificing quality
+- Tool design that improves agent accuracy
+
+### Course Modules
+1. **Context Engineering & Prompt Design** - Master structured prompts, advanced techniques, cost optimization
+2. **Retrieval Augmented Generation (RAG)** - Build RAG with hybrid search, reranking, evaluation
+3. **AI Agents** - Design agents with tools, memory, orchestration
+4. **Agent Reliability & Optimization** - Implement guardrails, business rules, optimization
+5. **Multi-Agent Systems & Coordination** - Coordinate multiple agents with workflow and agent orchestration
+
+**Contributors:** Pablo Luna (), Paulo Veiga
+
+---
+
+# Module 1: Context Engineering & Prompt Design
+
+## Overview & Learning Objectives
+
+By the end of this module, you'll be able to:
+- Understand how LLMs process context and why it matters
+- Design structured prompts that reduce hallucinations
+- Apply advanced techniques like Chain-of-Thought and extended thinking
+- Select appropriate models and optimize costs through caching
+- Test and iterate on prompts systematically
+
+**Why This Matters:** Most Gen AI projects fail not because of model limitations, but because of poor prompt engineering. The difference between a $5,000 monthly OpenAI bill and a $500 bill often comes down to prompt structure.
+
+**Real-world impact:** Teams using these patterns report 50-70% cost reductions from caching and 10-20% accuracy gains from structured prompting.
+
+---
+
+## LLM Fundamentals
+
+### Context Windows: Your Working Memory
+
+Everything you send gets loaded into the context window. The model can only "see" what fits inside.
+
+**Current Context Windows (January 2025):**
+- GPT-4: 128K tokens (~96K words)
+- Claude Sonnet 4.5: 200K tokens (~150K words)
+- Gemini 1.5 Pro: 2M tokens (~1.5M words)
+
+**Example:** Customer support agent handling complex case needs:
+- 2K tokens: System instructions
+- 5K tokens: Company knowledge base excerpts
+- 10K tokens: Conversation history
+- 3K tokens: Customer account details
+= 20K tokens before generating response
+
+**Token Economics:**
+```
+input_cost = 150K tokens × ($10/1M tokens) = $1.50
+output_cost = 3K tokens × ($30/1M tokens) = $0.09
+total_per_request = $1.59
+```
+
+### LLM Limitations You Must Know
+
+**1. Hallucinations: Making Stuff Up**
+
+LLMs predict plausible tokens, not facts. Famous failure: Air Canada's chatbot hallucinated a bereavement discount policy that didn't exist. The airline had to honor it in court.
+
+**Production Strategy:**
+- Constrain to provided context: "Only use information from these documents"
+- Validate outputs against source data
+- Add human review for high-stakes decisions
+
+**2. Non-Determinism: Different Answers Every Time**
+
+Same prompt, different responses (temperature > 0).
+
+```python
+prompt = "Summarize this customer complaint in 10 words"
+response_1 = "Customer angry about delayed shipment, demanding refund immediately"
+response_2 = "Shipment late, customer wants money back, very upset"
+response_3 = "Delayed delivery complaint with refund request, customer frustrated"
+```
+
+**Production Strategy:**
+- Temperature=0 for classification, extraction
+- Temperature=0.3-0.7 for creative tasks
+- Run multiple times and vote (self-consistency)
+
+**3. Recency Bias: Recent Context Matters More**
+
+LLMs pay more attention to text at beginning and end. Middle content gets "lost."
+
+**Best Practice:**
+```
+Critical instructions at START
+[Large document content in MIDDLE]
+Specific query at END
+```
+
+### Mental Model: LLMs as Completion Engines
+
+**Wrong:** "The AI understands my intent"
+**Right:** "The AI completes patterns it's seen in training"
+
+When you want structured output, give the LLM a pattern to complete:
+
+```python
+# ❌ Vague: "Extract the customer's name and email"
+# LLM might respond: "The customer's name is John and his email is..."
+
+# ✅ Pattern to complete:
+"""
+Extract customer information:
+
+Name: [the customer's name]
+Email: [the customer's email address]
+"""
+# LLM completes: "Name: John Smith\nEmail: john@email.com"
+```
+
+---
+
+## Structured Prompt Engineering
+
+### The Anatomy of a Production Prompt
+
+**Core Components:**
+1. **Role/Persona** - Sets behavior and expertise level
+2. **Context** - Background information needed
+3. **Instructions** - What to do, step by step
+4. **Constraints** - What NOT to do, output format
+5. **Examples** - Few-shot demonstrations (optional)
+6. **Input** - The actual data to process
+
+**Basic Template:**
+```python
+prompt = """
+[ROLE]
+You are an experienced customer support specialist for AcmeCo.
+
+[CONTEXT]
+AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, 
+no questions asked. After 30 days, refunds require manager approval.
+
+[INSTRUCTIONS]
+Analyze the customer message below and:
+- Identify the customer's primary issue
+- Determine if this qualifies for automatic refund
+- Suggest next steps for the support team
+
+[CONSTRAINTS]
+- Be empathetic but concise
+- Never promise refunds outside policy
+- If uncertain, recommend manager review
+
+[INPUT]
+Customer message: {customer_message}
+"""
+```
+
+**In Production:**
+- Cost impact: Clear output schemas reduce parsing errors and retries
+- Reliability: Structured prompts easier to validate and monitor
+- Performance: Slight token overhead; mitigate with caching
+
+### XML Tags: Your Secret Weapon
+
+**Why XML Tags Work:**
+- LLMs trained on HTML/XML (web data)
+- Tags create clear boundaries in context
+- Reduced hallucinations in controlled studies
+
+**Before (Ambiguous):**
+```python
+prompt = f"""
+System: You are a helpful assistant.
+User question: {user_input}
+Background context: {knowledge_base}
+Previous conversation: {history}
+"""
+# LLM might confuse where context ends and question begins
+```
+
+**After (Clear):**
+```python
+prompt = f"""
+<role>You are a helpful assistant</role>
+
+<context>
+<knowledge_base>
+{knowledge_base}
+</knowledge_base>
+
+<conversation_history>
+{history}
+</conversation_history>
+</context>
+
+<user_question>
+{user_input}
+</user_question>
+"""
+# Crystal clear boundaries
+```
+
+**Production Impact:**
+- Cost: Tagging adds tokens; mitigate with caching
+- Reliability: Clear boundaries reduce off-context responses
+- Real Example: Teams report 40-60% fewer hallucinations when tags + validation combined
+
+### Few-Shot Examples: Teaching by Showing
+
+**When to Use:**
+- Complex or subjective tasks
+- Specific output format required
+- Edge cases need clarification
+
+**Pattern:**
+```python
+prompt = f"""
+<task>Classify customer sentiment</task>
+
+<examples>
+<example>
+<input>Your product is amazing! Best purchase ever.</input>
+<output>positive</output>
+</example>
+
+<example>
+<input>It's okay, does the job but nothing special.</input>
+<output>neutral</output>
+</example>
+
+<example>
+<input>Terrible quality. Broke after one week. Demanding refund!</input>
+<output>negative</output>
+</example>
+</examples>
+
+<input_to_classify>
+{customer_message}
+</input_to_classify>
+"""
+```
+
+**Quality Over Quantity:**
+- 3-5 examples usually enough
+- More examples = more tokens = higher cost
+- Examples should cover edge cases, not just obvious ones
+
+---
+
+## Advanced Techniques
+
+### Chain-of-Thought (CoT): Making Reasoning Visible
+
+**Problem:** Can't see or debug reasoning in direct answers.
+
+**Solution: CoT**
+```python
+prompt = """
+Calculate 15% tip on a $47.83 bill.
+
+Think step by step:
+"""
+
+response = """
+Step 1: Convert 15% to decimal: 0.15
+Step 2: Multiply: $47.83 × 0.15 = $7.1745
+Step 3: Round to cents: $7.17
+
+Answer: $7.17
+"""
+```
+
+**Why It Works:**
+- Often improves performance on reasoning tasks (magnitude varies)
+- Creates "intermediate tokens" that guide the model
+- Makes errors debuggable
+
+**In Production:**
+- Use for complex reasoning; avoid for deterministic tasks at temperature=0
+- Consider privacy/compliance: avoid logging sensitive intermediate reasoning
+- Cost/latency rise with longer outputs—use selectively
+
+**Real-World Impact:**
+- Code generation: 35% fewer bugs with CoT
+- Math problems: 50-70% accuracy improvement
+- Medical diagnosis: More reliable clinical reasoning
+
+### Self-Consistency: Voting for Reliability
+
+**Problem:** One response might be wrong due to non-determinism.
+
+**Solution:** Generate multiple responses and vote.
+
+```python
+async def self_consistent_answer(
+    prompt: str,
+    n: int = 5,
+    temperature: float = 0.7
+) -> str:
+    """Generate multiple answers and return the most common one."""
+    responses = []
+    
+    for _ in range(n):
+        response = await llm.generate(prompt=prompt, temperature=temperature)
+        responses.append(response)
+    
+    # Count occurrences
+    from collections import Counter
+    answer_counts = Counter(responses)
+    
+    # Return most common answer
+    most_common = answer_counts.most_common(1)[0][0]
+    return most_common
+```
+
+**When to Use:**
+- High-stakes decisions (medical, financial, legal)
+- Complex reasoning where errors are costly
+- Classification tasks where confidence matters
+
+**Cost Consideration:**
+- 5x calls = 5x cost
+- Use only when accuracy justifies expense
+
+**Performance Data:**
+- CoT often improves reasoning benchmarks (Wei et al., 2022)
+- CoT + Self-Consistency can yield additional gains (Wang et al., 2022)
+- Always validate on your evaluation set
+
+---
+
+## Model Selection & Cost Optimization
+
+### Model Selection Decision Framework
+
+**Model Landscape (January 2025):**
+
+| Model | Context | Cost ($/1M input/output) | Best For |
+|-------|---------|-------------------------|----------|
+| GPT-4 Turbo | 128K | $10 / $30 | Complex reasoning, structured output |
+| GPT-3.5 Turbo | 16K | $0.50 / $1.50 | Simple tasks, high volume |
+| Claude Sonnet 4.5 | 200K | $3 / $15 | Long documents, nuanced analysis |
+| Claude Haiku | 200K | $0.25 / $1.25 | Fast classification, extraction |
+| Gemini Pro 1.5 | 2M | $1.25 / $5 | Massive context, multimodal |
+
+**Decision Tree:**
+```
+Is task simple (classification, basic extraction)?
+├─ Yes → Use fastest/cheapest (Haiku, GPT-3.5)
+└─ No → Continue
+
+Do you need >100K tokens context?
+├─ Yes → Claude Sonnet or Gemini Pro
+└─ No → Continue
+
+Do you need structured JSON output?
+├─ Yes → GPT-4
+└─ No → Claude Sonnet (better prose)
+
+Is cost critical (high volume)?
+├─ Yes → Consider model cascading
+└─ No → Use best model for quality
+```
+
+### Prompt Caching: 50-90% Cost Reduction
+
+**The Problem:** Sending same 50K token knowledge base with EVERY request.
+
+```python
+# Without caching
+for query in queries:  # 10,000 queries
+    prompt = f"{knowledge_base}\n\nQuery: {query}"  # 50K + 100 tokens
+    response = llm.generate(prompt)
+
+# Cost: 10,000 × 50,100 tokens = 501M input tokens
+# At $3/1M: $1,503
+```
+
+**The Solution: Prompt Caching**
+
+Mark reusable parts for caching:
+
+```python
+# OpenAI Caching (GPT-4)
+# Automated caching when system prompts >1024 tokens
+response = openai.chat.completions.create(
+    model="gpt-4-turbo",
+    messages=[
+        {
+            "role": "system",
+            "content": knowledge_base  # This gets cached
+        },
+        {
+            "role": "user",
+            "content": query  # This changes
+        }
+    ]
+)
+
+# First call: Full cost
+# Subsequent calls (within 5-10 min): 50% reduction on cached portion
+```
+
+```python
+# Anthropic Caching (Claude)
+# Cache control needs specification
+response = anthropic.messages.create(
+    model="claude-sonnet-4.5-20250929",
+    system=[
+        {
+            "type": "text",
+            "text": knowledge_base,
+            "cache_control": {"type": "ephemeral"}  # Cache this
+        }
+    ],
+    messages=[{"role": "user", "content": query}]
+)
+
+# Cache hit: 90% reduction on cached tokens
+# TTL: 5 minutes (Anthropic) - extendable to 1 hour
+```
+
+**Production Economics:**
+```python
+# Scenario: Customer support chatbot
+# - Knowledge base: 50K tokens
+# - Avg conversation: 5 queries
+# - Cache hit rate: 80%
+
+without_caching = 10_000 * 50K * $3/1M = $1,500
+with_caching = (
+    (10_000 * 0.2) * 50K  # Cache misses (20%)
+    + (10_000 * 0.8) * 5K  # Cache hits (90% reduction)
+) * $3/1M = $450
+
+savings = $1,050 (70% reduction)
+```
+
+**Best Practices:**
+1. Cache static content (knowledge bases, system prompts)
+2. Don't cache user input (changes every request)
+3. Structure prompts with cacheable parts first
+4. Monitor cache hit rates
+5. Adjust query patterns to maximize cache hits
+
+### Model Cascading: Using Cheap Models First
+
+**The Strategy:**
+- Try cheap/fast model first
+- If uncertain, escalate to expensive/smart model
+- Can reduce cost while maintaining quality when confidence gating reliable
+
+```python
+async def cascaded_classification(
+    message: str,
+    confidence_threshold: float = 0.85
+) -> dict:
+    """Try Haiku first. If confident, done. Otherwise, escalate to Sonnet."""
+    
+    # Step 1: Fast model
+    haiku_prompt = f"""
+Classify sentiment: {message}
+Output: positive|neutral|negative
+Confidence: [0.0-1.0]
+"""
+    
+    haiku_response = await claude_haiku.generate(haiku_prompt)
+    sentiment = extract_sentiment(haiku_response)
+    confidence = extract_confidence(haiku_response)
+    
+    # Step 2: Check confidence
+    if confidence >= confidence_threshold:
+        return {
+            "sentiment": sentiment,
+            "model": "haiku",
+            "cost": 0.0003
+        }
+    
+    # Step 3: Escalate to smart model
+    sonnet_prompt = f"""
+Classify sentiment: {message}
+
+The fast model was uncertain. Please provide careful analysis.
+"""
+    
+    sonnet_response = await claude_sonnet.generate(sonnet_prompt)
+    sentiment = extract_sentiment(sonnet_response)
+    
+    return {
+        "sentiment": sentiment,
+        "model": "sonnet",
+        "cost": 0.005
+    }
+
+# Production results:
+# - 70% handled by Haiku
+# - 30% escalated to Sonnet
+# - Average cost: (0.7 × $0.0003) + (0.3 × $0.005) = $0.0018
+# - vs. Sonnet only: $0.005
+# - Savings: 64%
+```
+
+**When Cascading Works:**
+- High-volume, similar tasks
+- Clear confidence signals
+- Cost pressure but quality requirements
+
+**When to Avoid:**
+- Low latency requirements (cascading adds delay)
+- Tasks where confidence hard to measure
+- Low volume (not worth complexity)
+
+---
+
+# Module 2: Retrieval Augmented Generation (RAG)
+
+## Overview & Learning Objectives
+
+By the end of this module, you'll be able to:
+- Implement two-stage retrieval (first-pass + reranking) pipelines
+- Choose between full-text, semantic, and hybrid search strategies
+- Optimize chunking strategies for different document types
+- Process unstructured data (PDFs, images) reliably
+- Evaluate retrieval and generation quality independently
+- Debug RAG failures using component-level analysis
+
+**Why RAG Matters:** Many enterprises favor RAG to access current, proprietary data. It solves the knowledge problem: LLMs are frozen at training, RAG connects them to current data.
+
+**Real-World Example:** Law firm tried GPT-4 for case law questions. Problems: hallucinated precedents, couldn't access proprietary notes, no source citations. RAG solution: Retrieved relevant cases/notes, constrained LLM to context, generated answers with citations. Result: 95% accuracy, full auditability, zero hallucinations on verified cases.
+
+---
+
+## RAG Fundamentals: The Core Pattern
+
+RAG isn't just "search + LLM." It's a carefully designed pipeline:
+
+```
++------------------+
+│    User Query    │
++------------------+
+        |
+        v
++------------------+
+│  Stage 1:        │
+│  Fast Retrieval  │  ← Get 10-50 candidates quickly
+│  (BM25/Vectors)  │     (prioritize recall)
++------------------+
+        |
+        v
++------------------+
+│  Stage 2:        │
+│  Reranking       │  ← Narrow to top 3-5 precisely
+│  (Cross-Encoder) │     (prioritize precision)
++------------------+
+        |
+        v
++------------------+
+│  Stage 3:        │
+│  LLM Generation  │  ← Use retrieved context to generate
+│  (GPT-4/Claude)  │     grounded response
++------------------+
+```
+
+### Why Two-Stage Retrieval?
+
+**The Fundamental Trade-off:**
+- Fast retrieval (embeddings, BM25): 100K+ docs in milliseconds
+- Accurate ranking (cross-encoders): Only ~100 docs in reasonable time
+- Solution: Fast method filters, accurate method ranks
+
+**Latency in practice (varies by system):**
+- First-pass: Returns candidates quickly (hardware-dependent)
+- Cross-encoder rerank: Adds latency but improves precision
+- Production targets: Interactive latency budgets
+
+---
+
+## Search Strategy Selection
+
+### Full-Text Search (BM25)
+
+**How it works:** Statistical matching on exact terms and frequencies.
+
+**Strengths:**
+- Low-latency on well-indexed corpora
+- Excellent for exact matches and rare terms
+- No model training required
+- Interpretable results
+
+**Weaknesses:**
+- Misses synonyms ("car" ≠ "automobile")
+- Struggles with conceptual queries
+- Language-specific (requires stemming/lemmatization)
+
+**Best for:**
+- Legal document search (exact statute numbers)
+- Code search (function names, error codes)
+- Product SKU lookup
+
+```python
+from rank_bm25 import BM25Okapi
+
+class BM25Retriever:
+    def __init__(self, documents: list[str]):
+        self.tokenized_corpus = [doc.lower().split() for doc in documents]
+        self.corpus = documents
+        self.bm25 = BM25Okapi(self.tokenized_corpus)
+    
+    def search(self, query: str, top_k: int = 5) -> list[dict]:
+        tokenized_query = query.lower().split()
+        scores = self.bm25.get_scores(tokenized_query)
+        top_indices = np.argsort(scores)[-top_k:][::-1]
+        
+        return [
+            {
+                "document": self.corpus[i],
+                "score": scores[i],
+                "rank": rank + 1
+            }
+            for rank, i in enumerate(top_indices)
+        ]
+```
+
+### Semantic Search (Embeddings)
+
+**How it works:** Converts text to vectors; similar meaning = nearby vectors.
+
+**Strengths:**
+- Handles synonyms and paraphrasing
+- Works across languages (multilingual models)
+- Captures conceptual similarity
+- No query engineering needed
+
+**Weaknesses:**
+- Slower than BM25 (100-500ms for large collections)
+- Misses exact matches if semantically "boring"
+- Black box (hard to debug)
+- Requires GPU for large-scale indexing
+
+**Best for:**
+- Customer support (intent-based)
+- Research papers (conceptual queries)
+- Multilingual search
+- FAQ matching
+
+```python
+from sentence_transformers import SentenceTransformer
+import chromadb
+
+class SemanticRetriever:
+    def __init__(self, documents: list[str], model_name: str = "all-MiniLM-L6-v2"):
+        self.model = SentenceTransformer(model_name)
+        self.client = chromadb.Client()
+        self.collection = self.client.create_collection(
+            name="semantic_search",
+            metadata={"hnsw:space": "cosine"}
+        )
+        
+        embeddings = self.model.encode(documents)
+        self.collection.add(
+            documents=documents,
+            embeddings=embeddings.tolist(),
+            ids=[f"doc_{i}" for i in range(len(documents))]
+        )
+    
+    def search(self, query: str, top_k: int = 5) -> list[dict]:
+        query_embedding = self.model.encode(query)
+        results = self.collection.query(
+            query_embeddings=[query_embedding.tolist()],
+            n_results=top_k
+        )
+        
+        return [
+            {
+                "document": doc,
+                "score": 1 - dist,  # Convert distance to similarity
+                "rank": i + 1
+            }
+            for i, (doc, dist) in enumerate(
+                zip(results['documents'][0], results['distances'][0])
+            )
+        ]
+```
+
+### Hybrid Search: Best of Both Worlds
+
+**The Production Standard:** Combine BM25 (precision) + embeddings (recall).
+
+**Why hybrid wins:**
+- Catches exact matches BM25 excels at
+- Catches semantic matches embeddings excel at
+- Often improves retrieval quality across diverse corpora
+- Commonly used in production
+
+**Implementation: Reciprocal Rank Fusion (RRF)**
+
+```python
+class HybridRetriever:
+    def __init__(self, documents: list[str]):
+        self.bm25 = BM25Retriever(documents)
+        self.semantic = SemanticRetriever(documents)
+    
+    def reciprocal_rank_fusion(
+        self,
+        bm25_results: list[dict],
+        semantic_results: list[dict],
+        k: int = 60  # RRF constant
+    ) -> list[dict]:
+        """RRF score = sum(1 / (k + rank)) for each result list."""
+        scores = {}
+        
+        # Add BM25 scores
+        for result in bm25_results:
+            doc = result['document']
+            scores[doc] = scores.get(doc, 0) + 1 / (k + result['rank'])
+        
+        # Add semantic scores
+        for result in semantic_results:
+            doc = result['document']
+            scores[doc] = scores.get(doc, 0) + 1 / (k + result['rank'])
+        
+        # Sort by combined score
+        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        return [
+            {"document": doc, "score": score, "rank": i + 1}
+            for i, (doc, score) in enumerate(ranked)
+        ]
+    
+    def search(self, query: str, top_k: int = 5) -> list[dict]:
+        bm25_results = self.bm25.search(query, top_k=20)
+        semantic_results = self.semantic.search(query, top_k=20)
+        fused = self.reciprocal_rank_fusion(bm25_results, semantic_results)
+        return fused[:top_k]
+```
+
+**When to Use Each:**
+
+| Query Type | Best Strategy | Example |
+|------------|---------------|---------|
+| Exact terminology | BM25 | "ICD-10 code M54.5" (medical) |
+| Product codes/IDs | BM25 | "SKU-2847-B" |
+| Conceptual question | Semantic | "How do I improve sleep?" |
+| Paraphrased intent | Semantic | "Can't sign in" → password reset |
+| Mixed (most production) | Hybrid | "Latest Python security updates" |
+
+**Performance (typical):**
+- BM25 alone: 70-75% relevant results
+- Semantic alone: 72-78% relevant results
+- Hybrid: 85-92% relevant results
+
+**Recommendation:** Start with hybrid unless strict latency requirements (<50ms) or clear use case for BM25-only.
+
+---
+
+## Chunking and Metadata Strategies
+
+### The Chunking Problem
+
+Documents are long. Context windows limited. Must split documents into chunks.
+
+**The core tension:**
+- Small chunks (100-200 tokens): Precise retrieval, lose context
+- Large chunks (1000+ tokens): Keep context, dilute relevance
+- Sweet spot: Depends on use case
+
+### Chunking Strategies
+
+**1. Fixed-Size (Simplest)**
+
+```python
+def fixed_size_chunking(
+    text: str,
+    chunk_size: int = 500,
+    overlap: int = 50
+) -> list[str]:
+    chunks = []
+    start = 0
+    
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end]
+        chunks.append(chunk)
+        start += chunk_size - overlap  # Step back for overlap
+    
+    return chunks
+```
+
+**Pros:** Simple, predictable, fast
+**Cons:** May split mid-sentence, ignores structure
+**Use when:** Prototyping, homogeneous documents
+
+**2. Semantic Chunking (Better)**
+
+```python
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+def semantic_chunking(
+    text: str,
+    chunk_size: int = 1000,
+    chunk_overlap: int = 200
+) -> list[str]:
+    """Split at semantic boundaries (paragraphs, sentences)."""
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        length_function=len,
+        separators=[
+            "\n\n",  # Paragraph breaks (preferred)
+            "\n",    # Line breaks
+            ". ",    # Sentences
+            " ",     # Words
+            ""       # Characters (fallback)
+        ]
+    )
+    return splitter.split_text(text)
+```
+
+**Pros:** Respects boundaries, keeps related content together
+**Cons:** Variable chunk sizes, more complex
+**Use when:** General-purpose RAG, varied documents
+
+**3. Document Structure-Aware (Production)**
+
+```python
+from bs4 import BeautifulSoup
+
+def structure_aware_chunking(html: str, max_chunk_size: int = 800) -> List[Dict]:
+    """Chunk based on HTML structure. Maintains hierarchical context."""
+    soup = BeautifulSoup(html, 'html.parser')
+    chunks = []
+    current_context = []
+    
+    for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li']):
+        # Update context when hitting headers
+        if element.name in ['h1', 'h2', 'h3']:
+            level = int(element.name[1])
+            current_context = current_context[:level-1]
+            current_context.append(element.get_text())
+        
+        # For content elements, create chunk with context
+        elif element.name in ['p', 'li']:
+            content = element.get_text()
+            chunk_text = " > ".join(current_context) + "\n\n" + content
+            
+            chunks.append({
+                "content": chunk_text,
+                "metadata": {
+                    "section_path": " > ".join(current_context),
+                    "element_type": element.name
+                }
+            })
+    
+    return chunks
+```
+
+**Pros:** Preserves hierarchy, full context path, excellent for technical docs
+**Cons:** Requires structured input, complex, metadata overhead
+**Use when:** Technical documentation, legal contracts, hierarchical content
+
+### Chunking Guidelines by Document Type
+
+| Document Type | Strategy | Chunk Size | Overlap | Why |
+|---------------|----------|------------|---------|-----|
+| Blog posts | Semantic | 800-1000 char | 200 | Respect paragraphs |
+| Technical docs | Structure-aware | 600-800 char | 150 | Maintain hierarchy |
+| Legal contracts | Structure-aware | 1000-1500 char | 300 | Keep clauses intact |
+| Chat transcripts | Semantic | 500-700 char | 100 | Conversation turns |
+| Research papers | Structure-aware | 1000-1200 char | 200 | Section context |
+
+### Metadata: The Secret Weapon
+
+Good metadata transforms retrieval quality.
+
+**Essential Metadata Fields:**
+
+```python
+from datetime import datetime
+
+class DocumentChunk:
+    def __init__(self, content: str, metadata: dict):
+        self.content = content
+        self.metadata = metadata
+    
+    @classmethod
+    def from_document(
+        cls,
+        content: str,
+        source: str,
+        chunk_index: int,
+        total_chunks: int,
+        **extra_metadata
+    ):
+        metadata = {
+            # Required
+            'source': source,  # e.g., "docs/api-guide.md"
+            'chunk_id': f"{source}_{chunk_index}",
+            'created_at': datetime.now().isoformat(),
+            
+            # Chunk context
+            'chunk_index': chunk_index,
+            'total_chunks': total_chunks,
+            
+            # Domain-specific
+            'document_type': extra_metadata.get('document_type'),
+            'author': extra_metadata.get('author'),
+            'section': extra_metadata.get('section'),
+            'language': extra_metadata.get('language', 'en'),
+            
+            # Quality signals
+            'word_count': len(content.split()),
+            'char_count': len(content)
+        }
+        return cls(content, metadata)
+```
+
+**Using Metadata for Filtered Retrieval:**
+
+```python
+# Filtered retrieval with Chroma
+collection.query(
+    query_texts=["How do I authenticate?"],
+    n_results=5,
+    where={
+        "$and": [
+            {"document_type": {"$eq": "api_documentation"}},
+            {"section": {"$in": ["Authentication", "Security"]}}
+        ]
+    }
+)
+
+# Dramatically improves precision:
+# - Excludes irrelevant document types
+# - Focuses on specific sections
+# - Enables domain-specific retrieval
+```
+
+**Metadata Strategy:**
+- **Always include:** Source, timestamp, chunk position
+- **Include when relevant:** Author, document type, section, language, quality scores, version
+
+---
+
+## RAG Evaluation
+
+### Why Evaluation is Non-Negotiable
+
+RAG systems usually fail not because the LLM is bad, but because context is subtly wrong. Without evaluation, you're debugging blind.
+
+**The Problem:** Teams spend weeks tuning prompts for hallucinations, only to discover root cause was weak embedding model missing domain-specific documents.
+
+### The Two-Part Evaluation
+
+1. **Retrieval Quality:** Did we find the right documents?
+2. **Generation Quality:** Did the LLM use them correctly?
+
+```
+Query → [Retrieval ✓?] → Retrieved Docs → [Generation ✓?] → Answer
+```
+
+### ARES Framework for Failure Attribution
+
+| Check | Component | Goal | Metric |
+|:------|:----------|:-----|:-------|
+| **Context Relevance** | Retrieval | Did we retrieve necessary ground-truth docs? | Recall@k, NDCG@k |
+| **Answer Faithfulness** | Generation | Is answer grounded only in retrieved context? | LLM-as-Judge |
+| **Answer Relevance** | Generation | Does answer address original query? | LLM-as-Judge |
+
+**Debugging logic:** If Context Relevance low → fix retriever. If Context Relevance high but Faithfulness/Relevance low → fix generator/prompt/reranker.
+
+### Part 1: Retrieval Metrics
+
+**Recall@k:** What fraction of relevant documents did we retrieve?
+- Target: Recall@10 > 0.90
+
+**Precision@k:** What fraction of retrieved documents are relevant?
+- Target: Precision@5 > 0.80
+
+**NDCG@k:** Are relevant docs ranked higher?
+- Target: NDCG@10 > 0.80
+
+**MRR (Mean Reciprocal Rank):** How quickly do we find relevance?
+- Target: MRR > 0.80
+
+```python
+from llama_index.evaluation import RetrieverEvaluator, RetrievalMetric
+
+# Define metrics
+metrics = [
+    RetrievalMetric.HIT_RATE,  # Recall-like
+    RetrievalMetric.MRR,       # Mean Reciprocal Rank
+    RetrievalMetric.PRECISION,
+    RetrievalMetric.NDCG,
+    RetrievalMetric.AVERAGE_RECALL
+]
+
+# Create evaluator
+evaluator = RetrieverEvaluator(
+    metrics=metrics,
+    retriever=retriever
+)
+
+# Run evaluation
+# evaluation_results = await evaluator.evaluate_dataset(test_dataset)
+# print(evaluation_results.average_scores)
+```
+
+### Part 2: Generation Quality
+
+**Faithfulness:** Does answer only contain info from retrieved docs?
+- Target: Faithfulness > 0.90 (< 10% hallucination)
+
+**Relevance:** Is answer on-topic and helpful?
+- Target: Relevance > 0.85
+
+### LLM-as-Judge
+
+Use separate LLM (GPT-4) to evaluate response quality.
+
+**Main advantage:** Works in production without ground truth. Unlike retrieval metrics requiring labeled relevant docs, LLM-as-Judge evaluates any query-response pair by comparing response to retrieved context.
+
+**Critical requirement:** Before deploying, **validate judge against ground truth**. Create 50-100 human-annotated examples, run judge, measure agreement (>85% needed). Adjust judge model/prompts/temperature if needed.
+
+```python
+from llama_index.llms import OpenAI
+from llama_index.evaluation import ResponseEvaluator
+
+judge_llm = OpenAI(model="gpt-4o")
+evaluator = ResponseEvaluator(llm=judge_llm)
+
+def evaluate_response_quality(
+    query: str,
+    response: str,
+    source_nodes: List[str]
+) -> EvaluationResult:
+    """Evaluates faithfulness and relevancy using LLM-as-Judge."""
+    
+    evaluation_result = evaluator.evaluate(
+        query=query,
+        response=response,
+        contexts=source_nodes
+    )
+    
+    return evaluation_result
+
+# Example
+results = evaluate_response_quality(
+    query="What is the capital of Texas?",
+    response="The capital of Texas is Austin.",
+    source_nodes=["Austin is the capital of Texas."]
+)
+
+print(f"Passing: {results.passing}: {results.feedback}")
+```
+
+### Building a Golden Dataset
+
+Most important step: You need ground truth test cases.
+
+```python
+# 1. Collect real user queries
+real_queries = [
+    "How do I reset my password?",
+    "What's the return policy?",
+    "Do you ship internationally?",
+    # ... 50-100 real queries
+]
+
+# 2. For each query, manually identify relevant docs
+golden_dataset = []
+for query in real_queries:
+    # Human annotators mark relevant docs (text content needed)
+    relevant_node_texts = annotate_relevant_docs_texts(query, corpus)
+    expected_answer = write_expected_answer(query, relevant_node_texts)
+    
+    golden_dataset.append({
+        "query": query,
+        "ground_truth_nodes": relevant_node_texts,  # List of chunk texts
+        "expected_answer": expected_answer
+    })
+
+# 3. Save for repeated evaluation
+import json
+with open('golden_dataset.json', 'w') as f:
+    json.dump(golden_dataset, f, indent=2)
+```
+
+**Golden dataset best practices:**
+- **Size:** 50-100 minimum, 500+ ideal
+- **Diversity:** Cover all query types (factual, conceptual, multi-hop)
+- **Difficulty:** Include easy and hard cases
+- **Updates:** Refresh quarterly as corpus changes
+- **Multiple annotators:** Inter-annotator agreement > 0.80
+
+---
+
+# Module 3: AI Agents
+
+## Overview & Learning Objectives
+
+By the end of this module, you will be able to:
+- Build agents that can use tools to accomplish tasks
+- Design effective tools following MCP best practices
+- Implement appropriate memory architecture for agent continuity
+- Choose between working memory and long-term memory appropriately
+- Select the right memory integration pattern for your use case
+- Build agents with both tool capabilities and persistent context
+
+**The Challenge:** Building agents for demos is easy. Building agents that meet enterprise reliability requirements (95%+ accuracy) is hard. Most agent projects fail not because of the LLM, but because of design and orchestration.
+
+---
+
+## Introduction to AI Agents
+
+### What is an AI Agent?
+
+You've been using LLMs for single-shot tasks:
+```python
+response = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    messages=[{"role": "user", "content": "What's the capital of France?"}]
+)
+# → "Paris"
+```
+
+This works for simple questions. But what if you need to:
+- **Look up information** the LLM doesn't know (customer data, inventory)
+- **Take actions** in external systems (create tickets, send emails, update databases)
+- **Remember context** across multiple turns (maintain conversation state)
+- **Make decisions** based on intermediate results (if X then Y)
+
+**That's what agents do.**
+
+**Definition:** An AI agent is an LLM system that can:
+1. **Perceive** - Understand current situation (user request, context, state)
+2. **Think** - Reason about what to do (using LLM)
+3. **Act** - Execute actions using tools (function calls, API calls)
+4. **Remember** - Maintain state and context
+5. **Repeat** - Continue until task complete
+
+### The Basic Agent Loop
+
+```
+User Query
+    ↓
+Agent Thinks: "I need customer data to answer"
+    ↓
+Agent Acts: Calls get_customer(id="123")
+    ↓
+Tool Returns: {name: "Alice", orders: 5}
+    ↓
+Agent Thinks Again: "Now I can answer"
+    ↓
+Agent Responds: "Alice has placed 5 orders"
+```
+
+### Your First Agent: Simple Tool Use
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+# Step 1: Define a tool
+tools = [{
+    "name": "get_weather",
+    "description": "Get current weather for a city. Use when user asks about weather.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "city": {
+                "type": "string",
+                "description": "City name, e.g. 'San Francisco'"
+            }
+        },
+        "required": ["city"]
+    }
+}]
+
+# Step 2: Implement the tool function
+def get_weather(city: str) -> dict:
+    # In production, call real weather API
+    return {
+        "city": city,
+        "temperature": 72,
+        "condition": "Sunny",
+        "humidity": 45
+    }
+
+# Step 3: Create the agent loop
+def run_agent(user_message: str):
+    messages = [{"role": "user", "content": user_message}]
+    
+    while True:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            tools=tools,
+            messages=messages
+        )
+        
+        if response.stop_reason == "tool_use":
+            # Agent wants to use a tool
+            tool_use = next(
+                block for block in response.content
+                if block.type == "tool_use"
+            )
+            
+            # Execute the tool
+            if tool_use.name == "get_weather":
+                tool_result = get_weather(**tool_use.input)
+            
+            # Add tool use and result to conversation
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({
+                "role": "user",
+                "content": [{
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": str(tool_result)
+                }]
+            })
+        else:
+            # Agent is done
+            final_text = next(
+                block.text for block in response.content
+                if hasattr(block, "text")
+            )
+            return final_text
+
+print(run_agent("What's the weather in San Francisco?"))
+```
+
+**What just happened:**
+1. User asks about weather
+2. Agent sees it has `get_weather` tool available
+3. Agent decides to use that tool
+4. We execute tool and give result back to agent
+5. Agent uses result to formulate final answer
+
+**Key Insight:** The agent made a decision. We didn't tell it "call get_weather." It reasoned that to answer the question, it needed weather data, and chose the appropriate tool.
+
+---
+
+## Tool Design & Implementation
+
+### Why Tools Matter
+
+Poor tool design leads to:
+- Agents selecting wrong tools
+- Excessive API calls (cost, latency)
+- Confusing error messages
+- Unpredictable behavior
+
+Good tool design leads to:
+- Accurate tool selection (>90%)
+- Minimal agent steps
+- Clear error handling
+- Predictable, testable behavior
+
+### Model Context Protocol (MCP)
+
+**MCP** is open standard for connecting AI systems to data sources and tools. Think of it as "USB for AI" - universal connector.
+
+**Why MCP Matters:**
+
+Without MCP:
+```python
+# Agent needs to understand each API directly
+tools = [
+    salesforce_get_account,     # Salesforce-specific
+    zendesk_get_ticket,         # Zendesk-specific
+    shopify_get_order,          # Shopify-specific
+]
+```
+
+With MCP:
+```python
+# Standard protocol across all tools
+mcp_server = MCPServer()
+
+@mcp_server.tool()
+async def get_customer_data(customer_id: str):
+    """Standard interface, internal complexity hidden."""
+    # Can call Salesforce, Zendesk, internal DB, whatever
+    # Agent doesn't need to know details
+```
+
+**MCP Benefits:**
+1. **Standardization:** Same protocol for all tools
+2. **Tool Discovery:** Agents can list available tools dynamically
+3. **Error Handling:** Consistent error format
+4. **Security:** Built-in authentication/authorization
+5. **Composability:** Tools can call other tools
+
+### Tool Design Principles
+
+**Principle 1: Clear, Descriptive Names**
+
+Bad names: `process`, `fetch`, `do_thing`
+
+Good names:
+```python
+get_customer_by_email
+search_products_by_category
+calculate_shipping_cost_for_order
+send_notification_to_user
+```
+
+**Naming convention:** `[verb]_[noun]_[context]`
+
+**Principle 2: Comprehensive Descriptions**
+
+The description must answer:
+- **What** does this tool do?
+- **When** should agent use it?
+- **When NOT** to use it (distinguish from similar tools)
+- **What format** are inputs/outputs?
+
+Bad description:
+```python
+@mcp_server.tool()
+async def get_data(id: str):
+    """Get data."""
+    pass
+```
+
+Good description:
+```python
+@mcp_server.tool()
+async def get_customer_by_id(customer_id: str) -> dict:
+    """Retrieve customer account information by customer ID.
+    
+    Use this when:
+    - You have a customer ID and need their details
+    - User mentions "my account" (look up by context)
+    
+    Do NOT use for:
+    - Searching by name/email (use search_customers instead)
+    - Getting order history (use get_customer_orders instead)
+    
+    Args:
+        customer_id: Customer ID in format CUST-##### (e.g., "CUST-12345")
+    
+    Returns:
+        Customer object with: name, email, phone, address, account_status
+        
+    Example:
+        Input: customer_id="CUST-12345"
+        Output: {
+            "name": "Alice Johnson",
+            "email": "alice@example.com",
+            "account_status": "active"
+        }
+    """
+    pass
+```
+
+**Principle 3: Simple Parameter Schemas**
+
+**Research shows:** Tool parameter complexity significantly affects agent accuracy.
+
+| Parameter Count | Agent Accuracy |
+|-----------------|----------------|
+| 1-3 parameters  | 90%+ correct   |
+| 4-6 parameters  | 75-85% correct |
+| 7+ parameters   | 60-70% correct |
+
+**Design principle:** Prefer multiple simple tools over one complex tool.
+
+Anti-pattern: Complex tool with 10 parameters → 65% success rate
+Better: Three simple tools with 2-3 params each → 85% success rate
+
+Even though multiple tools require more agent steps, the higher accuracy makes them more reliable in production.
+
+**Principle 4: Consistent Return Formats**
+
+Standard response envelope:
+```python
+from typing import TypedDict, Optional
+
+class ToolResponse(TypedDict):
+    success: bool
+    data: Optional[dict]
+    error: Optional[str]
+    message: str
+
+@mcp_server.tool()
+async def example_tool(param: str) -> ToolResponse:
+    try:
+        result = await process(param)
+        return {
+            "success": True,
+            "data": result,
+            "error": None,
+            "message": "Operation completed successfully"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": type(e).__name__,
+            "message": f"Failed: {str(e)}"
+        }
+```
+
+**Benefits:**
+- Agent knows what to expect
+- Easy to check success/failure
+- Consistent error handling
+
+---
+
+## Agent Memory
+
+### The Memory Problem in Production
+
+Consider this scenario:
+```
+User: "I ordered a laptop last week"
+Agent: [searches orders] "Found order #12345 for MacBook Pro"
+
+User: "When will it arrive?"
+Agent: [searches orders AGAIN] "Order #12345 ships tomorrow"
+
+User: "Can I change the address?"
+Agent: [searches orders AGAIN] "For order #12345, yes I can help"
+```
+
+**Problem:** Three redundant tool calls, costing roughly 3x what it should.
+
+**Solution:** Production memory architecture with working memory (session state) and long-term memory (persistent knowledge).
+
+### Memory Architecture: Two-Tier System
+
+| Memory Type | Duration | Purpose | Storage | Search |
+|-------------|----------|---------|---------|--------|
+| **Working Memory** | Single session | Active conversation state | Redis key-value | Simple lookup |
+| **Long-Term Memory** | Cross-session | Persistent knowledge | Redis + vector index | Semantic search |
+
+Think of working memory as L1 cache (fast, temporary) and long-term memory as database (persistent, searchable).
+
+### Working Memory: Session-Scoped State
+
+**What it is:** Durable storage for specific conversation session—the "scratch pad" where agents track current conversation context.
+
+**What belongs here:**
+- **Conversation messages** - The actual user/assistant dialogue
+- **Session-specific data** - Temporary context that doesn't need to persist
+- **Tool results cache** - Results from API calls to avoid redundant requests
+
+```python
+from agent_memory_client import MemoryAPIClient, WorkingMemory, MemoryMessage
+
+class SessionAgent:
+    def __init__(self, memory_url: str = "http://localhost:8000"):
+        self.memory = MemoryAPIClient(base_url=memory_url)
+        self.tool_cache = {}
+    
+    async def process_turn(
+        self,
+        user_message: str,
+        session_id: str,
+        user_id: str
+    ) -> str:
+        # 1. Get or create working memory session
+        created, working_memory = await self.memory.get_or_create_working_memory(
+            session_id=session_id,
+            model_name="claude-sonnet-4-20250514",
+            user_id=user_id
+        )
+        
+        # 2. Check tool cache before making redundant calls
+        cache_key = f"order_lookup:{user_id}"
+        if cache_key not in self.tool_cache:
+            order_data = await self.get_order_data(user_id)
+            self.tool_cache[cache_key] = order_data
+        else:
+            order_data = self.tool_cache[cache_key]
+        
+        # 3. Get enriched context (past messages + relevant long-term memories)
+        context = await self.memory.memory_prompt(
+            query=user_message,
+            session_id=session_id,
+            long_term_search={
+                "text": user_message,
+                "filters": {"user_id": {"eq": user_id}},
+                "limit": 5
+            }
+        )
+        
+        # 4. Generate response with full context
+        response = await self.generate_response(
+            messages=context.messages,
+            user_message=user_message,
+            order_data=order_data
+        )
+        
+        # 5. Store the conversation turn
+        await self.memory.set_working_memory(
+            session_id=session_id,
+            working_memory=WorkingMemory(
+                session_id=session_id,
+                messages=[
+                    MemoryMessage(role="user", content=user_message),
+                    MemoryMessage(role="assistant", content=response)
+                ],
+                user_id=user_id
+            )
+        )
+        
+        return response
+```
+
+**Benefits:**
+- Avoids redundant tool calls within session (3x cost reduction)
+- Maintains conversation coherence across turns
+- Automatically manages conversation window
+- Durable by default (persists across server restarts)
+
+### Long-Term Memory: Cross-Session Knowledge
+
+**What it is:** Persistent, vector-indexed storage for knowledge that should be retained and searchable across all interactions.
+
+**What belongs here:**
+- **User preferences** - "User prefers dark mode interfaces"
+- **Important facts** - "Customer subscription expires 2024-06-15"
+- **Historical context** - "User working on Python ML project"
+
+**Memory Types:**
+
+| Type | Purpose | Example |
+|------|---------|---------|
+| **Semantic** | Facts, preferences, general knowledge | "User prefers metric units" |
+| **Episodic** | Events with temporal context | "User visited Paris in March 2024" |
+| **Message** | Conversation records (auto-generated) | Individual chat messages |
+
+```python
+from agent_memory_client.models import MemoryRecord
+from datetime import datetime
+
+class PersistentKnowledgeAgent:
+    async def store_user_preferences(self, user_id: str, preferences: dict):
+        """Store lasting user preferences"""
+        memories = [
+            MemoryRecord(
+                text=f"User prefers {value} for {key}",
+                memory_type="semantic",
+                topics=["preferences", key],
+                entities=[value],
+                user_id=user_id,
+                namespace="preferences"
+            )
+            for key, value in preferences.items()
+        ]
+        await self.memory.create_long_term_memories(memories)
+    
+    async def remember_event(self, user_id: str, event_text: str, event_date: datetime):
+        """Store important events with temporal context"""
+        memory = MemoryRecord(
+            text=event_text,
+            memory_type="episodic",
+            event_date=event_date,
+            topics=["events", "timeline"],
+            user_id=user_id
+        )
+        await self.memory.create_long_term_memories([memory])
+    
+    async def get_relevant_context(self, user_id: str, query: str) -> list[str]:
+        """Semantic search for relevant memories"""
+        results = await self.memory.search_long_term_memory(
+            text=query,
+            filters={
+                "user_id": {"eq": user_id},
+                "memory_type": {"any": ["semantic", "episodic"]}
+            },
+            limit=5
+        )
+        return [memory.text for memory in results.memories]
+```
+
+**Key Features:**
+- **Semantic search** - Find relevant memories without exact keyword matches
+- **Automatic deduplication** - Hash-based and semantic similarity detection
+- **Rich metadata** - Topics, entities, timestamps for precise filtering
+- **Cross-session persistence** - Survives server restarts and session expiration
+
+### The Three Integration Patterns
+
+**Pattern 1: LLM-Driven Memory (Tool-Based)**
+
+**When to use:** Conversational agents where LLM should decide what to remember.
+
+**How it works:** Give LLM tool access to memory operations.
+
+**Advantages:** Natural flow, user control, contextual decisions
+**Disadvantages:** Token overhead, inconsistent behavior, higher costs
+
+**Pattern 2: Code-Driven Memory (Programmatic)**
+
+**When to use:** Applications requiring predictable memory behavior and explicit control.
+
+**How it works:** Your code decides when to store/retrieve memories.
+
+```python
+class CodeDrivenAgent:
+    async def get_contextual_response(
+        self,
+        user_message: str,
+        user_id: str,
+        session_id: str
+    ) -> str:
+        # 1. Get working memory session
+        created, working_memory = await self.memory.get_or_create_working_memory(session_id)
+        
+        # 2. Search for relevant context
+        context = await self.memory.memory_prompt(
+            query=user_message,
+            session_id=session_id,
+            long_term_search={
+                "text": user_message,
+                "filters": {"user_id": {"eq": user_id}},
+                "limit": 5,
+                "recency_boost": True
+            }
+        )
+        
+        # 3. Generate response with enriched context
+        response = await self.openai_client.chat.completions.create(
+            model="gpt-4o",
+            messages=context.messages  # Pre-loaded with relevant memories
+        )
+        
+        # 4. Store interaction if it contains preferences
+        if "prefer" in user_message.lower() or "like" in user_message.lower():
+            await self.memory.create_long_term_memories([
+                MemoryRecord(
+                    text=f"User expressed: {user_message}",
+                    memory_type="semantic",
+                    topics=["preferences"],
+                    user_id=user_id
+                )
+            ])
+        
+        return response.choices[0].message.content
+```
+
+**Advantages:** Predictable, efficient, reliable, optimizable
+**Disadvantages:** More coding required, less natural, maintenance overhead
+
+**Pattern 3: Background Extraction (Automatic)**
+
+**When to use:** Systems that should learn automatically from conversations.
+
+**How it works:** Store conversations in working memory; system extracts important info in background.
+
+**Advantages:** Zero overhead, continuous learning, contextual grounding, scales naturally
+**Disadvantages:** Less control, delayed availability, potential noise
+
+---
+
+## Key Takeaways
+
+### Context Engineering & Prompt Design
+1. Structured prompts often reduce hallucinations (results vary by task/model)
+2. XML tags create clear boundaries
+3. Model selection and caching can materially reduce costs
+4. CoT often improves reasoning; Self-Consistency adds improvements (magnitude varies)
+5. Testing is non-negotiable: Create eval datasets, measure everything, iterate systematically
+
+### RAG
+1. Two-stage retrieval is production standard: Fast first-pass + precise reranking
+2. Hybrid search wins: Combines BM25 + semantic, catches both exact and conceptual matches
+3. Chunking strategy matters: Structure-aware with metadata dramatically improves quality
+4. Evaluate retrieval separately from generation: Many failures stem from retrieval issues
+5. Golden datasets are non-negotiable: You cannot improve what you don't measure (50-100 test cases minimum)
+
+### AI Agents
+1. Agents extend LLMs with actions: The agent loop (think → act → think) enables multi-step workflows
+2. Tool design directly impacts reliability: 1-3 parameter tools achieve 90%+ accuracy, 7+ parameters drop to 60-70%
+3. Memory prevents waste: Production agents need working memory (session context) and long-term memory (persistent knowledge)
+4. MCP is the standard: Consistent tool interfaces, discovery, error handling, security
+5. Choose integration patterns intentionally: Code-driven offers predictability, LLM-driven offers flexibility, background extraction offers continuous learning
+
+---
+
+*Generated: 2025-11-30*
+*Git Commit: 6b9cc28e19f403b60aa6b77e43216dcd923c7eb5*
+*Last Updated: 2025-11-24 07:41:21 -0800*
+
