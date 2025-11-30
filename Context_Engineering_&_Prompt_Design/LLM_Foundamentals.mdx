@@ -5,51 +5,17 @@ sidebarTitle: "LLM Fundamentals"
 icon: "book"
 ---
 
+import { CodeEmbed } from '/snippets/CodeEmbed.jsx';
+
 ## Hello World
 
-[Full runnable hello world notebook](https://colab.research.google.com/drive/1owGCyAAB5ptDKp2WfBg46zghbhFnn8sD?usp=sharing)
+After configuring your OpenAI API key, you can run this example by executing `npm run llm:sample1` in the terminal. Give a try !
 
-<CodeGroup>
-
-```python Python
-
-response = completion(model="gpt-4o-mini", messages=[{"role": "user", "content": "Hello, how are you?"}])
-print(response)
-
-# Output:
-# {
-#   "choices": [
-#     {
-#       "message": {
-#         "content": "I'm doing great, thank you! How can I help you today?"
-#       }
-#     }
-#   ]
-# }
-```
-
-
-```ts TypeScript
-const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: "Hello, how are you?" }]
-});
-
-console.log(response);
-
-// Output:
-// {
-//   "choices": [
-//     {
-//       "message": {
-//         "content": "I'm doing great, thank you! How can I help you today?"
-//       }
-//     }
-//   ]
-// }
-```
-
-</CodeGroup>
+<CodeEmbed 
+  file="src/hello_world.ts" 
+  lines="9-17"
+  title="LLM Fundamentals - Hello World"
+/>
 
 ## How LLMs Process Your Input
 
@@ -88,7 +54,7 @@ $$
 
 LLMs are trained to predict the next plausible token. They're not fact-checking databases.
 
-**Famous Failure:** Air Canada's chatbot hallucinated a bereavement discount policy that didn't exist. The airline had to honor it in court. Cost: Unknown, but significant legal precedent. ([BBC, 2024](https://www.bbc.com/news/world-us-canada-68267138), [CBC, 2024](https://www.cbc.ca/news/canada/british-columbia/air-canada-chatbot-compensation-1.7124924))
+**Famous Failure:** Air Canada's chatbot hallucinated a bereavement discount policy that didn't exist. The airline had to honor it in court. Cost: Unknown, but significant legal precedent. ([BBC, 2024](https://www.bbc.com/travel/article/20240222-air-canada-chatbot-misinformation-what-travellers-should-know))
 
 **Why It Happens:**
 
@@ -140,9 +106,9 @@ Control the creativity of the model with the Temperature parameter.
 
 LLMs pay more attention to text at the beginning and end of the prompt. Middle content gets "lost."
 
-**Heuristic:** Prompt structure and placement can affect results. Many teams place the specific query toward the end; validate with your use case. 
+**Heuristic:** Prompt structure and placement can affect results. Many teams place the specific query toward the end; validate with your use case.
 
-**Best Practice for Gemini: **See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
+\*\*Best Practice for Gemini: \*\*See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
 
 ```
 Critical instructions at START
@@ -201,5 +167,3 @@ Email: [the customer's email address]
 ```
 
 </CodeGroup>
-
----
