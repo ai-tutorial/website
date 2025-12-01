@@ -1,3 +1,5 @@
+import { useRef, useState, useEffect } from 'react';
+
 export const IFrameCodeEmbed = ({ 
   file = 'src/hello_world.ts', 
   lines, 
@@ -68,14 +70,6 @@ export const IFrameCodeEmbed = ({
   };
 
   /**
-   * Remove the OpenAI API key from localStorage
-   */
-  const removeApiKey = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    dispatchApiKeyChanged();
-  };
-
-  /**
    * Create or update .env file in StackBlitz VM
    */
   const updateEnvFile = async (vm) => {
@@ -84,9 +78,6 @@ export const IFrameCodeEmbed = ({
     }
 
     try {
-      // Get the base file path (without line numbers)
-      const baseFilePath = file || 'src/hello_world.ts';
-      
       // Use isApiKeyConfigured to check if key is properly configured
       const configured = isApiKeyConfigured();
       let envContent;
@@ -111,6 +102,7 @@ OPENAI_API_KEY=${apiKey.trim()}`;
       }
 
       // Create run.conf with the file name in env directory
+      const baseFilePath = file || 'src/hello_world.ts';
       const configContent = `file=${baseFilePath}`;
 
       await vm.applyFsDiff({
@@ -235,11 +227,7 @@ OPENAI_API_KEY=${apiKey.trim()}`;
       if (saved) {
         setSuccess(true);
         setApiKey('');
-        
-        // Hide dialog and show iframe after a brief delay
-        setTimeout(() => {
-          setShowApiKeyDialog(false);
-        }, 500);
+        setShowApiKeyDialog(false);
       } else {
         setError('Failed to save API key. Please try again.');
       }
@@ -327,42 +315,30 @@ OPENAI_API_KEY=${apiKey.trim()}`;
     }
 
     const handleLoad = async () => {
-      // Wait for iframe to be ready
-      setTimeout(async () => {
-        try {
-          // Load SDK and connect to VM
-          const sdk = await loadSDK();
-          
-          // Prevent multiple connections
-          if (vmRef.current) {
-            return;
-          }
-
-          const vm = await sdk.connect(iframe);
-          vmRef.current = vm;
-          
-          // Wait for VM to be fully ready before creating .env file
-          setTimeout(async () => {
-            if (!hasCreatedEnvRef.current && vm) {
-              await updateEnvFile(vm);
-            }
-          }, 2000);
-        } catch (error) {
-          // Connection failed, will retry on next iframe load or API key change
+      try {
+        // Load SDK and connect to VM
+        const sdk = await loadSDK();
+        
+        // Prevent multiple connections
+        if (vmRef.current) {
+          return;
         }
-      }, 2000);
+
+        const vm = await sdk.connect(iframe);
+        vmRef.current = vm;
+        
+        // Create .env file once VM is connected
+        if (!hasCreatedEnvRef.current && vm) {
+          await updateEnvFile(vm);
+        }
+      } catch (error) {
+        console.error('Failed to connect to StackBlitz VM:', error);
+        // Connection failed, will retry on next iframe load or API key change
+      }
     };
 
     iframe.addEventListener('load', handleLoad);
-    
-    // If iframe is already loaded, connect immediately
-    try {
-      if (iframe.contentDocument?.readyState === 'complete') {
-        handleLoad();
-      }
-    } catch (e) {
-      // CORS: Cannot access iframe.contentDocument, wait for load event
-    }
+    // Note: Event listener cleanup is handled automatically when iframe element is removed by React
   };
 
   // Show API key configuration dialog if not configured
