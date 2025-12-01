@@ -189,6 +189,13 @@ OPENAI_API_KEY=${apiKey.trim()}`;
     }
   };
 
+  // Handle skip configuration
+  const handleSkipConfiguration = () => {
+    const skipKey = 'sk-<configure-your-key>';
+    saveApiKey(skipKey);
+    setShowApiKeyDialog(false);
+  };
+
   // Handle API key form submission
   const handleApiKeySubmit = async (e) => {
     e.preventDefault();
@@ -365,7 +372,7 @@ OPENAI_API_KEY=${apiKey.trim()}`;
         style={{
           width: '100%',
           height: height,
-          border: '1px solid #e2e8f0',
+          border: 'none',
           borderRadius: '8px',
           display: 'flex',
           flexDirection: 'column',
@@ -377,21 +384,23 @@ OPENAI_API_KEY=${apiKey.trim()}`;
       >
         <div
           style={{
-            maxWidth: '500px',
+            maxWidth: '520px',
             width: '100%',
             backgroundColor: 'white',
-            padding: '2rem',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+            padding: '2.5rem',
+            borderRadius: '12px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            border: '1px solid #e2e8f0',
           }}
         >
           <h2
             style={{
               marginTop: 0,
-              marginBottom: '1rem',
+              marginBottom: '1.25rem',
               fontSize: '1.5rem',
-              fontWeight: 600,
+              fontWeight: 700,
               color: '#1a202c',
+              letterSpacing: '-0.025em',
             }}
           >
             Configure OpenAI API Key
@@ -399,24 +408,65 @@ OPENAI_API_KEY=${apiKey.trim()}`;
           
           <p
             style={{
-              marginBottom: '1.5rem',
+              marginBottom: '1rem',
               color: '#4a5568',
-              lineHeight: '1.6',
+              lineHeight: '1.7',
+              fontSize: '0.875rem',
             }}
           >
-            To run the interactive examples, you need to configure your OpenAI API key. 
-            Your key will be stored locally in your browser and sent to the StackBlitz editor.
+            All interactive examples execute entirely within your browser environment, ensuring complete security and privacy. 
+            Your API key is stored locally in your browser's storage and is never transmitted to external servers.
           </p>
 
+          <div
+            style={{
+              marginBottom: '1.5rem',
+              padding: '1rem 1.25rem',
+              backgroundColor: '#f7fafc',
+              borderRadius: '8px',
+              fontSize: '0.8125rem',
+              color: '#4a5568',
+              lineHeight: '1.6',
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            <p style={{ margin: 0, marginBottom: '0.5rem', fontWeight: 600, color: '#2d3748' }}>
+              Don't have an API key?. 
+            </p>
+            <p style={{ margin: 0 }}>
+              Get one at{' '}
+              <a
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ 
+                  color: '#3182ce', 
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  borderBottom: '1px solid transparent',
+                  transition: 'border-color 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.borderBottomColor = '#3182ce';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.borderBottomColor = 'transparent';
+                }}
+              >
+                platform.openai.com/api-keys
+              </a>
+            </p>
+          </div>
+
           <form onSubmit={handleApiKeySubmit}>
-            <div style={{ marginBottom: '1rem' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
               <label
                 htmlFor="api-key-input"
                 style={{
                   display: 'block',
-                  marginBottom: '0.5rem',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
+                  marginBottom: '0.625rem',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
                   color: '#2d3748',
                 }}
               >
@@ -435,12 +485,24 @@ OPENAI_API_KEY=${apiKey.trim()}`;
                 disabled={isSubmitting}
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
-                  fontSize: '0.875rem',
-                  border: error ? '1px solid #e53e3e' : '1px solid #cbd5e0',
-                  borderRadius: '4px',
+                  padding: '0.875rem',
+                  fontSize: '0.8125rem',
+                  border: error ? '2px solid #e53e3e' : '2px solid #e2e8f0',
+                  borderRadius: '6px',
                   fontFamily: 'monospace',
                   boxSizing: 'border-box',
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                  outline: 'none',
+                }}
+                onFocus={(e) => {
+                  if (!error) {
+                    e.target.style.borderColor = '#3182ce';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(49, 130, 206, 0.1)';
+                  }
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = error ? '#e53e3e' : '#e2e8f0';
+                  e.target.style.boxShadow = 'none';
                 }}
                 autoFocus
               />
@@ -449,32 +511,40 @@ OPENAI_API_KEY=${apiKey.trim()}`;
             {error && (
               <div
                 style={{
-                  padding: '0.75rem',
-                  marginBottom: '1rem',
-                  backgroundColor: '#fed7d7',
-                  border: '1px solid #fc8181',
-                  borderRadius: '4px',
-                  color: '#c53030',
-                  fontSize: '0.875rem',
+                  padding: '0.875rem 1rem',
+                  marginBottom: '1.25rem',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  color: '#991b1b',
+                  fontSize: '0.8125rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
                 }}
               >
-                {error}
+                <span style={{ fontSize: '1rem' }}>⚠️</span>
+                <span>{error}</span>
               </div>
             )}
 
             {success && (
               <div
                 style={{
-                  padding: '0.75rem',
-                  marginBottom: '1rem',
-                  backgroundColor: '#c6f6d5',
-                  border: '1px solid #68d391',
-                  borderRadius: '4px',
-                  color: '#22543d',
-                  fontSize: '0.875rem',
+                  padding: '0.875rem 1rem',
+                  marginBottom: '1.25rem',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '6px',
+                  color: '#166534',
+                  fontSize: '0.8125rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
                 }}
               >
-                ✓ API key saved successfully! Loading editor...
+                <span style={{ fontSize: '1rem' }}>✓</span>
+                <span>API key saved successfully! Loading editor...</span>
               </div>
             )}
 
@@ -483,43 +553,103 @@ OPENAI_API_KEY=${apiKey.trim()}`;
               disabled={isSubmitting || isValidating || !apiKey.trim()}
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                fontSize: '1rem',
-                fontWeight: 500,
+                padding: '0.875rem 1.5rem',
+                fontSize: '0.9375rem',
+                fontWeight: 600,
                 color: 'white',
-                backgroundColor: isSubmitting || isValidating || !apiKey.trim() ? '#a0aec0' : '#3182ce',
+                backgroundColor: isSubmitting || isValidating || !apiKey.trim() ? '#cbd5e0' : '#3182ce',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 cursor: isSubmitting || isValidating || !apiKey.trim() ? 'not-allowed' : 'pointer',
-                transition: 'background-color 0.2s',
+                transition: 'all 0.2s',
+                marginBottom: '0.875rem',
+                boxShadow: isSubmitting || isValidating || !apiKey.trim() ? 'none' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isSubmitting && !isValidating && apiKey.trim()) {
+                  e.target.style.backgroundColor = '#2c5aa0';
+                  e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSubmitting && !isValidating && apiKey.trim()) {
+                  e.target.style.backgroundColor = '#3182ce';
+                  e.target.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+                }
               }}
             >
               {isValidating ? 'Validating...' : isSubmitting ? 'Saving...' : 'Save API Key'}
             </button>
           </form>
 
+          <button
+            type="button"
+            onClick={handleSkipConfiguration}
+            disabled={isSubmitting || isValidating}
+            style={{
+              width: '100%',
+              padding: '0.625rem 1rem',
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              color: '#718096',
+              backgroundColor: 'transparent',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
+              cursor: isSubmitting || isValidating ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!isSubmitting && !isValidating) {
+                e.target.style.backgroundColor = '#f7fafc';
+                e.target.style.borderColor = '#cbd5e0';
+                e.target.style.color = '#4a5568';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isSubmitting && !isValidating) {
+                e.target.style.backgroundColor = 'transparent';
+                e.target.style.borderColor = '#e2e8f0';
+                e.target.style.color = '#718096';
+              }
+            }}
+          >
+            Skip Configuration
+          </button>
+
           <div
             style={{
-              marginTop: '1.5rem',
-              paddingTop: '1.5rem',
+              marginTop: '1.25rem',
+              paddingTop: '1.25rem',
               borderTop: '1px solid #e2e8f0',
               fontSize: '0.75rem',
               color: '#718096',
+              lineHeight: '1.6',
             }}
           >
-            <p style={{ margin: 0, marginBottom: '0.5rem' }}>
-              <strong>Don't have an API key?</strong>
-            </p>
             <p style={{ margin: 0 }}>
-              Get one at{' '}
+              Alternatively, you may checkout the source code from{' '}
               <a
-                href="https://platform.openai.com/api-keys"
+                href="https://github.com/ai-tutorial/typescript-examples"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: '#3182ce', textDecoration: 'none' }}
+                style={{ 
+                  color: '#3182ce', 
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  borderBottom: '1px solid transparent',
+                  transition: 'border-color 0.2s',
+                  wordBreak: 'break-all',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.borderBottomColor = '#3182ce';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.borderBottomColor = 'transparent';
+                }}
               >
-                platform.openai.com/api-keys
+                https://github.com/ai-tutorial/typescript-examples
               </a>
+              {' '}and run the examples locally.
             </p>
           </div>
         </div>
