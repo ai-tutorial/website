@@ -110,13 +110,13 @@ OPENAI_API_KEY=${apiKey.trim()}`;
 # 4. The .env file will be automatically updated with your key`;
       }
 
-      // Create script.conf with the file name in .api-tutorial directory
+      // Create run.conf with the file name in env directory
       const configContent = `file=${baseFilePath}`;
 
       await vm.applyFsDiff({
         create: {
-          '.env': envContent,
-          '.api-tutorial/script.conf': configContent
+          'env/.env': envContent,
+          'env/run.conf': configContent
         },
         destroy: []
       });
