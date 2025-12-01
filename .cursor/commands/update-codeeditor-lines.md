@@ -87,3 +87,4 @@ ERROR HANDLING:
 - If function not found: Skip that CodeEditor and report warning
 - If lines prop format is invalid: Still update it with new format
 
+

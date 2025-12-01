@@ -107,90 +107,12 @@ prompt = f"""
 
 **Pattern:**
 
-[Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
-
-<CodeGroup>
-
-```python Python
-def format_docs(docs):
-    return "\n".join(f"- {doc}" for doc in docs)
-
-def build_support_prompt(query: str, customer_data: dict, relevant_docs: list) -> str:
-    return f"""
-<system_role>
-You are AcmeCo's senior customer support specialist.
-</system_role>
-
-<policy_documents>
-{format_docs(relevant_docs)}
-</policy_documents>
-
-<customer_context>
-<account_tier>{customer_data['tier']}</account_tier>
-<account_age_days>{customer_data['age_days']}</account_age_days>
-<previous_issues>{customer_data['issue_count']}</previous_issues>
-</customer_context>
-
-<customer_query>
-{query}
-</customer_query>
-
-<response_instructions>
-Analyze the query and provide:
-1. Issue category (billing, technical, account)
-2. Urgency level (low, medium, high)
-3. Recommended action
-4. Suggested response to customer
-
-Output as JSON with keys: category, urgency, action, response
-</response_instructions>
-"""
-```
-
-
-```ts TypeScript
-function formatDocs(docs: string[]): string {
-    return docs.map(doc => `- ${doc}`).join("\n");
-}
-
-function buildSupportPrompt(
-    query: string,
-    customerData: { tier: string; age_days: number; issue_count: number },
-    relevantDocs: string[]
-): string {
-    return `
-<system_role>
-You are AcmeCo's senior customer support specialist.
-</system_role>
-
-<policy_documents>
-${formatDocs(relevantDocs)}
-</policy_documents>
-
-<customer_context>
-<account_tier>${customerData.tier}</account_tier>
-<account_age_days>${customerData.age_days}</account_age_days>
-<previous_issues>${customerData.issue_count}</previous_issues>
-</customer_context>
-
-<customer_query>
-${query}
-</customer_query>
-
-<response_instructions>
-Analyze the query and provide:
-1. Issue category (billing, technical, account)
-2. Urgency level (low, medium, high)
-3. Recommended action
-4. Suggested response to customer
-
-Output as JSON with keys: category, urgency, action, response
-</response_instructions>
-`;
-}
-```
-
-</CodeGroup>
+<CodeEditor 
+  file="src/module1/structure_prompt_xml.ts" 
+  lines="115-142"
+  functionName="useStructuredOutputs"
+  title="Structured Prompt Engineering - XML Schemas"
+/> 
 
 
 ## Few-Shot Examples: Teaching by Showing
@@ -424,7 +346,7 @@ Based on ALL of the above context, answer: ${query}
 **Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
 
 <CodeEditor 
-  file="src/module1/structure_prompt.ts" 
+  file="src/module1/structure_prompt_json.ts" 
   lines="115-142"
   functionName="useStructuredOutputs"
   title="Structured Prompt Engineering - JSON Schemas"
