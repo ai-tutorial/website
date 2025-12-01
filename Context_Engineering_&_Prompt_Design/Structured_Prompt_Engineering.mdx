@@ -192,12 +192,6 @@ Output as JSON with keys: category, urgency, action, response
 
 </CodeGroup>
 
-<IFrameCodeEmbed 
-  file="src/module1/structure_prompt.ts" 
-  lines="9-17"
-  title="Structured Prompt Engineering - XML Tags"
-/> 
-
 
 ## Few-Shot Examples: Teaching by Showing
 
@@ -429,89 +423,12 @@ Based on ALL of the above context, answer: ${query}
 
 **Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
 
-**Pattern:** [Full runnable structured outputs with JSON schemas notebook](https://colab.research.google.com/drive/1ivZiyimkc16BkvUYqEKtmd4xuvpLF8aU?usp=drive_link)
+<IFrameCodeEmbed 
+  file="src/module1/structure_prompt.ts" 
+  lines="115-141"
+  title="Structured Prompt Engineering - JSON Schemas"
+/> 
 
-<CodeGroup>
-
-```python Python
-import jsonschema
-
-CONTRACT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "parties": {"type": "array", "items": {"type": "string"}},
-        "key_dates": {"type": "array", "items": {"type": "string", "format": "date"}},
-        "obligations": {"type": "array", "items": {"type": "string"}},
-        "risk_flags": {"type": "array", "items": {"type": "string"}},
-        "summary": {"type": "string"}
-    },
-    "required": ["parties", "key_dates", "obligations", "risk_flags", "summary"],
-    "additionalProperties": False
-}
-
-PROMPT = f"""
-<task>Summarize and extract fields from the contract</task>
-
-<constraints>
-- Output valid JSON only (no markdown, no comments)
-- Conform EXACTLY to this JSON schema (no extra fields):
-{json.dumps(CONTRACT_SCHEMA, indent=2)}
-</constraints>
-
-<contract>
-{{contract_text}}
-</contract>
-"""
-
-def validate_output(json_text: str) -> dict:
-    data = json.loads(json_text)
-    jsonschema.validate(instance=data, schema=CONTRACT_SCHEMA)
-    return data
-```
-
-
-```ts TypeScript
-import * as Ajv from "ajv";
-
-const CONTRACT_SCHEMA = {
-    type: "object",
-    properties: {
-        parties: { type: "array", items: { type: "string" } },
-        key_dates: { type: "array", items: { type: "string", format: "date" } },
-        obligations: { type: "array", items: { type: "string" } },
-        risk_flags: { type: "array", items: { type: "string" } },
-        summary: { type: "string" }
-    },
-    required: ["parties", "key_dates", "obligations", "risk_flags", "summary"],
-    additionalProperties: false
-};
-
-const PROMPT = `
-<task>Summarize and extract fields from the contract</task>
-
-<constraints>
-- Output valid JSON only (no markdown, no comments)
-- Conform EXACTLY to this JSON schema (no extra fields):
-${JSON.stringify(CONTRACT_SCHEMA, null, 2)}
-</constraints>
-
-<contract>
-${contractText}
-</contract>
-`;
-
-function validateOutput(jsonText: string): any {
-    const data = JSON.parse(jsonText);
-    const ajv = new Ajv();
-    const validate = ajv.compile(CONTRACT_SCHEMA);
-    if (!validate(data)) {
-        throw new Error("Invalid schema: " + JSON.stringify(validate.errors));
-    }
-    return data;
-}
-```
-
-</CodeGroup>
 
 See: OpenAI Structured Outputs (2025), Anthropic Prompt Engineering (2025), Gemini Prompting Strategies (2025) in Additional Resources.
 
