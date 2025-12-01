@@ -4,7 +4,7 @@ description: "Design structured prompts that often reduce hallucinations"
 sidebarTitle: "Structured Prompt Engineering"
 icon: "book"
 ---
-import { IFrameCodeEmbed } from '/snippets/IFrameCodeEmbed.jsx'; 
+import { CodeEditor } from '/snippets/CodeEditor.jsx'; 
 
 ## The Anatomy of a Production Prompt
 
@@ -423,9 +423,10 @@ Based on ALL of the above context, answer: ${query}
 
 **Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
 
-<IFrameCodeEmbed 
+<CodeEditor 
   file="src/module1/structure_prompt.ts" 
-  lines="115-141"
+  lines="115-142"
+  functionName="useStructuredOutputs"
   title="Structured Prompt Engineering - JSON Schemas"
 /> 
 

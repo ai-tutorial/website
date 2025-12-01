@@ -1,12 +1,28 @@
 import { useRef, useState, useEffect } from 'react';
 
+/**
+ * CodeEditor component for embedding interactive code examples in StackBlitz
+ * 
+ * @param {Object} props - Component props
+ * @param {string} [props.file='src/hello_world.ts'] - Path to the file to display
+ * @param {string|Object} [props.lines] - Line numbers to highlight (e.g., "10-20" or {start: 10, end: 20})
+ * @param {string} [props.title='Code Example'] - Title for the code editor
+ * @param {string} [props.repo='ai-tutorial/typescript-examples'] - GitHub repository path
+ * @param {string} [props.height='650px'] - Height of the iframe
+ * @param {string} props.functionName - Required. Name of the function being demonstrated (for documentation purposes)
+ */
 export const CodeEditor = ({ 
   file = 'src/hello_world.ts', 
   lines, 
   title = 'Code Example',
   repo = 'ai-tutorial/typescript-examples',
-  height = '650px'
+  height = '650px',
+  functionName
 }) => {
+  // Validate required parameter
+  if (!functionName) {
+    console.warn('CodeEditor: functionName parameter is required');
+  }
   const hasCreatedEnvRef = useRef(false);
   const vmRef = useRef(null);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
