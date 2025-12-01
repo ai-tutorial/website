@@ -117,5 +117,8 @@
       "github": "https://github.com/pluna/ai-tutorial",
       "linkedin": "https://linkedin.com/in/luna-pablo"
     }
-  }
+  },
+  "customScripts": [
+    "https://unpkg.com/@stackblitz/sdk/bundles/sdk.umd.js"
+  ]
 }
