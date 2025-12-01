@@ -2,7 +2,7 @@ export const IFrameCodeEmbed = ({
   file = 'src/hello_world.ts', 
   lines, 
   title = 'Code Example',
-  repo = 'veigap/ai-example-wip',
+  repo = 'ai-tutorial/typescript-examples',
   height = '650px'
 }) => {
   const hasCreatedEnvRef = useRef(false);
