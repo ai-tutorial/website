@@ -384,7 +384,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             padding: '2.5rem',
             borderRadius: '12px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
-            border: '1px solid #2a2a2a',
+            border: '2px solid #f59e0b',
           }}
         >
           <h2
@@ -395,8 +395,16 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
               fontWeight: 700,
               color: '#f5f5f5',
               letterSpacing: '-0.025em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
             }}
           >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
             Configure OpenAI API Key
           </h2>
           
@@ -490,17 +498,10 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                   transition: 'border-color 0.2s, box-shadow 0.2s',
                   outline: 'none',
                 }}
-                onFocus={(e) => {
-                  if (!error) {
-                    e.target.style.borderColor = '#3b82f6';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-                  }
-                }}
                 onBlur={(e) => {
                   e.target.style.borderColor = error ? '#ef4444' : '#262626';
                   e.target.style.boxShadow = 'none';
                 }}
-                autoFocus
               />
             </div>
 

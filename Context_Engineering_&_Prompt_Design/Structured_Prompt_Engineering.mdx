@@ -4,27 +4,33 @@ description: "Design structured prompts that often reduce hallucinations"
 sidebarTitle: "Structured Prompt Engineering"
 icon: "book"
 ---
-import { CodeEditor } from '/snippets/CodeEditor.jsx'; 
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx'; 
 
 ## The Anatomy of a Production Prompt
 
 **The Core Components:**
 
-1. **Role/Persona** - Sets behavior and expertise level
-2. **Context** - Background information needed
+1. **Role/Persona** - Sets behavior and expertise level ( values: user, assistant, system)
+2. **Context** - Background information needed 
 3. **Instructions** - What to do, step by step
 4. **Constraints** - What NOT to do, output format
 5. **Examples** - Few-shot demonstrations (optional)
 6. **Input** - The actual data to process
 
-**Basic Template:** [Full runnable structured prompt notebook](https://colab.research.google.com/drive/15hKw-5PONe0DKkDmYVfLviFJUoK3aBcn?usp=drive_link)
 
-```python
-prompt = """
-[ROLE]
-You are an experienced customer support specialist for AcmeCo.
+If we put all these components together, we get the following prompt. This promt looks more complex than the previous one, but this reflects the complexity of the task and the context needed to complete it when you use the API. 
 
-[CONTEXT]
+<LLMPlayground 
+  defaultMode="advanced"
+  defaultMessages={[
+    {
+      role: "system",
+      content: "You are an experienced customer support specialist for AcmeCo."
+    },
+    {
+      role: "user",
+      content: `[CONTEXT]
 AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, no questions asked. After 30 days, refunds require manager approval.
 
 [INSTRUCTIONS]
@@ -39,9 +45,20 @@ Analyze the customer message below and:
 - If uncertain, recommend manager review
 
 [INPUT]
-Customer message: customer_message
-"""
-```
+Customer message: I purchased a subscription 25 days ago and the software keeps crashing. I want my money back immediately.`
+    }
+  ]}
+  height="400px"
+/>
+
+The playground constructs the final prompt from these components, which is then sent to the OpenAI API as part of the JSON message payload. You can see the exact JSON payload that will be sent in the "OpenAI JSON Message" section after submitting.
+
+**Let's put all this together in code**
+
+<CodeEditor 
+  file="src/module1/structured_prompt_example.ts" 
+  title="Structured Prompt Anatomy Example"
+/> 
 
 **Practice Check:**
 

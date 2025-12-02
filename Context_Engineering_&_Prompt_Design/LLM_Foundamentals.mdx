@@ -143,10 +143,10 @@ result = "unknown" or makes something up
 
 **Practical Implication:** When you want structured output, give the LLM a pattern to complete:
 
-Try both approaches below. First, try the vague prompt and see how the LLM responds in prose. Then try the pattern-based approach to get structured output:
+**1. ❌ Vague Prompt Option:** First, try the vague prompt and see how the LLM responds in prose. Then try the pattern-based approach to get structured output:
 
 <LLMPlayground
-  defaultInput={`// ❌ Vague: "Extract the customer's name and email"
+  defaultInput={`//  Vague: "Extract the customer's name and email"
 // LLM might respond in prose: "The customer's name is John and his email is..."
 
 Extract the customer's name and email from: "Hi, I'm John Smith and you can reach me at john.smith@email.com for the order inquiry."`}
@@ -154,10 +154,10 @@ Extract the customer's name and email from: "Hi, I'm John Smith and you can reac
   height="500px"
 />
 
-Now try the pattern-based approach:
+**2. ✅ Pattern-Based Approach:**  
 
 <LLMPlayground
-  defaultInput={`// ✅ Pattern to complete:
+  defaultInput={`// Pattern to complete:
 // LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
 
 Extract customer information:
