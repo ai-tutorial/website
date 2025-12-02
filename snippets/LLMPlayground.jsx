@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 
 /**
  * LLMPlayground component for interactive LLM testing
@@ -118,6 +118,7 @@ export const LLMPlayground = ({
   const [temperature, setTemperature] = useState(defaultTemperature);
   const [apiKey, setApiKey] = useState('');
   const [responseCount, setResponseCount] = useState(0);
+  const responseCountRef = useRef(0);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
   const [messages, setMessages] = useState(() => {
@@ -239,6 +240,7 @@ export const LLMPlayground = ({
     if (!effectiveKeepOutput) {
       setOutput('');
       setResponseCount(0);
+      responseCountRef.current = 0;
     }
     
     if (mode === 'advanced') {
@@ -297,14 +299,23 @@ export const LLMPlayground = ({
         setLastResponseJson(data);
       }
       
-      if (effectiveKeepOutput && output) {
-        const nextCount = responseCount + 1;
-        setResponseCount(nextCount);
-        setOutput(prev => prev + `\n\nResponse ${nextCount}: ` + newResponse);
+      if (effectiveKeepOutput) {
+        setOutput(prevOutput => {
+          if (prevOutput) {
+            responseCountRef.current += 1;
+            const nextCount = responseCountRef.current;
+            setResponseCount(nextCount);
+            return prevOutput + `\n\nResponse ${nextCount}: ` + newResponse;
+          } else {
+            responseCountRef.current = 1;
+            setResponseCount(1);
+            return 'Response 1: ' + newResponse;
+          }
+        });
       } else {
+        responseCountRef.current = 1;
         setResponseCount(1);
-        const prefix = effectiveKeepOutput ? 'Response 1: ' : '';
-        setOutput(prefix + newResponse);
+        setOutput(newResponse);
       }
     } catch (err) {
       setError(err.message || 'An error occurred while processing your request');
