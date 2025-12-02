@@ -10,11 +10,10 @@ import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
 
 ## Hello World
 
-After configuring your OpenAI API key, you can run this example. Give a try !
+This isn't your typical "Hello World" — we're diving straight into what makes LLMs powerful. After configuring your OpenAI API key, press Enter to see the magic happen. The code is self-explanatory, so go ahead and modify it to experiment.
 
 <CodeEditor 
   file="src/module1/hello_world.ts" 
-  lines="9-17"
   title="LLM Fundamentals - Hello World"
 /> 
 
@@ -89,7 +88,7 @@ Run the same prompt twice, get different answers. That's by design (temperature 
 
 
 I ordered a premium wireless headset last week with express shipping. The package arrived three days late, and the headset was damaged with scratches. The left speaker produces only static noise. I demand a full refund."
-  defaultTemperature={0.7}
+  defaultTemperature={2.0}
   height="500px"
 />
 
@@ -117,7 +116,7 @@ LLMs pay more attention to text at the beginning and end of the prompt. Middle c
 
 **Heuristic:** Prompt structure and placement can affect results. Many teams place the specific query toward the end; validate with your use case.
 
-\*\*Best Practice for Gemini: \*\*See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
+**Best Practice for Gemini:** See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
 
 ```
 Critical instructions at START
@@ -144,35 +143,29 @@ result = "unknown" or makes something up
 
 **Practical Implication:** When you want structured output, give the LLM a pattern to complete:
 
-<CodeGroup>
+Try both approaches below. First, try the vague prompt and see how the LLM responds in prose. Then try the pattern-based approach to get structured output:
 
-```python Python
-# ❌ Vague: "Extract the customer's name and email"
-# LLM might respond in prose: "The customer's name is John and his email is..."
-
-# ✅ Pattern to complete:
-"""
-Extract customer information:
-
-Name: [the customer's name]
-Email: [the customer's email address]
-"""
-# LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
-```
-
-
-```ts TypeScript
-// ❌ Vague: "Extract the customer's name and email"
+<LLMPlayground
+  defaultInput={`// ❌ Vague: "Extract the customer's name and email"
 // LLM might respond in prose: "The customer's name is John and his email is..."
 
-// ✅ Pattern to complete:
-const prompt = `
+Extract the customer's name and email from: "Hi, I'm John Smith and you can reach me at john.smith@email.com for the order inquiry."`}
+  defaultTemperature={0.7}
+  height="500px"
+/>
+
+Now try the pattern-based approach:
+
+<LLMPlayground
+  defaultInput={`// ✅ Pattern to complete:
+// LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
+
 Extract customer information:
 
 Name: [the customer's name]
 Email: [the customer's email address]
-`;
-// LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
-```
 
-</CodeGroup>
+From: "Hi, I'm John Smith and you can reach me at john.smith@email.com for the order inquiry."`}
+  defaultTemperature={0.7}
+  height="500px"
+/>

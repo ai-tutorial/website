@@ -373,18 +373,18 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
           alignItems: 'center',
           justifyContent: 'center',
           padding: '2rem',
-          backgroundColor: '#f8fafc',
+          backgroundColor: '#0f0f0f',
         }}
       >
         <div
           style={{
             maxWidth: '520px',
             width: '100%',
-            backgroundColor: 'white',
+            backgroundColor: '#1a1a1a',
             padding: '2.5rem',
             borderRadius: '12px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            border: '1px solid #e2e8f0',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
+            border: '1px solid #2a2a2a',
           }}
         >
           <h2
@@ -393,7 +393,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
               marginBottom: '1.25rem',
               fontSize: '1.5rem',
               fontWeight: 700,
-              color: '#1a202c',
+              color: '#f5f5f5',
               letterSpacing: '-0.025em',
             }}
           >
@@ -403,7 +403,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
           <p
             style={{
               marginBottom: '1rem',
-              color: '#4a5568',
+              color: '#a3a3a3',
               lineHeight: '1.7',
               fontSize: '0.875rem',
             }}
@@ -416,15 +416,15 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             style={{
               marginBottom: '1.5rem',
               padding: '1rem 1.25rem',
-              backgroundColor: '#f7fafc',
+              backgroundColor: '#151515',
               borderRadius: '8px',
               fontSize: '0.8125rem',
-              color: '#4a5568',
+              color: '#a3a3a3',
               lineHeight: '1.6',
-              border: '1px solid #e2e8f0',
+              border: '1px solid #262626',
             }}
           >
-            <p style={{ margin: 0, marginBottom: '0.5rem', fontWeight: 600, color: '#2d3748' }}>
+            <p style={{ margin: 0, marginBottom: '0.5rem', fontWeight: 600, color: '#d4d4d4' }}>
               Don't have an API key?. 
             </p>
             <p style={{ margin: 0 }}>
@@ -434,14 +434,14 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ 
-                  color: '#3182ce', 
+                  color: '#3b82f6', 
                   textDecoration: 'none',
                   fontWeight: 500,
                   borderBottom: '1px solid transparent',
                   transition: 'border-color 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.borderBottomColor = '#3182ce';
+                  e.target.style.borderBottomColor = '#3b82f6';
                 }}
                 onMouseLeave={(e) => {
                   e.target.style.borderBottomColor = 'transparent';
@@ -461,7 +461,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                   marginBottom: '0.625rem',
                   fontSize: '0.8125rem',
                   fontWeight: 600,
-                  color: '#2d3748',
+                  color: '#d4d4d4',
                 }}
               >
                 OpenAI API Key
@@ -481,7 +481,9 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                   width: '100%',
                   padding: '0.875rem',
                   fontSize: '0.8125rem',
-                  border: error ? '2px solid #e53e3e' : '2px solid #e2e8f0',
+                  backgroundColor: '#0f0f0f',
+                  color: '#f5f5f5',
+                  border: error ? '2px solid #ef4444' : '2px solid #262626',
                   borderRadius: '6px',
                   fontFamily: 'monospace',
                   boxSizing: 'border-box',
@@ -490,12 +492,12 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                 }}
                 onFocus={(e) => {
                   if (!error) {
-                    e.target.style.borderColor = '#3182ce';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(49, 130, 206, 0.1)';
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
                   }
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = error ? '#e53e3e' : '#e2e8f0';
+                  e.target.style.borderColor = error ? '#ef4444' : '#262626';
                   e.target.style.boxShadow = 'none';
                 }}
                 autoFocus
@@ -507,10 +509,10 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                 style={{
                   padding: '0.875rem 1rem',
                   marginBottom: '1.25rem',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fecaca',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
                   borderRadius: '6px',
-                  color: '#991b1b',
+                  color: '#f87171',
                   fontSize: '0.8125rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -527,10 +529,10 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                 style={{
                   padding: '0.875rem 1rem',
                   marginBottom: '1.25rem',
-                  backgroundColor: '#f0fdf4',
-                  border: '1px solid #bbf7d0',
+                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
                   borderRadius: '6px',
-                  color: '#166534',
+                  color: '#4ade80',
                   fontSize: '0.8125rem',
                   display: 'flex',
                   alignItems: 'center',
@@ -551,24 +553,24 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                 fontSize: '0.9375rem',
                 fontWeight: 600,
                 color: 'white',
-                backgroundColor: isSubmitting || isValidating || !apiKey.trim() ? '#cbd5e0' : '#3182ce',
+                backgroundColor: isSubmitting || isValidating || !apiKey.trim() ? '#1a1a1a' : '#3b82f6',
                 border: 'none',
                 borderRadius: '6px',
                 cursor: isSubmitting || isValidating || !apiKey.trim() ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s',
                 marginBottom: '0.875rem',
-                boxShadow: isSubmitting || isValidating || !apiKey.trim() ? 'none' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                boxShadow: isSubmitting || isValidating || !apiKey.trim() ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
               }}
               onMouseEnter={(e) => {
                 if (!isSubmitting && !isValidating && apiKey.trim()) {
-                  e.target.style.backgroundColor = '#2c5aa0';
-                  e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+                  e.target.style.backgroundColor = '#2563eb';
+                  e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isSubmitting && !isValidating && apiKey.trim()) {
-                  e.target.style.backgroundColor = '#3182ce';
-                  e.target.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+                  e.target.style.backgroundColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
                 }
               }}
             >
@@ -585,25 +587,25 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
               padding: '0.625rem 1rem',
               fontSize: '0.75rem',
               fontWeight: 500,
-              color: '#718096',
+              color: '#737373',
               backgroundColor: 'transparent',
-              border: '1px solid #e2e8f0',
+              border: '1px solid #262626',
               borderRadius: '6px',
               cursor: isSubmitting || isValidating ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
               if (!isSubmitting && !isValidating) {
-                e.target.style.backgroundColor = '#f7fafc';
-                e.target.style.borderColor = '#cbd5e0';
-                e.target.style.color = '#4a5568';
+                e.target.style.backgroundColor = '#151515';
+                e.target.style.borderColor = '#404040';
+                e.target.style.color = '#a3a3a3';
               }
             }}
             onMouseLeave={(e) => {
               if (!isSubmitting && !isValidating) {
                 e.target.style.backgroundColor = 'transparent';
-                e.target.style.borderColor = '#e2e8f0';
-                e.target.style.color = '#718096';
+                e.target.style.borderColor = '#262626';
+                e.target.style.color = '#737373';
               }
             }}
           >
@@ -614,9 +616,9 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             style={{
               marginTop: '1.25rem',
               paddingTop: '1.25rem',
-              borderTop: '1px solid #e2e8f0',
+              borderTop: '1px solid #262626',
               fontSize: '0.75rem',
-              color: '#718096',
+              color: '#737373',
               lineHeight: '1.6',
             }}
           >
@@ -627,7 +629,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ 
-                  color: '#3182ce', 
+                  color: '#3b82f6', 
                   textDecoration: 'none',
                   fontWeight: 500,
                   borderBottom: '1px solid transparent',
@@ -635,7 +637,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                   wordBreak: 'break-all',
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.borderBottomColor = '#3182ce';
+                  e.target.style.borderBottomColor = '#3b82f6';
                 }}
                 onMouseLeave={(e) => {
                   e.target.style.borderBottomColor = 'transparent';
