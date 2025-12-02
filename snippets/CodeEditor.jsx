@@ -105,11 +105,11 @@ export const CodeEditor = ({
           return;
         }
         envContent = `# Using the API key you configured. This file will be created when the dialog is loaded.
-OPENAI_MODEL=openai/gpt-4o-mini
+OPENAI_MODEL=gpt-4o-mini
 OPENAI_API_KEY=${apiKey.trim()}`;
       } else {
         // Use mock key if not configured
-        envContent = `OPENAI_MODEL=openai/gpt-4o-mini
+        envContent = `OPENAI_MODEL=gpt-4o-mini
 OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 # API key not found in browser storage
 # To configure your API key:
