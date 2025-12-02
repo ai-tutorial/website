@@ -419,7 +419,7 @@ export const LLMPlayground = ({
                       <line x1="12" y1="9" x2="12" y2="13"></line>
                       <line x1="12" y1="17" x2="12.01" y2="17"></line>
                     </svg>
-                    <span>Configure Open API Key to make the most of the tutorial</span>
+                    <span>Configure OpenAI API Key to make the most of the tutorial</span>
                   </h3>
                   <p
                     style={{
@@ -923,7 +923,7 @@ export const LLMPlayground = ({
           color: '#999',
         }}
       >
-        <span>Open API Key Status:</span>
+        <span>OpenAI key status:</span>
         <div
           style={{
             display: 'flex',
