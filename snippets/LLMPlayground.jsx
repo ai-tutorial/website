@@ -154,6 +154,11 @@ export const LLMPlayground = ({
     localStorage.setItem(SETTINGS_PANEL_KEY, String(isSettingsOpen));
   }, [isSettingsOpen]);
 
+  // Sync ref with state
+  useEffect(() => {
+    responseCountRef.current = responseCount;
+  }, [responseCount]);
+
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -301,12 +306,32 @@ export const LLMPlayground = ({
       
       if (effectiveKeepOutput) {
         setOutput(prevOutput => {
-          if (prevOutput) {
-            responseCountRef.current += 1;
-            const nextCount = responseCountRef.current;
+          // If there's existing output, append to it
+          if (prevOutput && prevOutput.trim().length > 0) {
+            // Determine the next count
+            let nextCount;
+            if (responseCountRef.current > 0) {
+              // Ref is in sync, increment it
+              responseCountRef.current += 1;
+              nextCount = responseCountRef.current;
+            } else {
+              // Ref might be out of sync, try to extract count from output or default to 2
+              const match = prevOutput.match(/Response (\d+):/g);
+              if (match && match.length > 0) {
+                // Extract the last response number and increment
+                const lastMatch = match[match.length - 1];
+                const lastCount = parseInt(lastMatch.match(/\d+/)[0], 10);
+                nextCount = lastCount + 1;
+              } else {
+                // No pattern found, assume this is the second response
+                nextCount = 2;
+              }
+              responseCountRef.current = nextCount;
+            }
             setResponseCount(nextCount);
             return prevOutput + `\n\nResponse ${nextCount}: ` + newResponse;
           } else {
+            // First response
             responseCountRef.current = 1;
             setResponseCount(1);
             return 'Response 1: ' + newResponse;
@@ -322,7 +347,7 @@ export const LLMPlayground = ({
     } finally {
       setIsLoading(false);
     }
-  }, [mode, input, apiKey, isLoading, keepOutput, output, responseCount, constructAdvancedMessages, filterComments, isFormValid]);
+  }, [mode, input, apiKey, isLoading, keepOutput, constructAdvancedMessages, filterComments, isFormValid]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
