@@ -4,7 +4,8 @@ description: "Understand what's actually happening when you call a model"
 sidebarTitle: "LLM Fundamentals"
 icon: "book"
 ---
-import { CodeEditor } from '/snippets/CodeEditor.jsx'; 
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx'; 
 
 
 ## Hello World
@@ -81,18 +82,16 @@ LLMs are trained to predict the next plausible token. They're not fact-checking 
 
 **2. Non-Determinism: Different Answers Every Time**
 
-Run the same prompt twice, get different answers. That's by design (temperature \> 0).
+Run the same prompt twice, get different answers. That's by design (temperature \> 0). Try running the same prompt multiple times with different temperature settings to see how the model generates different responses:
 
-[Full runnable non-deterministic outputs notebook](non-deterministic-outputs.ipynb)
+<LLMPlayground 
+  defaultInput="Summarize this customer complaint in 10 words:
 
-```python
-# Same prompt, different responses
-prompt = "Summarize this customer complaint in 10 words"
 
-response_1 = "Customer angry about delayed shipment, demanding refund immediately"
-response_2 = "Shipment late, customer wants money back, very upset"
-response_3 = "Delayed delivery complaint with refund request, customer frustrated"
-```
+I ordered a premium wireless headset last week with express shipping. The package arrived three days late, and the headset was damaged with scratches. The left speaker produces only static noise. I demand a full refund."
+  defaultTemperature={0.7}
+  height="500px"
+/>
 
 **Production Strategy:**
 
