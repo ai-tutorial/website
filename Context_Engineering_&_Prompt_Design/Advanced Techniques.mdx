@@ -5,6 +5,7 @@ sidebarTitle: "Advanced Prompting Techniques"
 icon: "book"
 ---
 import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
 
 
 ## Chain-of-Thought (CoT): Making Reasoning Visible
@@ -69,6 +70,12 @@ But what if you need to debug a wrong answer? You can't see the reasoning. The e
 **The Problem:** One response might be wrong due to non-determinism, ambiguous tasks, and/or valid solution paths.
 
 **The Solution:** Generate multiple responses and vote.
+<CodeEditor 
+  file="src/module1/advance_self_consistency.ts" 
+  title="Advanced Self-Consistency"
+/> 
+
+
 
 
 **When to Use:**

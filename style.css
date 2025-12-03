@@ -885,3 +885,218 @@
   width: 100%;
 }
 
+/* CodeEditor Styles */
+.code-editor-dialog-container {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: #0f0f0f;
+}
+
+.code-editor-dialog-box {
+  max-width: 520px;
+  width: 100%;
+  background-color: #1a1a1a;
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  border: 2px solid #f59e0b;
+}
+
+.code-editor-dialog-title {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f5f5f5;
+  letter-spacing: -0.025em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.code-editor-dialog-description {
+  margin-bottom: 1rem;
+  color: #a3a3a3;
+  line-height: 1.7;
+  font-size: 0.875rem;
+}
+
+.code-editor-info-box {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  background-color: #151515;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  color: #a3a3a3;
+  line-height: 1.6;
+  border: 1px solid #262626;
+}
+
+.code-editor-info-box-title {
+  margin: 0;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.code-editor-info-box-text {
+  margin: 0;
+}
+
+.code-editor-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.code-editor-link:hover {
+  border-bottom-color: #3b82f6;
+}
+
+.code-editor-link-break {
+  word-break: break-all;
+}
+
+.code-editor-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.code-editor-label {
+  display: block;
+  margin-bottom: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #d4d4d4;
+}
+
+.code-editor-input {
+  width: 100%;
+  padding: 0.875rem;
+  font-size: 0.8125rem;
+  background-color: #0f0f0f;
+  color: #f5f5f5;
+  border: 2px solid #262626;
+  border-radius: 6px;
+  font-family: monospace;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.code-editor-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.code-editor-input-error {
+  border-color: #ef4444;
+}
+
+.code-editor-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.code-editor-message {
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.25rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.code-editor-message-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.code-editor-message-success {
+  background-color: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.code-editor-message-icon {
+  font-size: 1rem;
+}
+
+.code-editor-button {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: white;
+  background-color: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.875rem;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.code-editor-button:hover:not(:disabled) {
+  background-color: #2563eb;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
+
+.code-editor-button:disabled {
+  background-color: #1a1a1a;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.code-editor-button-secondary {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #737373;
+  background-color: transparent;
+  border: 1px solid #262626;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.code-editor-button-secondary:hover:not(:disabled) {
+  background-color: #151515;
+  border-color: #404040;
+  color: #a3a3a3;
+}
+
+.code-editor-button-secondary:disabled {
+  cursor: not-allowed;
+}
+
+.code-editor-footer {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #262626;
+  font-size: 0.75rem;
+  color: #737373;
+  line-height: 1.6;
+}
+
+.code-editor-footer-text {
+  margin: 0;
+}
+
+.code-editor-iframe {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+

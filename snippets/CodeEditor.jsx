@@ -326,6 +326,9 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
     });
   };
 
+  // ==================== STYLES ====================
+  // Styles are now in style.css - using CSS classes instead
+
   // Callback ref to handle iframe mounting
   const iframeRef = (iframe) => {
     if (!iframe) {
@@ -363,43 +366,11 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
   if (showApiKeyDialog) {
     return (
       <div
-        style={{
-          width: '100%',
-          height: height,
-          border: 'none',
-          borderRadius: '8px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '2rem',
-          backgroundColor: '#0f0f0f',
-        }}
+        className="code-editor-dialog-container"
+        style={{ height: height }}
       >
-        <div
-          style={{
-            maxWidth: '520px',
-            width: '100%',
-            backgroundColor: '#1a1a1a',
-            padding: '2.5rem',
-            borderRadius: '12px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
-            border: '2px solid #f59e0b',
-          }}
-        >
-          <h2
-            style={{
-              marginTop: 0,
-              marginBottom: '1.25rem',
-              fontSize: '1.5rem',
-              fontWeight: 700,
-              color: '#f5f5f5',
-              letterSpacing: '-0.025em',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
+        <div className="code-editor-dialog-box">
+          <h2 className="code-editor-dialog-title">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
               <line x1="12" y1="9" x2="12" y2="13"></line>
@@ -408,52 +379,22 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             Configure OpenAI API Key
           </h2>
           
-          <p
-            style={{
-              marginBottom: '1rem',
-              color: '#a3a3a3',
-              lineHeight: '1.7',
-              fontSize: '0.875rem',
-            }}
-          >
+          <p className="code-editor-dialog-description">
             All interactive examples execute entirely within your browser environment, ensuring complete security and privacy. 
             Your API key is stored locally in your browser's storage and is never transmitted to external servers.
           </p>
 
-          <div
-            style={{
-              marginBottom: '1.5rem',
-              padding: '1rem 1.25rem',
-              backgroundColor: '#151515',
-              borderRadius: '8px',
-              fontSize: '0.8125rem',
-              color: '#a3a3a3',
-              lineHeight: '1.6',
-              border: '1px solid #262626',
-            }}
-          >
-            <p style={{ margin: 0, marginBottom: '0.5rem', fontWeight: 600, color: '#d4d4d4' }}>
+          <div className="code-editor-info-box">
+            <p className="code-editor-info-box-title">
               Don't have an API key?. 
             </p>
-            <p style={{ margin: 0 }}>
+            <p className="code-editor-info-box-text">
               Get one at{' '}
               <a
                 href="https://platform.openai.com/api-keys"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ 
-                  color: '#3b82f6', 
-                  textDecoration: 'none',
-                  fontWeight: 500,
-                  borderBottom: '1px solid transparent',
-                  transition: 'border-color 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.borderBottomColor = '#3b82f6';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.borderBottomColor = 'transparent';
-                }}
+                className="code-editor-link"
               >
                 platform.openai.com/api-keys
               </a>
@@ -461,16 +402,10 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
           </div>
 
           <form onSubmit={handleApiKeySubmit}>
-            <div style={{ marginBottom: '1.25rem' }}>
+            <div className="code-editor-form-group">
               <label
                 htmlFor="api-key-input"
-                style={{
-                  display: 'block',
-                  marginBottom: '0.625rem',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  color: '#d4d4d4',
-                }}
+                className="code-editor-label"
               >
                 OpenAI API Key
               </label>
@@ -485,62 +420,20 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                 }}
                 placeholder="sk-..."
                 disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem',
-                  fontSize: '0.8125rem',
-                  backgroundColor: '#0f0f0f',
-                  color: '#f5f5f5',
-                  border: error ? '2px solid #ef4444' : '2px solid #262626',
-                  borderRadius: '6px',
-                  fontFamily: 'monospace',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s, box-shadow 0.2s',
-                  outline: 'none',
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = error ? '#ef4444' : '#262626';
-                  e.target.style.boxShadow = 'none';
-                }}
+                className={`code-editor-input ${error ? 'code-editor-input-error' : ''}`}
               />
             </div>
 
             {error && (
-              <div
-                style={{
-                  padding: '0.875rem 1rem',
-                  marginBottom: '1.25rem',
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '6px',
-                  color: '#f87171',
-                  fontSize: '0.8125rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontSize: '1rem' }}>⚠️</span>
+              <div className="code-editor-message code-editor-message-error">
+                <span className="code-editor-message-icon">⚠️</span>
                 <span>{error}</span>
               </div>
             )}
 
             {success && (
-              <div
-                style={{
-                  padding: '0.875rem 1rem',
-                  marginBottom: '1.25rem',
-                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                  borderRadius: '6px',
-                  color: '#4ade80',
-                  fontSize: '0.8125rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontSize: '1rem' }}>✓</span>
+              <div className="code-editor-message code-editor-message-success">
+                <span className="code-editor-message-icon">✓</span>
                 <span>API key saved successfully! Loading editor...</span>
               </div>
             )}
@@ -548,32 +441,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             <button
               type="submit"
               disabled={isSubmitting || isValidating || !apiKey.trim()}
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.5rem',
-                fontSize: '0.9375rem',
-                fontWeight: 600,
-                color: 'white',
-                backgroundColor: isSubmitting || isValidating || !apiKey.trim() ? '#1a1a1a' : '#3b82f6',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: isSubmitting || isValidating || !apiKey.trim() ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s',
-                marginBottom: '0.875rem',
-                boxShadow: isSubmitting || isValidating || !apiKey.trim() ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
-              }}
-              onMouseEnter={(e) => {
-                if (!isSubmitting && !isValidating && apiKey.trim()) {
-                  e.target.style.backgroundColor = '#2563eb';
-                  e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isSubmitting && !isValidating && apiKey.trim()) {
-                  e.target.style.backgroundColor = '#3b82f6';
-                  e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
-                }
-              }}
+              className="code-editor-button"
             >
               {isValidating ? 'Validating...' : isSubmitting ? 'Saving...' : 'Save API Key'}
             </button>
@@ -583,66 +451,19 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             type="button"
             onClick={handleSkipConfiguration}
             disabled={isSubmitting || isValidating}
-            style={{
-              width: '100%',
-              padding: '0.625rem 1rem',
-              fontSize: '0.75rem',
-              fontWeight: 500,
-              color: '#737373',
-              backgroundColor: 'transparent',
-              border: '1px solid #262626',
-              borderRadius: '6px',
-              cursor: isSubmitting || isValidating ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (!isSubmitting && !isValidating) {
-                e.target.style.backgroundColor = '#151515';
-                e.target.style.borderColor = '#404040';
-                e.target.style.color = '#a3a3a3';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isSubmitting && !isValidating) {
-                e.target.style.backgroundColor = 'transparent';
-                e.target.style.borderColor = '#262626';
-                e.target.style.color = '#737373';
-              }
-            }}
+            className="code-editor-button-secondary"
           >
             Skip Configuration
           </button>
 
-          <div
-            style={{
-              marginTop: '1.25rem',
-              paddingTop: '1.25rem',
-              borderTop: '1px solid #262626',
-              fontSize: '0.75rem',
-              color: '#737373',
-              lineHeight: '1.6',
-            }}
-          >
-            <p style={{ margin: 0 }}>
+          <div className="code-editor-footer">
+            <p className="code-editor-footer-text">
               Alternatively, you may checkout the source code from{' '}
               <a
                 href="https://github.com/ai-tutorial/typescript-examples"
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ 
-                  color: '#3b82f6', 
-                  textDecoration: 'none',
-                  fontWeight: 500,
-                  borderBottom: '1px solid transparent',
-                  transition: 'border-color 0.2s',
-                  wordBreak: 'break-all',
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.borderBottomColor = '#3b82f6';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.borderBottomColor = 'transparent';
-                }}
+                className="code-editor-link code-editor-link-break"
               >
                 https://github.com/ai-tutorial/typescript-examples
               </a>
@@ -658,13 +479,8 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
     <iframe
       ref={iframeRef}
       src={stackblitzUrl}
-      style={{
-        width: '100%',
-        height: height,
-        border: '0',
-        borderRadius: '8px',
-        overflow: 'hidden',
-      }}
+      className="code-editor-iframe"
+      style={{ height: height }}
       title={title || 'Code Example'}
       allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
       sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
