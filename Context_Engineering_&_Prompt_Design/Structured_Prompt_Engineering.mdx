@@ -189,36 +189,6 @@ This approach uses prompt instructions to request XML output combined with XML p
 - More examples = more tokens = higher cost
 - Examples should cover edge cases, not just obvious ones
 
-**Production Note:** Store examples separately and inject only relevant ones:
-
-<CodeGroup>
-
-```python Python
-example_db = {
-    "classification": [...],
-    "extraction": [...],
-    "summarization": [...]
-}
-
-def get_relevant_examples(task_type: str, limit: int = 3):
-    return example_db[task_type][:limit]
-```
-
-
-```ts TypeScript
-const exampleDb: Record<string, any[]> = {
-    classification: [...],
-    extraction: [...],
-    summarization: [...]
-};
-
-function getRelevantExamples(taskType: string, limit: number = 3): any[] {
-    return exampleDb[taskType].slice(0, limit);
-}
-```
-
-</CodeGroup>
-
 ## Structured Outputs with JSON Schemas
 
 **Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
