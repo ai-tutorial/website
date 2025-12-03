@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from '/snippets/react';
 
 /**
  * CodeEditor component for embedding interactive code examples in StackBlitz
