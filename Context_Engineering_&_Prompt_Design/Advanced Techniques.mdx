@@ -4,6 +4,7 @@ description: "Apply advanced techniques to improve the performance of your promp
 sidebarTitle: "Advanced Prompting Techniques"
 icon: "book"
 ---
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
 
 ## Chain-of-Thought (CoT): Making Reasoning Visible
 
@@ -15,61 +16,31 @@ icon: "book"
 
 **The Problem:**
 
-<CodeGroup>
-
-```python Python
-prompt = "What's 15% tip on a $47.83 bill?"
-response = "$7.17"  # Correct
-```
-
-
-```ts TypeScript
-const prompt = "What's 15% tip on a $47.83 bill?";
-const response = "$7.17";  // Correct
-```
-
-</CodeGroup>
+<LLMPlayground 
+  defaultMode="simple"
+  defaultInput={`What's 15% tip on a $47.83 bill?`}
+  placeholderResponse={`$7.17`}
+  height="400px"
+/>
 
 But what if you need to debug a wrong answer? You can't see the reasoning.
 
 **The Solution: CoT:** [Full runnable chain-of-thought notebook](https://colab.research.google.com/drive/1CobAOn09WNGCP_u5lpC540QveepLPb7J#scrollTo=ED506cVi7H8S&line=14&uniqifier=1)
 
-<CodeGroup>
+The expected response would be something like (note: the response shown below is a placeholder example, not a real API response):
 
-```python Python
-prompt = """
-Calculate 15% tip on a $47.83 bill.
+<LLMPlayground 
+  defaultMode="simple"
+  defaultInput={`Calculate 15% tip on a $47.83 bill.
 
-Think step by step:
-"""
-
-response = """
-Step 1: Convert 15% to decimal: 0.15
+Think step by step:`}
+  placeholderResponse={`Step 1: Convert 15% to decimal: 0.15
 Step 2: Multiply: $47.83 × 0.15 = $7.1745
 Step 3: Round to cents: $7.17
 
-Answer: $7.17
-"""
-```
-
-
-```ts TypeScript
-const prompt = `
-Calculate 15% tip on a $47.83 bill.
-
-Think step by step:
-`;
-
-const response = `
-Step 1: Convert 15% to decimal: 0.15
-Step 2: Multiply: $47.83 × 0.15 = $7.1745
-Step 3: Round to cents: $7.17
-
-Answer: $7.17
-`;
-```
-
-</CodeGroup>
+Answer: $7.17`}
+  height="400px"
+/>
 
 **In Production:**
 

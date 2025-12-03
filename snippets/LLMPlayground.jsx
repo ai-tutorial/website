@@ -11,6 +11,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
  * @param {boolean} [props.keepOutput=false] - If true, append new responses instead of overwriting
  * @param {string} [props.defaultMode='simple'] - 'simple' or 'advanced'
  * @param {Array} [props.defaultMessages=[]] - Array of {role, content} for advanced mode
+ * @param {string} [props.placeholderResponse=''] - Placeholder response to show when no output yet
  */
 export const LLMPlayground = ({
   defaultInput = '',
@@ -19,7 +20,8 @@ export const LLMPlayground = ({
   height = '600px',
   keepOutput = false,
   defaultMode = 'simple',
-  defaultMessages = []
+  defaultMessages = [],
+  placeholderResponse = ''
 }) => {
   // ==================== CONSTANTS ====================
   const STORAGE_KEY = 'openai_api_key';
@@ -121,6 +123,9 @@ export const LLMPlayground = ({
   const responseCountRef = useRef(0);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
+  const textareaRef = useRef(null);
+  const textareaBackgroundRef = useRef(null);
+  const advancedTextareaRefs = useRef({});
   const [messages, setMessages] = useState(() => {
     if (defaultMessages && defaultMessages.length > 0) {
       return defaultMessages;
@@ -183,6 +188,34 @@ export const LLMPlayground = ({
       .join('\n')
       .trim();
   }, []);
+
+  const autoResizeTextarea = useCallback((textarea) => {
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, []);
+
+  // Auto-resize simple mode textarea and sync background
+  useEffect(() => {
+    if (textareaRef.current) {
+      autoResizeTextarea(textareaRef.current);
+      // Sync background div height with textarea
+      if (textareaBackgroundRef.current && textareaRef.current) {
+        const height = Math.max(textareaRef.current.scrollHeight, 60);
+        textareaBackgroundRef.current.style.height = `${height}px`;
+        textareaBackgroundRef.current.style.minHeight = `${height}px`;
+      }
+    }
+  }, [input, autoResizeTextarea]);
+
+  // Auto-resize advanced mode textareas
+  useEffect(() => {
+    Object.values(advancedTextareaRefs.current).forEach((textarea) => {
+      if (textarea) {
+        autoResizeTextarea(textarea);
+      }
+    });
+  }, [messages, autoResizeTextarea]);
 
   const constructAdvancedMessages = useCallback(() => {
     return messages.filter(msg => msg.content.trim().length > 0);
@@ -476,13 +509,13 @@ export const LLMPlayground = ({
       <div
         style={{
           position: 'relative',
-          flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          minHeight: 0,
+          minHeight: '60px',
         }}
       >
         <div
+          ref={textareaBackgroundRef}
           style={{
             position: 'absolute',
             top: 0,
@@ -495,7 +528,9 @@ export const LLMPlayground = ({
             whiteSpace: 'pre-wrap',
             wordWrap: 'break-word',
             overflow: 'hidden',
-            zIndex: 0,
+            zIndex: 1,
+            minHeight: '60px',
+            height: 'auto',
           }}
         >
           {input ? (
@@ -521,8 +556,18 @@ export const LLMPlayground = ({
           )}
         </div>
         <textarea
+          ref={textareaRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            autoResizeTextarea(e.target);
+            // Sync background div height
+            if (textareaBackgroundRef.current) {
+              const height = Math.max(e.target.scrollHeight, 60);
+              textareaBackgroundRef.current.style.height = `${height}px`;
+              textareaBackgroundRef.current.style.minHeight = `${height}px`;
+            }
+          }}
           onKeyDown={handleKeyDown}
           placeholder=""
           disabled={isLoading}
@@ -530,14 +575,14 @@ export const LLMPlayground = ({
             ...styles.textareaBase,
             ...styles.textareaEnabled,
             position: 'relative',
-            zIndex: 1,
+            zIndex: 2,
             color: 'transparent',
             caretColor: '#f5f5f5',
             backgroundColor: 'transparent',
-            overflowY: 'auto',
-            flex: '1 1 0%',
-            minHeight: 0,
-            height: 0,
+            overflowY: 'hidden',
+            resize: 'none',
+            minHeight: '60px',
+            height: 'auto',
           }}
           onFocus={(e) => {
             e.target.style.borderColor = '#3b82f6';
@@ -685,11 +730,17 @@ export const LLMPlayground = ({
             </button>
           </div>
           <textarea
+            ref={(el) => {
+              if (el) {
+                advancedTextareaRefs.current[index] = el;
+              }
+            }}
             value={message.content}
             onChange={(e) => {
               const newMessages = [...messages];
               newMessages[index].content = e.target.value;
               setMessages(newMessages);
+              autoResizeTextarea(e.target);
             }}
             onKeyDown={handleKeyDown}
             placeholder={`Enter ${message.role} message content...`}
@@ -698,11 +749,12 @@ export const LLMPlayground = ({
               ...styles.textareaBase,
               ...styles.textareaEnabled,
               minHeight: '60px',
-              maxHeight: '180px',
               padding: '8px',
               fontSize: '0.75em',
               lineHeight: '16px',
-              overflowY: 'auto',
+              overflowY: 'hidden',
+              resize: 'none',
+              height: 'auto',
             }}
           />
         </div>
@@ -787,6 +839,43 @@ export const LLMPlayground = ({
           <>
             {output ? (
               <div style={styles.responseBox}>{output}</div>
+            ) : isLoading ? (
+              <div
+                style={{
+                  color: '#525252',
+                  fontSize: '12px',
+                  fontStyle: 'italic',
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px',
+                  backgroundColor: '#1a1a1a',
+                  borderRadius: '6px',
+                  border: '1px solid #262626',
+                  minHeight: '100px',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                    <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+                  </svg>
+                  Generating response...
+                </span>
+              </div>
+            ) : placeholderResponse ? (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}
+              >
+                <label style={styles.sectionLabel}>Response (Expected response, press submit to get actual response)</label>
+                <div style={{ ...styles.responseBox, color: '#a3a3a3', fontStyle: 'italic' }}>
+                  {placeholderResponse}
+                </div>
+              </div>
             ) : (
               <div
                 style={{
@@ -804,16 +893,7 @@ export const LLMPlayground = ({
                   minHeight: '100px',
                 }}
               >
-                {isLoading ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
-                      <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-                    </svg>
-                    Generating response...
-                  </span>
-                ) : (
-                  'Response will appear here'
-                )}
+                Response will appear here
               </div>
             )}
           </>
@@ -872,7 +952,9 @@ export const LLMPlayground = ({
 
   const renderSimpleResponse = () => (
     <>
-      <label style={styles.sectionLabel}>Response</label>
+      <label style={styles.sectionLabel}>
+        Response{placeholderResponse && !output ? ' (Expected response, press submit to get actual response)' : ''}
+      </label>
       {output ? (
         <div
           style={{
@@ -888,28 +970,56 @@ export const LLMPlayground = ({
       ) : (
         <div
           style={{
-            color: '#525252',
-            fontSize: '12px',
-            fontStyle: 'italic',
             flex: 1,
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '12px',
-            backgroundColor: '#1a1a1a',
-            borderRadius: '6px',
-            border: '1px solid #262626',
+            flexDirection: 'column',
           }}
         >
           {isLoading ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
-                <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-              </svg>
-              Generating response...
-            </span>
+            <div
+              style={{
+                color: '#525252',
+                fontSize: '12px',
+                fontStyle: 'italic',
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '12px',
+                backgroundColor: '#1a1a1a',
+                borderRadius: '6px',
+                border: '1px solid #262626',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                  <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+                </svg>
+                Generating response...
+              </span>
+            </div>
+          ) : placeholderResponse ? (
+            <div style={{ ...styles.responseBox, color: '#a3a3a3', fontStyle: 'italic' }}>
+              {placeholderResponse}
+            </div>
           ) : (
-            'Response will appear here'
+            <div
+              style={{
+                color: '#525252',
+                fontSize: '12px',
+                fontStyle: 'italic',
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '12px',
+                backgroundColor: '#1a1a1a',
+                borderRadius: '6px',
+                border: '1px solid #262626',
+              }}
+            >
+              Response will appear here
+            </div>
           )}
         </div>
       )}
@@ -1005,14 +1115,14 @@ export const LLMPlayground = ({
         >
           <div
             style={{
-              flex: hasSubmitted ? '0 1 auto' : '1 1 100%',
+              flex: (hasSubmitted || (placeholderResponse && placeholderResponse.trim())) ? '0 0 auto' : '1 1 100%',
               display: 'flex',
               flexDirection: 'column',
               padding: '12px',
               overflow: 'hidden',
-              borderBottom: hasSubmitted ? '1px solid #1a1a1a' : 'none',
+              borderBottom: (hasSubmitted || (placeholderResponse && placeholderResponse.trim())) ? '1px solid #1a1a1a' : 'none',
               backgroundColor: '#0f0f0f',
-              minHeight: hasSubmitted ? '200px' : 'auto',
+              minHeight: (hasSubmitted || (placeholderResponse && placeholderResponse.trim())) ? 'auto' : 'auto',
             }}
           >
             {mode === 'simple' ? renderSimpleInput() : renderAdvancedInput()}
@@ -1029,7 +1139,7 @@ export const LLMPlayground = ({
             )}
           </div>
 
-          {hasSubmitted && (
+          {(hasSubmitted || (placeholderResponse && placeholderResponse.trim())) && (
             <div
               style={{
                 flex: '0 0 auto',
@@ -1043,7 +1153,7 @@ export const LLMPlayground = ({
                 overflowY: 'auto',
               }}
             >
-              {!apiKey ? (
+              {!apiKey && !(placeholderResponse && placeholderResponse.trim()) ? (
                 <>
                   <label style={styles.sectionLabel}>Prompt</label>
                   <textarea
@@ -1058,11 +1168,13 @@ export const LLMPlayground = ({
                     }}
                   />
                 </>
-              ) : mode === 'advanced' ? renderTabs() : renderSimpleResponse()}
+              ) : (
+                mode === 'advanced' ? renderTabs() : renderSimpleResponse()
+              )}
             </div>
           )}
 
-          {apiKey && (
+          {(apiKey || (placeholderResponse && placeholderResponse.trim())) && (
             <div
               style={{
                 padding: '10px 12px',
@@ -1072,53 +1184,59 @@ export const LLMPlayground = ({
                 justifyContent: 'flex-end',
               }}
             >
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading || !isFormValid}
-                style={{
-                  padding: '6px 16px',
-                  backgroundColor: isLoading || !isFormValid ? '#1a1a1a' : '#3b82f6',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: isLoading || !isFormValid ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
-                  letterSpacing: '-0.01em',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLoading && isFormValid) {
-                    e.target.style.backgroundColor = '#2563eb';
-                    e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
-                    e.target.style.transform = 'translateY(-1px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isLoading && isFormValid) {
-                    e.target.style.backgroundColor = '#3b82f6';
-                    e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
-                    e.target.style.transform = 'translateY(0)';
-                  }
-                }}
-                onMouseDown={(e) => {
-                  if (!isLoading && isFormValid) {
-                    e.target.style.transform = 'translateY(0)';
-                  }
-                }}
-              >
-                {isLoading ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
-                      <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-                    </svg>
-                    Processing...
-                  </span>
-                ) : (
-                  'Submit'
-                )}
-              </button>
+              {apiKey ? (
+                <button
+                  onClick={handleSubmit}
+                  disabled={isLoading || !isFormValid}
+                  style={{
+                    padding: '6px 16px',
+                    backgroundColor: isLoading || !isFormValid ? '#1a1a1a' : '#3b82f6',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: isLoading || !isFormValid ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
+                    letterSpacing: '-0.01em',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isLoading && isFormValid) {
+                      e.target.style.backgroundColor = '#2563eb';
+                      e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isLoading && isFormValid) {
+                      e.target.style.backgroundColor = '#3b82f6';
+                      e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
+                      e.target.style.transform = 'translateY(0)';
+                    }
+                  }}
+                  onMouseDown={(e) => {
+                    if (!isLoading && isFormValid) {
+                      e.target.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  {isLoading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                        <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+                      </svg>
+                      Processing...
+                    </span>
+                  ) : (
+                    'Submit'
+                  )}
+                </button>
+              ) : (
+                <div style={{ fontSize: '11px', color: '#737373', fontStyle: 'italic' }}>
+                  Configure API key above to submit and get actual response
+                </div>
+              )}
             </div>
           )}
         </div>
