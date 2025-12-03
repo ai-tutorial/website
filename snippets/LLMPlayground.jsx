@@ -810,15 +810,15 @@ export const LLMPlayground = ({
         <div className="llm-playground-content">
           {mode === 'chat' ? (
             <>
-              {/* Chat messages area */}
-              {renderChatInterface()}
-              
-              {/* API Key form - shown above input if not configured */}
+              {/* API Key form - shown first if not configured */}
               {!apiKey && (
                 <div className="llm-api-key-form-wrapper">
                   {renderApiKeyForm()}
                 </div>
               )}
+              
+              {/* Chat messages area */}
+              {renderChatInterface()}
               
               {/* Error message */}
               {error && (
