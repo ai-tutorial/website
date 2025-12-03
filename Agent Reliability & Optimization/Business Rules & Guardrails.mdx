@@ -2098,7 +2098,13 @@ async function productionAgentPipeline(userInput: string, context: Record<string
 
 ## Full Example: Insurance Claims Processing
 
-**Before: Prompt-Based Rules (78% accuracy)**
+### Practical Implication
+
+Compare these two approaches to implementing business rules:
+
+#### ❌ Antipattern
+
+**Prompt-Based Rules (78% accuracy)**
 
 <CodeGroup>
 ```python Python
@@ -2126,7 +2132,9 @@ Rules:
 ```
 </CodeGroup>
 
-**After: Deterministic Rules (99.7% accuracy)**
+#### ✅ Best Practice
+
+**Deterministic Rules (99.7% accuracy)**
 
 <CodeGroup>
 ```python Python

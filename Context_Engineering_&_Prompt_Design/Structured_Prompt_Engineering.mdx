@@ -80,40 +80,42 @@ The playground constructs the final prompt from these components, which is then 
 - Tags create clear boundaries in the context
 - Reduced hallucinations in controlled studies
 
-**Before (Ambiguous):**
+### Practical Implication
 
-```python
-prompt = f"""
-System: You are a helpful assistant.
-User question: {user_input}
-Background context: {knowledge_base}
-Previous conversation: {history}
-"""
-# LLM might confuse where context ends and question begins
-```
+Compare these two approaches to structuring prompts:
 
-**After (Clear):**
+#### ❌ Antipattern
 
-```python
-prompt = f"""
-<role>You are a helpful assistant</role>
+<LLMPlayground 
+  defaultMode="simple"
+  defaultInput={`System: You are a helpful assistant.
+User question: What is the return policy?
+Background context: Our store offers a 30-day return window for all purchases. Items must be in original packaging. Electronics require a receipt.
+Previous conversation: Customer asked about shipping times. We responded that standard shipping takes 5-7 business days.`}
+  height="400px"
+/>
 
-<context>
-<knowledge_base>
-{knowledge_base}
-</knowledge_base>
+#### ✅ Best Practice
 
-<conversation_history>
-{history}
-</conversation_history>
-</context>
+<LLMPlayground 
+  defaultMode="simple"
+  defaultInput={`<role>You are a helpful assistant</role>
 
-<user_question>
-{user_input}
-</user_question>
-"""
-# Crystal clear boundaries
-```
+  <context>
+    <knowledge_base>
+      Our store offers a 30-day return window for all purchases. Items must be in original packaging. Electronics require a receipt.
+    </knowledge_base>
+
+    <conversation_history>
+      Customer asked about shipping times. We responded that standard shipping takes 5-7 business days.
+    </conversation_history>
+  </context>
+
+  <user_question>
+    What is the return policy?
+  </user_question>`}
+  height="400px"
+/>
 
 **In Production:**
 
@@ -140,66 +142,33 @@ prompt = f"""
 - Specific output format required
 - Edge cases need clarification
 
-**Pattern:** [Full runnable few-shot examples notebook](https://colab.research.google.com/drive/1dCxVNAqgUY8bTiLXv32dvH5NyHSfZ67r?usp=drive_link)
 
-<CodeGroup>
+<LLMPlayground 
+  defaultMode="simple"
+  defaultInput={`  <task>Classify customer sentiment</task>
 
-```python Python
-prompt = f"""
-<task>Classify customer sentiment</task>
+  <examples>
+    <example>
+      <input>Your product is amazing! Best purchase ever.</input>
+      <output>positive</output>
+    </example>
 
-<examples>
-<example>
-<input>Your product is amazing! Best purchase ever.</input>
-<output>positive</output>
-</example>
+    <example>
+      <input>It's okay, does the job but nothing special.</input>
+      <output>neutral</output>
+    </example>
 
-<example>
-<input>It's okay, does the job but nothing special.</input>
-<output>neutral</output>
-</example>
+    <example>
+      <input>Terrible quality. Broke after one week. Demanding refund!</input>
+      <output>negative</output>
+    </example>
+  </examples>
 
-<example>
-<input>Terrible quality. Broke after one week. Demanding refund!</input>
-<output>negative</output>
-</example>
-</examples>
-
-<input_to_classify>
-{customer_message}
-</input_to_classify>
-"""
-```
-
-
-```ts TypeScript
-const prompt = `
-<task>Classify customer sentiment</task>
-
-<examples>
-<example>
-<input>Your product is amazing! Best purchase ever.</input>
-<output>positive</output>
-</example>
-
-<example>
-<input>It's okay, does the job but nothing special.</input>
-<output>neutral</output>
-</example>
-
-<example>
-<input>Terrible quality. Broke after one week. Demanding refund!</input>
-<output>negative</output>
-</example>
-</examples>
-
-<input_to_classify>
-${customerMessage}
-</input_to_classify>
-`;
-```
-
-</CodeGroup>
+  <input_to_classify>
+    The shipping was fast and the product arrived in perfect condition. Would buy again!
+  </input_to_classify>`}
+  height="500px"
+/>
 
 **Quality Over Quantity:**
 
@@ -237,127 +206,6 @@ function getRelevantExamples(taskType: string, limit: number = 3): any[] {
 
 </CodeGroup>
 
-## Model-Specific Optimization
-
-Different models have different "personalities." Here's what works best for each:
-
-[Full runnable model-specific optimization notebook](https://colab.research.google.com/drive/19Ge-7okrUJ0mLOxAe0sY6QkV07X9njr0?usp=drive_link)
-
-### GPT-4 / GPT-4 Turbo
-
-<CodeGroup>
-
-```python Python
-# Strengths: Structured output, following complex instructions
-# Best practices:
-prompt = """
-{
-  "role": "senior_analyst",
-  "task": "financial_analysis",
-  "output_format": {
-    "summary": "string",
-    "key_metrics": ["string"],
-    "recommendation": "buy|hold|sell"
-  }
-}
-
-Input: {data}
-"""
-# GPT-4 excels at JSON, clear role definitions
-```
-
-
-```ts TypeScript
-// Strengths: Structured output, following complex instructions
-// Best practices:
-const prompt = `
-{
-  "role": "senior_analyst",
-  "task": "financial_analysis",
-  "output_format": {
-    "summary": "string",
-    "key_metrics": ["string"],
-    "recommendation": "buy|hold|sell"
-  }
-}
-
-Input: ${data}
-`;
-// GPT-4 excels at JSON, clear role definitions
-```
-
-</CodeGroup>
-
-### Claude (Sonnet/Opus)
-
-<CodeGroup>
-
-```python Python
-# Strengths: Natural language, complex reasoning, long context
-# Best practices:
-prompt = """
-<thinking>
-Let me work through this step by step...
-</thinking>
-
-[Your instructions here]
-"""
-# Claude benefits from explicit thinking blocks
-# Excellent with XML tags and markdown
-```
-
-
-```ts TypeScript
-// Strengths: Natural language, complex reasoning, long context
-// Best practices:
-const prompt = `
-<thinking>
-Let me work through this step by step...
-</thinking>
-
-[Your instructions here]
-`;
-// Claude benefits from explicit thinking blocks
-// Excellent with XML tags and markdown
-```
-
-</CodeGroup>
-
-### Gemini 1.5 Pro
-
-<CodeGroup>
-
-```python Python
-# Strengths: Massive context (2M tokens), multimodal
-# Best practices:
-prompt = """
-[Upload entire 500-page PDF]
-[Upload 10 images]
-[Provide conversation history]
-
-Based on ALL of the above context, answer: {query}
-"""
-# Many teams place the query at the end; validate per task (see Gemini prompting strategies)
-# Can handle entire codebases or document sets
-```
-
-
-```ts TypeScript
-// Strengths: Massive context (2M tokens), multimodal
-// Best practices:
-const prompt = `
-[Upload entire 500-page PDF]
-[Upload 10 images]
-[Provide conversation history]
-
-Based on ALL of the above context, answer: ${query}
-`;
-// Many teams place the query at the end; validate per task (see Gemini prompting strategies)
-// Can handle entire codebases or document sets
-```
-
-</CodeGroup>
-
 ## Structured Outputs with JSON Schemas
 
 **Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
@@ -370,6 +218,57 @@ Based on ALL of the above context, answer: ${query}
 /> 
 
 
-See: OpenAI Structured Outputs (2025), Anthropic Prompt Engineering (2025), Gemini Prompting Strategies (2025) in Additional Resources.
+See: [OpenAI Structured Outputs](https://openai.com/index/introducing-structured-outputs-in-the-api/) (2025), [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview) (2025), [Gemini Prompting Strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies) (2025) in Additional Resources.
+
+## Model-Specific Prompt Optimization
+
+Different models have different "personalities." Here's what works best for each:
+
+### GPT-4 / GPT-4 Turbo
+
+```python Prompt
+# Strengths: Structured output, following complex instructions
+# Best practices:
+{
+  "role": "senior_analyst",
+  "task": "financial_analysis",
+  "output_format": {
+    "summary": "string",
+    "key_metrics": ["string"],
+    "recommendation": "buy|hold|sell"
+  }
+}
+
+Input: Company revenue: $50M, growth: 15% YoY, market share: 8%
+# GPT-4 excels at JSON, clear role definitions
+```
+
+### Claude (Sonnet/Opus)
+
+```python Prompt
+# Strengths: Natural language, complex reasoning, long context
+# Best practices:
+<thinking>
+Let me work through this step by step...
+</thinking>
+
+Analyze the quarterly financial report and identify key trends and risks.
+# Claude benefits from explicit thinking blocks
+# Excellent with XML tags and markdown
+```
+
+### Gemini 1.5 Pro
+
+```python Prompt
+# Strengths: Massive context (2M tokens), multimodal
+# Best practices:
+[Upload entire 500-page PDF]
+[Upload 10 images]
+[Provide conversation history]
+
+Based on ALL of the above context, answer: What are the main findings from the research study?
+# Many teams place the query at the end; validate per task (see Gemini prompting strategies)
+# Can handle entire codebases or document sets
+```
 
 ---

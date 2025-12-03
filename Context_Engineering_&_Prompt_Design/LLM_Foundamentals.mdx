@@ -142,9 +142,13 @@ result = "unknown" or makes something up
 # It hasn't seen this pattern → hallucination risk
 ```
 
-**Practical Implication:** When you want structured output, give the LLM a pattern to complete:
+### Practical Implication
 
-**1. ❌ Vague Prompt Option:** First, try the vague prompt and see how the LLM responds in prose. Then try the pattern-based approach to get structured output:
+When you want structured output, give the LLM a pattern to complete. Compare these two approaches:
+
+#### ❌ Antipattern
+
+First, try the vague prompt and see how the LLM responds in prose. Then try the pattern-based approach to get structured output:
 
 <LLMPlayground
   defaultInput={`//  Vague: "Extract the customer's name and email"
@@ -155,7 +159,7 @@ Extract the customer's name and email from: "Hi, I'm John Smith and you can reac
   height="500px"
 />
 
-**2. ✅ Pattern-Based Approach:**  
+#### ✅ Best Practice
 
 <LLMPlayground
   defaultInput={`// Pattern to complete:

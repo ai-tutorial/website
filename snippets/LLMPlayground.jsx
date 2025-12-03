@@ -534,6 +534,10 @@ export const LLMPlayground = ({
             color: 'transparent',
             caretColor: '#f5f5f5',
             backgroundColor: 'transparent',
+            overflowY: 'auto',
+            flex: '1 1 0%',
+            minHeight: 0,
+            height: 0,
           }}
           onFocus={(e) => {
             e.target.style.borderColor = '#3b82f6';
@@ -698,6 +702,7 @@ export const LLMPlayground = ({
               padding: '8px',
               fontSize: '0.75em',
               lineHeight: '16px',
+              overflowY: 'auto',
             }}
           />
         </div>
