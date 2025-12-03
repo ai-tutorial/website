@@ -210,13 +210,25 @@ function getRelevantExamples(taskType: string, limit: number = 3): any[] {
 
 **Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
 
+Compare these two approaches:
+
+### Example 1: Schema in Prompt
+
+This approach includes the JSON schema in the prompt itself, instructing the model to follow the schema structure.
+
 <CodeEditor 
-  file="src/module1/structure_prompt_json.ts" 
-  lines="115-142"
-  functionName="useStructuredOutputs"
-  title="Structured Prompt Engineering - JSON Schemas"
+  file="src/module1/structured_outputs_schema_in_prompt.ts" 
+  title="Structured Outputs - Schema in Prompt"
 /> 
 
+### Example 2: Structured Outputs (JSON Mode)
+
+This approach uses OpenAI's structured outputs feature (`response_format: json_object`) combined with schema validation. This is more reliable than just including the schema in the prompt.
+
+<CodeEditor 
+  file="src/module1/structured_outputs_json_mode.ts" 
+  title="Structured Outputs - JSON Mode"
+/> 
 
 See: [OpenAI Structured Outputs](https://openai.com/index/introducing-structured-outputs-in-the-api/) (2025), [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview) (2025), [Gemini Prompting Strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies) (2025) in Additional Resources.
 
