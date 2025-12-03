@@ -164,6 +164,7 @@ export const LLMPlayground = ({
   const [isSavingKey, setIsSavingKey] = useState(false);
   const textareaRef = useRef(null);
   const advancedTextareaRefs = useRef({});
+  const responseAreaRef = useRef(null);
   const [messages, setMessages] = useState(() => {
     if (defaultMessages && defaultMessages.length > 0) {
       return defaultMessages;
@@ -279,6 +280,17 @@ export const LLMPlayground = ({
       }
     });
   }, [messages, autoResizeTextarea]);
+
+  // Scroll to response area when submission completes in advanced mode
+  useEffect(() => {
+    if (mode === 'advanced' && hasSubmitted && responseAreaRef.current && !isLoading) {
+      setTimeout(() => {
+        if (responseAreaRef.current) {
+          responseAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [hasSubmitted, output, mode, isLoading]);
 
   const constructAdvancedMessages = useCallback(() => {
     return messages.filter(msg => msg.content.trim().length > 0);
@@ -853,7 +865,7 @@ export const LLMPlayground = ({
               </div>
 
               {(hasSubmitted || (response && response.trim())) && (
-                <div className="llm-playground-response-area">
+                <div ref={responseAreaRef} className="llm-playground-response-area">
                   {!apiKey && !(response && response.trim()) ? (
                     <>
                       <label className="llm-section-label">Prompt</label>

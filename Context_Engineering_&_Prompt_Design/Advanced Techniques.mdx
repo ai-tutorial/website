@@ -6,6 +6,7 @@ icon: "book"
 ---
 import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
 
+
 ## Chain-of-Thought (CoT): Making Reasoning Visible
 
 <Note>
@@ -69,78 +70,6 @@ But what if you need to debug a wrong answer? You can't see the reasoning. The e
 
 **The Solution:** Generate multiple responses and vote.
 
-
-<CodeGroup>
-
-```python Python
-async def self_consistent_answer(
-    prompt: str,
-    n: int = 5,
-    temperature: float = 0.7
-) -> str:
-    """
-    Generate multiple answers and return the most common one.
-    """
-    responses = []
-    
-    for _ in range(n):
-        response = await llm.generate(
-            prompt=prompt,
-            temperature=temperature
-        )
-        responses.append(response)
-    
-    # Count occurrences (or use semantic similarity - more about this later -)
-    from collections import Counter
-    answer_counts = Counter(responses)
-    
-    # Return most common answer
-    most_common = answer_counts.most_common(1)[0][0]
-    
-    return most_common
-```
-
-
-```ts TypeScript
-async function selfConsistentAnswer(
-    prompt: string,
-    n: number = 5,
-    temperature: number = 0.7
-): Promise<string> {
-    /**
-     * Generate multiple answers and return the most common one.
-     */
-    const responses: string[] = [];
-    
-    for (let i = 0; i < n; i++) {
-        const response = await llm.generate({
-            prompt: prompt,
-            temperature: temperature
-        });
-        responses.push(response);
-    }
-    
-    // Count occurrences (or use semantic similarity - more about this later)
-    const answerCounts: Record<string, number> = {};
-    for (const response of responses) {
-        answerCounts[response] = (answerCounts[response] || 0) + 1;
-    }
-    
-    // Return most common answer
-    let mostCommon = "";
-    let maxCount = 0;
-    for (const [answer, count] of Object.entries(answerCounts)) {
-        if (count > maxCount) {
-            maxCount = count;
-            mostCommon = answer;
-        }
-    }
-    
-    return mostCommon;
-}
-```
-
-</CodeGroup>
 
 **When to Use:**
 
