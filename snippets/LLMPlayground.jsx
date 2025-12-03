@@ -45,6 +45,105 @@ export const LLMPlayground = ({
     API_RESPONSE: 'apiResponse'
   };
 
+  // ==================== ICON HELPERS ====================
+  const IconWarningSun = ({ size = 14, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+    </svg>
+  );
+
+  const IconLoadingSpinner = ({ size = 14, className = '', strokeColor = 'currentColor', strokeWidth = '2', strokeLinecap = 'butt' }) => (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke={strokeColor} 
+      strokeWidth={strokeWidth}
+      strokeLinecap={strokeLinecap}
+      className={className}
+    >
+      <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+    </svg>
+  );
+
+  const IconWarningTriangle = ({ size = 16, strokeColor = '#f59e0b', className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className={className}>
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+      <line x1="12" y1="9" x2="12" y2="13"></line>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </svg>
+  );
+
+  const IconClose = ({ size = 10, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  );
+
+  const IconPlus = ({ size = 12, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </svg>
+  );
+
+  const IconError = ({ size = 14, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+  );
+
+  const IconSend = ({ size = 16, fillColor = '#000', className = '' }) => (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      fill={fillColor}
+      className={className}
+    >
+      <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/>
+    </svg>
+  );
+
+  const IconCheckmark = ({ size = 14, strokeColor = '#22c55e', className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className={className}>
+      <polyline points="9 11 12 14 22 4"></polyline>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+    </svg>
+  );
+
+  const IconXStatus = ({ size = 14, strokeColor = '#ef4444', className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="9" y1="9" x2="15" y2="15"></line>
+      <line x1="15" y1="9" x2="9" y2="15"></line>
+    </svg>
+  );
+
+  const IconChevron = ({ size = 12, isOpen = false, className = '' }) => (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {isOpen ? (
+        <polyline points="18 15 12 9 6 15"></polyline>
+      ) : (
+        <polyline points="6 9 12 15 18 9"></polyline>
+      )}
+    </svg>
+  );
+
   // ==================== STYLES ====================
   // Styles are now in style.css - using CSS classes instead
 
@@ -373,9 +472,7 @@ export const LLMPlayground = ({
       <div className="llm-chat-interface">
         {hasPlaceholderMessages && (
           <div className="llm-warning-banner">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            </svg>
+            <IconWarningSun size={14} />
             <span>This is a sample conversation. Click the send button to make a real API call.</span>
           </div>
         )}
@@ -389,9 +486,7 @@ export const LLMPlayground = ({
         {isLoading && (
           <div className="llm-chat-loading">
             <div className="llm-chat-loading-bubble">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="llm-chat-loading-spinner">
-                <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-              </svg>
+              <IconLoadingSpinner size={14} className="llm-chat-loading-spinner" />
               <span>Thinking...</span>
             </div>
           </div>
@@ -405,11 +500,7 @@ export const LLMPlayground = ({
     <div className="llm-api-key-form">
       <div className="llm-api-key-form-section">
         <h3 className="llm-api-key-form-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-            <line x1="12" y1="9" x2="12" y2="13"></line>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
+          <IconWarningTriangle size={16} strokeColor="#f59e0b" />
           <span>Configure OpenAI API Key to make the most of the tutorial</span>
         </h3>
         <p className="llm-api-key-form-description">
@@ -582,10 +673,7 @@ export const LLMPlayground = ({
               }}
               title="Remove message"
             >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+              <IconClose size={10} />
             </button>
           </div>
           <textarea
@@ -626,10 +714,7 @@ export const LLMPlayground = ({
           e.target.style.color = '#a3a3a3';
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
+        <IconPlus size={12} />
         Add Message
       </button>
     </div>
@@ -662,9 +747,7 @@ export const LLMPlayground = ({
             ) : isLoading ? (
               <div className="llm-tab-loading">
                 <span className="llm-tab-loading-content">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="llm-chat-loading-spinner">
-                    <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-                  </svg>
+                  <IconLoadingSpinner size={14} className="llm-chat-loading-spinner" />
                   Generating response...
                 </span>
               </div>
@@ -741,11 +824,7 @@ export const LLMPlayground = ({
               {error && (
                 <div className="llm-error-wrapper">
                   <div className="llm-error-message">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
+                    <IconError size={14} />
                     {error}
                   </div>
                 </div>
@@ -787,28 +866,9 @@ export const LLMPlayground = ({
                     aria-label="Send message"
                   >
                     {isLoading ? (
-                      <svg 
-                        width="16" 
-                        height="16" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="#000" 
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        className="llm-chat-send-spinner"
-                      >
-                        <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-                      </svg>
+                      <IconLoadingSpinner size={16} strokeColor="#000" strokeWidth="2.5" strokeLinecap="round" className="llm-chat-send-spinner" />
                     ) : (
-                      <svg 
-                        width="16" 
-                        height="16" 
-                        viewBox="0 0 24 24" 
-                        fill="#000"
-                        className="llm-chat-send-icon"
-                      >
-                        <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/>
-                      </svg>
+                      <IconSend size={16} fillColor="#000" className="llm-chat-send-icon" />
                     )}
                   </button>
                 )}
@@ -828,11 +888,7 @@ export const LLMPlayground = ({
                 {!apiKey && renderApiKeyForm()}
                 {error && (
                   <div className="llm-error-message llm-error-message-top">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
+                    <IconError size={14} />
                     {error}
                   </div>
                 )}
@@ -890,9 +946,7 @@ export const LLMPlayground = ({
                     >
                       {isLoading ? (
                         <span className="llm-submit-button-loading">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="llm-submit-button-loading-spinner">
-                            <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-                          </svg>
+                          <IconLoadingSpinner size={12} className="llm-submit-button-loading-spinner" />
                           Processing...
                         </span>
                       ) : (
@@ -982,16 +1036,9 @@ export const LLMPlayground = ({
             title={apiKey ? 'API Key configured' : 'API Key not configured'}
           >
             {apiKey ? (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
-                <polyline points="9 11 12 14 22 4"></polyline>
-                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-              </svg>
+              <IconCheckmark size={14} strokeColor="#22c55e" />
             ) : (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="9" y1="9" x2="15" y2="15"></line>
-                <line x1="15" y1="9" x2="9" y2="15"></line>
-              </svg>
+              <IconXStatus size={14} strokeColor="#ef4444" />
             )}
           </div>
         </div>
@@ -1018,23 +1065,11 @@ export const LLMPlayground = ({
             }}
             aria-label="Toggle settings"
           >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={isSettingsOpen ? 'llm-footer-toggle-icon llm-footer-toggle-icon-open' : 'llm-footer-toggle-icon'}
-            >
-              {isSettingsOpen ? (
-                <polyline points="18 15 12 9 6 15"></polyline>
-              ) : (
-                <polyline points="6 9 12 15 18 9"></polyline>
-              )}
-            </svg>
+            <IconChevron 
+              size={12} 
+              isOpen={isSettingsOpen} 
+              className={isSettingsOpen ? 'llm-footer-toggle-icon llm-footer-toggle-icon-open' : 'llm-footer-toggle-icon'} 
+            />
             <span>Settings</span>
           </button>
         )}
