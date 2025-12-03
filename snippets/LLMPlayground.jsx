@@ -8,20 +8,22 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
  * @param {string} [props.defaultModel='gpt-4o-mini'] - Default model
  * @param {number} [props.defaultTemperature=0.7] - Default temperature
  * @param {string} [props.height='600px'] - Height of the component
- * @param {boolean} [props.keepOutput=false] - If true, append new responses instead of overwriting
- * @param {string} [props.defaultMode='simple'] - 'simple' or 'advanced'
+ * @param {boolean} [props.keepInput=false] - If true, keep input after submission
+ * @param {string} [props.defaultMode='chat'] - 'chat' or 'advanced'
  * @param {Array} [props.defaultMessages=[]] - Array of {role, content} for advanced mode
- * @param {string} [props.placeholderResponse=''] - Placeholder response to show when no output yet
+ * @param {string} [props.response=''] - Sample response to show when no output yet (requires defaultInput)
+ * @param {boolean} [props.forceSettingsOpen=false] - If true, force settings panel to be open
  */
 export const LLMPlayground = ({
   defaultInput = '',
   defaultModel = 'gpt-4o-mini',
   defaultTemperature = 0.7,
   height = '600px',
-  keepOutput = false,
-  defaultMode = 'simple',
+  keepInput = false,
+  defaultMode = 'chat',
   defaultMessages = [],
-  placeholderResponse = ''
+  response = '',
+  forceSettingsOpen = false
 }) => {
   // ==================== CONSTANTS ====================
   const STORAGE_KEY = 'openai_api_key';
@@ -110,7 +112,7 @@ export const LLMPlayground = ({
 
   // ==================== STATE ====================
   const isAdvancedMode = defaultMode === 'advanced' || (defaultMessages && defaultMessages.length > 0);
-  const mode = isAdvancedMode ? 'advanced' : 'simple';
+  const mode = isAdvancedMode ? 'advanced' : 'chat';
 
   const [input, setInput] = useState(defaultInput);
   const [output, setOutput] = useState('');
@@ -135,11 +137,15 @@ export const LLMPlayground = ({
       { role: 'user', content: '' }
     ];
   });
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const messagesEndRef = useRef(null);
+  const isInitialMount = useRef(true);
   const [lastSentJson, setLastSentJson] = useState(null);
   const [lastResponseJson, setLastResponseJson] = useState(null);
   const [activeTab, setActiveTab] = useState(TABS.RESPONSE);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
+    if (forceSettingsOpen) return true;
     if (typeof window === 'undefined') return true;
     const stored = localStorage.getItem(SETTINGS_PANEL_KEY);
     return stored !== null ? stored === 'true' : true;
@@ -156,8 +162,12 @@ export const LLMPlayground = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (forceSettingsOpen) {
+      setIsSettingsOpen(true);
+      return;
+    }
     localStorage.setItem(SETTINGS_PANEL_KEY, String(isSettingsOpen));
-  }, [isSettingsOpen]);
+  }, [isSettingsOpen, forceSettingsOpen]);
 
   // Sync ref with state
   useEffect(() => {
@@ -191,22 +201,49 @@ export const LLMPlayground = ({
 
   const autoResizeTextarea = useCallback((textarea) => {
     if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    // Reset height to get accurate scrollHeight
+    textarea.style.height = '0px';
+    const scrollHeight = textarea.scrollHeight;
+    // One line = line-height (20px) + padding top (6px) + padding bottom (6px) = 32px
+    // But we need to ensure it's exactly one line when empty
+    const minHeight = 32;
+    const newHeight = Math.max(scrollHeight, minHeight);
+    textarea.style.height = `${newHeight}px`;
   }, []);
 
-  // Auto-resize simple mode textarea and sync background
+  // Auto-resize chat mode textarea and sync background
   useEffect(() => {
     if (textareaRef.current) {
-      autoResizeTextarea(textareaRef.current);
+      // Set height to 0 first to get accurate scrollHeight
+      textareaRef.current.style.height = '0px';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const minHeight = 32; // One line: 20px line-height + 6px top + 6px bottom
+      const newHeight = Math.max(scrollHeight, minHeight);
+      textareaRef.current.style.height = `${newHeight}px`;
+      
       // Sync background div height with textarea
-      if (textareaBackgroundRef.current && textareaRef.current) {
-        const height = Math.max(textareaRef.current.scrollHeight, 60);
-        textareaBackgroundRef.current.style.height = `${height}px`;
-        textareaBackgroundRef.current.style.minHeight = `${height}px`;
+      if (textareaBackgroundRef.current) {
+        textareaBackgroundRef.current.style.height = `${newHeight}px`;
+        textareaBackgroundRef.current.style.minHeight = `${newHeight}px`;
       }
     }
-  }, [input, autoResizeTextarea]);
+  }, [input]);
+
+  // Scroll to bottom when new messages are added (but not on initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (messagesEndRef.current && conversationHistory.length > 0) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 100);
+    }
+  }, [conversationHistory, isLoading]);
 
   // Auto-resize advanced mode textareas
   useEffect(() => {
@@ -223,7 +260,7 @@ export const LLMPlayground = ({
 
   const isFormValid = useMemo(() => {
     if (!apiKey) return false;
-    if (mode === 'simple') {
+    if (mode === 'chat') {
       return input.trim().length > 0;
     } else {
       return messages.some(msg => msg.content.trim().length > 0);
@@ -273,29 +310,31 @@ export const LLMPlayground = ({
     setError('');
     setHasSubmitted(true);
     
-    const effectiveKeepOutput = mode === 'advanced' ? false : keepOutput;
-    
-    if (!effectiveKeepOutput) {
-      setOutput('');
-      setResponseCount(0);
-      responseCountRef.current = 0;
-    }
-    
     if (mode === 'advanced') {
       setLastResponseJson(null);
       setActiveTab(TABS.RESPONSE);
     }
 
     let requestMessages = [];
+    let userMessageContent = '';
     
-    if (mode === 'simple') {
+    if (mode === 'chat') {
       const filteredInput = filterComments(input);
       if (!filteredInput) {
         setError('Please enter a prompt (comments are not sent to the API)');
         setIsLoading(false);
         return;
       }
+      userMessageContent = filteredInput;
       requestMessages = [{ role: 'user', content: filteredInput }];
+      
+      // Add user message to conversation history
+      setConversationHistory(prev => [...prev, { role: 'user', content: filteredInput }]);
+      
+      // Clear input if keepInput is false
+      if (!keepInput) {
+        setInput('');
+      }
     } else {
       const advancedMessages = constructAdvancedMessages();
       if (advancedMessages.length === 0) {
@@ -335,61 +374,168 @@ export const LLMPlayground = ({
       
       if (mode === 'advanced') {
         setLastResponseJson(data);
-      }
-      
-      if (effectiveKeepOutput) {
-        setOutput(prevOutput => {
-          // If there's existing output, append to it
-          if (prevOutput && prevOutput.trim().length > 0) {
-            // Determine the next count
-            let nextCount;
-            if (responseCountRef.current > 0) {
-              // Ref is in sync, increment it
-              responseCountRef.current += 1;
-              nextCount = responseCountRef.current;
-            } else {
-              // Ref might be out of sync, try to extract count from output or default to 2
-              const match = prevOutput.match(/Response (\d+):/g);
-              if (match && match.length > 0) {
-                // Extract the last response number and increment
-                const lastMatch = match[match.length - 1];
-                const lastCount = parseInt(lastMatch.match(/\d+/)[0], 10);
-                nextCount = lastCount + 1;
-              } else {
-                // No pattern found, assume this is the second response
-                nextCount = 2;
-              }
-              responseCountRef.current = nextCount;
-            }
-            setResponseCount(nextCount);
-            return prevOutput + `\n\nResponse ${nextCount}: ` + newResponse;
-          } else {
-            // First response
-            responseCountRef.current = 1;
-            setResponseCount(1);
-            return 'Response 1: ' + newResponse;
-          }
-        });
+        setOutput(newResponse);
       } else {
-        responseCountRef.current = 1;
-        setResponseCount(1);
+        // Chat mode: add assistant response to conversation history
+        setConversationHistory(prev => [...prev, { role: 'assistant', content: newResponse }]);
         setOutput(newResponse);
       }
     } catch (err) {
       setError(err.message || 'An error occurred while processing your request');
+      // Remove the user message from history if there was an error
+      if (mode === 'chat') {
+        setConversationHistory(prev => prev.slice(0, -1));
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [mode, input, apiKey, isLoading, keepOutput, constructAdvancedMessages, filterComments, isFormValid]);
+  }, [mode, input, apiKey, isLoading, keepInput, constructAdvancedMessages, filterComments, isFormValid]);
 
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-  }, [handleSubmit]);
+  // Removed handleKeyDown - Enter should add new line, submit only via play button
 
   // ==================== RENDER HELPERS ====================
+  const renderChatMessage = (message, index, isPlaceholder = false) => {
+    const isUser = message.role === 'user';
+    return (
+      <div
+        key={index}
+        style={{
+          display: 'flex',
+          justifyContent: isUser ? 'flex-end' : 'flex-start',
+          marginBottom: '8px',
+          padding: '0 12px',
+          position: 'relative',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '70%',
+            padding: '8px 12px',
+            borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+            backgroundColor: isUser ? '#005c4b' : '#202c33',
+            color: '#e9edef',
+            fontSize: '14px',
+            lineHeight: '1.4',
+            wordWrap: 'break-word',
+            whiteSpace: 'pre-wrap',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+          opacity: isPlaceholder ? 0.7 : 1,
+          border: isPlaceholder ? '1px dashed rgba(255, 255, 255, 0.3)' : 'none',
+        }}
+      >
+        {message.content}
+      </div>
+      </div>
+    );
+  };
+
+  const renderChatInterface = () => {
+    const allMessages = [...conversationHistory];
+    const placeholderMessages = [];
+    
+    // If there's a response and no conversation yet, show both input and response
+    // response requires defaultInput to be present - if response exists but no defaultInput, don't show placeholder messages
+    if (response && !hasSubmitted && conversationHistory.length === 0) {
+      // defaultInput is mandatory when response is provided
+      if (defaultInput && defaultInput.trim()) {
+        const filteredInput = filterComments(defaultInput);
+        if (filteredInput) {
+          placeholderMessages.push({ role: 'user', content: filteredInput, isPlaceholder: true });
+          // Only show response if we have a valid input
+          placeholderMessages.push({ role: 'assistant', content: response, isPlaceholder: true });
+        }
+      }
+      // If response is provided but no defaultInput, the response won't be shown (as per requirement)
+    }
+    
+    const hasPlaceholderMessages = placeholderMessages.length > 0;
+    
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+          backgroundColor: '#0b141a',
+          paddingTop: '12px',
+          paddingBottom: '12px',
+        }}
+      >
+        {hasPlaceholderMessages && (
+          <div
+            style={{
+              padding: '8px 12px',
+              marginBottom: '8px',
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              borderRadius: '6px',
+              marginLeft: '12px',
+              marginRight: '12px',
+              fontSize: '12px',
+              color: '#fbbf24',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            <span>This is a sample conversation. Click the send button to make a real API call.</span>
+          </div>
+        )}
+        {allMessages.length === 0 && placeholderMessages.length === 0 && !isLoading && (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#8696a0',
+              fontSize: '14px',
+              fontStyle: 'italic',
+            }}
+          >
+            Start a conversation with OpenAI LLM using the API key you provided!
+          </div>
+        )}
+        {placeholderMessages.map((msg, idx) => renderChatMessage(msg, `placeholder-${idx}`, true))}
+        {allMessages.map((msg, idx) => renderChatMessage(msg, `real-${idx}`, false))}
+        {isLoading && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+              marginBottom: '8px',
+              padding: '0 12px',
+            }}
+          >
+            <div
+              style={{
+                padding: '8px 12px',
+                borderRadius: '18px 18px 18px 4px',
+                backgroundColor: '#202c33',
+                color: '#8696a0',
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+              </svg>
+              <span>Thinking...</span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+    );
+  };
+
   const renderApiKeyForm = () => (
     <div
       style={{
@@ -503,34 +649,62 @@ export const LLMPlayground = ({
     </div>
   );
 
-  const renderSimpleInput = () => (
-    <>
-      <label style={styles.sectionLabel}>Prompt</label>
+  const renderChatInput = () => {
+    const commonTextStyles = {
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontSize: '15px',
+      lineHeight: '20px',
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      fontVariant: 'normal',
+      fontStretch: 'normal',
+      fontFeatureSettings: 'normal',
+      fontVariationSettings: 'normal',
+      letterSpacing: 'normal',
+      textAlign: 'left',
+      textDecoration: 'none',
+      textTransform: 'none',
+      textIndent: '0',
+      textShadow: 'none',
+    };
+
+    const commonLayoutStyles = {
+      padding: '6px 16px',
+      margin: '0',
+      border: 'none',
+      boxSizing: 'border-box',
+    };
+
+    return (
       <div
         style={{
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          minHeight: '60px',
+          minHeight: '32px',
+          maxHeight: '120px',
+          backgroundColor: '#2a3942',
+          borderRadius: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
         }}
       >
         <div
           ref={textareaBackgroundRef}
           style={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            top: '0',
+            left: '0',
+            right: '0',
+            bottom: '0',
             pointerEvents: 'none',
-            ...styles.textareaBase,
-            ...styles.textareaEnabled,
             whiteSpace: 'pre-wrap',
             wordWrap: 'break-word',
             overflow: 'hidden',
             zIndex: 1,
-            minHeight: '60px',
+            minHeight: '32px',
             height: 'auto',
+            ...commonTextStyles,
+            ...commonLayoutStyles,
           }}
         >
           {input ? (
@@ -540,7 +714,7 @@ export const LLMPlayground = ({
                 <span
                   key={idx}
                   style={{
-                    color: isComment ? '#6a9955' : '#f5f5f5',
+                    color: isComment ? '#6a9955' : '#e9edef',
                     fontStyle: isComment ? 'italic' : 'normal',
                   }}
                 >
@@ -550,8 +724,8 @@ export const LLMPlayground = ({
               );
             })
           ) : (
-            <span style={{ color: '#525252', fontStyle: 'italic' }}>
-              Enter your prompt here... (Cmd/Ctrl + Enter to submit)
+            <span style={{ color: '#8696a0', fontStyle: 'normal' }}>
+              Type a message
             </span>
           )}
         </div>
@@ -563,47 +737,44 @@ export const LLMPlayground = ({
             autoResizeTextarea(e.target);
             // Sync background div height
             if (textareaBackgroundRef.current) {
-              const height = Math.max(e.target.scrollHeight, 60);
-              textareaBackgroundRef.current.style.height = `${height}px`;
-              textareaBackgroundRef.current.style.minHeight = `${height}px`;
+              const scrollHeight = e.target.scrollHeight;
+              const height = Math.max(scrollHeight, 32);
+              const maxHeight = Math.min(height, 120);
+              textareaBackgroundRef.current.style.height = `${maxHeight}px`;
+              textareaBackgroundRef.current.style.minHeight = `${maxHeight}px`;
             }
           }}
-          onKeyDown={handleKeyDown}
           placeholder=""
           disabled={isLoading}
           style={{
-            ...styles.textareaBase,
-            ...styles.textareaEnabled,
             position: 'relative',
             zIndex: 2,
             color: 'transparent',
-            caretColor: '#f5f5f5',
+            caretColor: '#e9edef',
             backgroundColor: 'transparent',
-            overflowY: 'hidden',
+            outline: 'none',
+            overflowY: 'auto',
             resize: 'none',
-            minHeight: '60px',
-            height: 'auto',
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = '#3b82f6';
-            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-            const bg = e.target.previousElementSibling;
-            if (bg) {
-              bg.style.borderColor = '#3b82f6';
-            }
+            minHeight: '32px',
+            maxHeight: '120px',
+            height: '32px',
+            width: '100%',
+            verticalAlign: 'top',
+            overflow: 'hidden',
+            ...commonTextStyles,
+            ...commonLayoutStyles,
           }}
           onBlur={(e) => {
-            e.target.style.borderColor = 'transparent';
-            e.target.style.boxShadow = 'none';
-            const bg = e.target.previousElementSibling;
-            if (bg) {
-              bg.style.borderColor = '#262626';
+            const container = e.target.parentElement;
+            if (container) {
+              container.style.borderColor = '#2a3942';
+              container.style.backgroundColor = '#2a3942';
             }
           }}
         />
       </div>
-    </>
-  );
+    );
+  };
 
   const renderAdvancedInput = () => (
     <div
@@ -675,9 +846,6 @@ export const LLMPlayground = ({
                   letterSpacing: '0.05em',
                   transition: 'all 0.2s ease',
                 }}
-                onFocus={(e) => {
-                  e.target.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.2)';
-                }}
                 onBlur={(e) => {
                   e.target.style.boxShadow = 'none';
                 }}
@@ -742,7 +910,6 @@ export const LLMPlayground = ({
               setMessages(newMessages);
               autoResizeTextarea(e.target);
             }}
-            onKeyDown={handleKeyDown}
             placeholder={`Enter ${message.role} message content...`}
             disabled={isLoading}
             style={{
@@ -863,7 +1030,7 @@ export const LLMPlayground = ({
                   Generating response...
                 </span>
               </div>
-            ) : placeholderResponse ? (
+            ) : response ? (
               <div
                 style={{
                   display: 'flex',
@@ -873,7 +1040,7 @@ export const LLMPlayground = ({
               >
                 <label style={styles.sectionLabel}>Response (Expected response, press submit to get actual response)</label>
                 <div style={{ ...styles.responseBox, color: '#a3a3a3', fontStyle: 'italic' }}>
-                  {placeholderResponse}
+                  {response}
                 </div>
               </div>
             ) : (
@@ -950,81 +1117,10 @@ export const LLMPlayground = ({
     </>
   );
 
-  const renderSimpleResponse = () => (
-    <>
-      <label style={styles.sectionLabel}>
-        Response{placeholderResponse && !output ? ' (Expected response, press submit to get actual response)' : ''}
-      </label>
-      {output ? (
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            overflowY: 'auto',
-          }}
-        >
-          <div style={styles.responseBox}>{output}</div>
-        </div>
-      ) : (
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {isLoading ? (
-            <div
-              style={{
-                color: '#525252',
-                fontSize: '12px',
-                fontStyle: 'italic',
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '12px',
-                backgroundColor: '#1a1a1a',
-                borderRadius: '6px',
-                border: '1px solid #262626',
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
-                  <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-                </svg>
-                Generating response...
-              </span>
-            </div>
-          ) : placeholderResponse ? (
-            <div style={{ ...styles.responseBox, color: '#a3a3a3', fontStyle: 'italic' }}>
-              {placeholderResponse}
-            </div>
-          ) : (
-            <div
-              style={{
-                color: '#525252',
-                fontSize: '12px',
-                fontStyle: 'italic',
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '12px',
-                backgroundColor: '#1a1a1a',
-                borderRadius: '6px',
-                border: '1px solid #262626',
-              }}
-            >
-              Response will appear here
-            </div>
-          )}
-        </div>
-      )}
-    </>
-  );
+  const renderChatResponse = () => {
+    // Chat interface is now integrated into the main layout
+    return null;
+  };
 
   // ==================== MAIN RENDER ====================
   return (
@@ -1032,13 +1128,13 @@ export const LLMPlayground = ({
       style={{
         width: '100%',
         height,
-        backgroundColor: '#0f0f0f',
+        backgroundColor: mode === 'chat' ? '#0b141a' : '#0f0f0f',
         borderRadius: '12px',
         border: '1px solid #2a2a2a',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        fontFamily: 'Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace',
+        fontFamily: mode === 'chat' ? 'system-ui, -apple-system, sans-serif' : 'Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
       }}
     >
@@ -1050,61 +1146,6 @@ export const LLMPlayground = ({
           position: 'relative',
         }}
       >
-        {apiKey && (
-          <button
-            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            style={{
-              position: 'absolute',
-              top: '12px',
-              right: isSettingsOpen ? `${SETTINGS_PANEL_WIDTH}px` : '12px',
-              zIndex: 10,
-              background: isSettingsOpen ? '#2a2a2a' : 'rgba(26, 26, 26, 0.9)',
-              border: '1px solid #2a2a2a',
-              cursor: 'pointer',
-              padding: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#d4d4d4',
-              borderRadius: '6px',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#2a2a2a';
-              e.target.style.borderColor = '#3a3a3a';
-            }}
-            onMouseLeave={(e) => {
-              if (!isSettingsOpen) {
-                e.target.style.backgroundColor = 'rgba(26, 26, 26, 0.9)';
-                e.target.style.borderColor = '#2a2a2a';
-              }
-            }}
-            aria-label="Toggle settings"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s ease',
-              }}
-            >
-              {isSettingsOpen ? (
-                <polyline points="9 18 15 12 9 6"></polyline>
-              ) : (
-                <polyline points="15 18 9 12 15 6"></polyline>
-              )}
-            </svg>
-          </button>
-        )}
-
         <div
           style={{
             flex: 1,
@@ -1113,131 +1154,250 @@ export const LLMPlayground = ({
             overflow: 'hidden',
           }}
         >
-          <div
-            style={{
-              flex: (hasSubmitted || (placeholderResponse && placeholderResponse.trim())) ? '0 0 auto' : '1 1 100%',
-              display: 'flex',
-              flexDirection: 'column',
-              padding: '12px',
-              overflow: 'hidden',
-              borderBottom: (hasSubmitted || (placeholderResponse && placeholderResponse.trim())) ? '1px solid #1a1a1a' : 'none',
-              backgroundColor: '#0f0f0f',
-              minHeight: (hasSubmitted || (placeholderResponse && placeholderResponse.trim())) ? 'auto' : 'auto',
-            }}
-          >
-            {mode === 'simple' ? renderSimpleInput() : renderAdvancedInput()}
-            {!apiKey && renderApiKeyForm()}
-            {error && (
-              <div style={{ ...styles.errorMessage, marginTop: '8px' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="12"></line>
-                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                {error}
-              </div>
-            )}
-          </div>
-
-          {(hasSubmitted || (placeholderResponse && placeholderResponse.trim())) && (
-            <div
-              style={{
-                flex: '0 0 auto',
-                display: 'flex',
-                flexDirection: 'column',
-                padding: '12px',
-                backgroundColor: '#0f0f0f',
-                borderBottom: '1px solid #1a1a1a',
-                minHeight: '200px',
-                maxHeight: '70vh',
-                overflowY: 'auto',
-              }}
-            >
-              {!apiKey && !(placeholderResponse && placeholderResponse.trim()) ? (
-                <>
-                  <label style={styles.sectionLabel}>Prompt</label>
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Enter your prompt here... (Configure API key to enable)"
-                    disabled={true}
-                    style={{
-                      ...styles.textareaBase,
-                      ...styles.textareaDisabled,
-                    }}
-                  />
-                </>
-              ) : (
-                mode === 'advanced' ? renderTabs() : renderSimpleResponse()
-              )}
-            </div>
-          )}
-
-          {(apiKey || (placeholderResponse && placeholderResponse.trim())) && (
-            <div
-              style={{
-                padding: '10px 12px',
-                backgroundColor: '#151515',
-                borderTop: '1px solid #1a1a1a',
-                display: 'flex',
-                justifyContent: 'flex-end',
-              }}
-            >
-              {apiKey ? (
-                <button
-                  onClick={handleSubmit}
-                  disabled={isLoading || !isFormValid}
-                  style={{
-                    padding: '6px 16px',
-                    backgroundColor: isLoading || !isFormValid ? '#1a1a1a' : '#3b82f6',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: isLoading || !isFormValid ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
-                    letterSpacing: '-0.01em',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isLoading && isFormValid) {
-                      e.target.style.backgroundColor = '#2563eb';
-                      e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
-                      e.target.style.transform = 'translateY(-1px)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isLoading && isFormValid) {
-                      e.target.style.backgroundColor = '#3b82f6';
-                      e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
-                      e.target.style.transform = 'translateY(0)';
-                    }
-                  }}
-                  onMouseDown={(e) => {
-                    if (!isLoading && isFormValid) {
-                      e.target.style.transform = 'translateY(0)';
-                    }
-                  }}
-                >
-                  {isLoading ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
-                        <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-                      </svg>
-                      Processing...
-                    </span>
-                  ) : (
-                    'Submit'
-                  )}
-                </button>
-              ) : (
-                <div style={{ fontSize: '11px', color: '#737373', fontStyle: 'italic' }}>
-                  Configure API key above to submit and get actual response
+          {mode === 'chat' ? (
+            <>
+              {/* Chat messages area */}
+              {renderChatInterface()}
+              
+              {/* API Key form - shown above input if not configured */}
+              {!apiKey && (
+                <div style={{ padding: '12px', borderTop: '1px solid #1a1a1a' }}>
+                  {renderApiKeyForm()}
                 </div>
               )}
-            </div>
+              
+              {/* Error message */}
+              {error && (
+                <div style={{ padding: '8px 12px', borderTop: '1px solid #1a1a1a' }}>
+                  <div style={styles.errorMessage}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    {error}
+                  </div>
+                </div>
+              )}
+              
+              {/* Input area at bottom */}
+              <div
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#0b141a',
+                  borderTop: '1px solid #202c33',
+                  display: 'flex',
+                  gap: '8px',
+                  alignItems: 'flex-end',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  {renderChatInput()}
+                </div>
+                {apiKey && (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isLoading || !isFormValid}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      minWidth: '32px',
+                      minHeight: '32px',
+                      padding: '0',
+                      margin: '0',
+                      backgroundColor: isLoading || !isFormValid ? '#8696a0' : '#00a884',
+                      border: 'none',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
+                      transition: 'background-color 0.2s ease',
+                      flexShrink: 0,
+                      outline: 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isLoading && isFormValid) {
+                        e.target.style.backgroundColor = '#06cf9c';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isLoading && isFormValid) {
+                        e.target.style.backgroundColor = '#00a884';
+                      }
+                    }}
+                    onMouseDown={(e) => {
+                      if (!isLoading && isFormValid) {
+                        e.target.style.transform = 'scale(0.95)';
+                      }
+                    }}
+                    onMouseUp={(e) => {
+                      if (!isLoading && isFormValid) {
+                        e.target.style.transform = 'scale(1)';
+                      }
+                    }}
+                    aria-label="Send message"
+                  >
+                    {isLoading ? (
+                      <svg 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="#000" 
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        style={{ animation: 'spin 1s linear infinite' }}
+                      >
+                        <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+                      </svg>
+                    ) : (
+                      <svg 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="#000"
+                        style={{ 
+                          display: 'block',
+                          margin: '0 auto',
+                        }}
+                      >
+                        <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/>
+                      </svg>
+                    )}
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Advanced mode - keep existing layout */}
+              <div
+                style={{
+                  flex: (hasSubmitted || (response && response.trim())) ? '0 0 auto' : '1 1 100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  padding: '12px',
+                  overflow: 'hidden',
+                  borderBottom: (hasSubmitted || (response && response.trim())) ? '1px solid #1a1a1a' : 'none',
+                  backgroundColor: '#0f0f0f',
+                  minHeight: (hasSubmitted || (response && response.trim())) ? 'auto' : 'auto',
+                }}
+              >
+                {renderAdvancedInput()}
+                {!apiKey && renderApiKeyForm()}
+                {error && (
+                  <div style={{ ...styles.errorMessage, marginTop: '8px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    {error}
+                  </div>
+                )}
+              </div>
+
+              {(hasSubmitted || (response && response.trim())) && (
+                <div
+                  style={{
+                    flex: '0 0 auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '12px',
+                    backgroundColor: '#0f0f0f',
+                    borderBottom: '1px solid #1a1a1a',
+                    minHeight: '200px',
+                    maxHeight: '70vh',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {!apiKey && !(response && response.trim()) ? (
+                    <>
+                      <label style={styles.sectionLabel}>Prompt</label>
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="Enter your prompt here... (Configure API key to enable)"
+                        disabled={true}
+                        style={{
+                          ...styles.textareaBase,
+                          ...styles.textareaDisabled,
+                        }}
+                      />
+                    </>
+                  ) : (
+                    renderTabs()
+                  )}
+                </div>
+              )}
+
+              {(apiKey || (response && response.trim())) && (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    backgroundColor: '#151515',
+                    borderTop: '1px solid #1a1a1a',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  {apiKey ? (
+                    <button
+                      onClick={handleSubmit}
+                      disabled={isLoading || !isFormValid}
+                      style={{
+                        padding: '6px 16px',
+                        backgroundColor: isLoading || !isFormValid ? '#1a1a1a' : '#3b82f6',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: isLoading || !isFormValid ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
+                        letterSpacing: '-0.01em',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isLoading && isFormValid) {
+                          e.target.style.backgroundColor = '#2563eb';
+                          e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
+                          e.target.style.transform = 'translateY(-1px)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isLoading && isFormValid) {
+                          e.target.style.backgroundColor = '#3b82f6';
+                          e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
+                          e.target.style.transform = 'translateY(0)';
+                        }
+                      }}
+                      onMouseDown={(e) => {
+                        if (!isLoading && isFormValid) {
+                          e.target.style.transform = 'translateY(0)';
+                        }
+                      }}
+                    >
+                      {isLoading ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                            <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+                          </svg>
+                          Processing...
+                        </span>
+                      ) : (
+                        'Submit'
+                      )}
+                    </button>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#737373', fontStyle: 'italic' }}>
+                      Configure API key above to submit and get actual response
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -1297,10 +1457,6 @@ export const LLMPlayground = ({
                   outline: 'none',
                   transition: 'all 0.2s ease',
                   fontFamily: 'Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace',
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#3b82f6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
                 }}
                 onBlur={(e) => {
                   e.target.style.borderColor = '#262626';
@@ -1391,34 +1547,96 @@ export const LLMPlayground = ({
           borderTop: '1px solid #2d2d2d',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'flex-start',
+          justifyContent: 'space-between',
           gap: '8px',
           fontSize: '11px',
           color: '#999',
         }}
       >
-        <span>OpenAI key status:</span>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            cursor: 'default',
-          }}
-          title={apiKey ? 'API Key configured' : 'API Key not configured'}
-        >
-          {apiKey ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
-              <polyline points="9 11 12 14 22 4"></polyline>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-            </svg>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="9" y1="9" x2="15" y2="15"></line>
-              <line x1="15" y1="9" x2="9" y2="15"></line>
-            </svg>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>OpenAI key status:</span>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'default',
+            }}
+            title={apiKey ? 'API Key configured' : 'API Key not configured'}
+          >
+            {apiKey ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+                <polyline points="9 11 12 14 22 4"></polyline>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+              </svg>
+            )}
+          </div>
         </div>
+        {apiKey && (
+          <button
+            onClick={() => {
+              if (!forceSettingsOpen) {
+                setIsSettingsOpen(!isSettingsOpen);
+              }
+            }}
+            disabled={forceSettingsOpen}
+            style={{
+              background: isSettingsOpen ? '#2a2a2a' : 'transparent',
+              border: '1px solid #2a2a2a',
+              cursor: forceSettingsOpen ? 'not-allowed' : 'pointer',
+              padding: '4px 8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              color: '#d4d4d4',
+              borderRadius: '4px',
+              transition: 'all 0.2s ease',
+              fontSize: '11px',
+              opacity: forceSettingsOpen ? 0.6 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!forceSettingsOpen) {
+                e.target.style.backgroundColor = '#2a2a2a';
+                e.target.style.borderColor = '#3a3a3a';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!forceSettingsOpen) {
+                e.target.style.backgroundColor = isSettingsOpen ? '#2a2a2a' : 'transparent';
+                e.target.style.borderColor = '#2a2a2a';
+              }
+            }}
+            aria-label="Toggle settings"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+              }}
+            >
+              {isSettingsOpen ? (
+                <polyline points="18 15 12 9 6 15"></polyline>
+              ) : (
+                <polyline points="6 9 12 15 18 9"></polyline>
+              )}
+            </svg>
+            <span>Settings</span>
+          </button>
+        )}
       </div>
     </div>
   );

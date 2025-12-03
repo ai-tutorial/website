@@ -87,7 +87,7 @@ Compare these two approaches to structuring prompts:
 #### ❌ Antipattern
 
 <LLMPlayground 
-  defaultMode="simple"
+  defaultMode="chat"
   defaultInput={`System: You are a helpful assistant.
 User question: What is the return policy?
 Background context: Our store offers a 30-day return window for all purchases. Items must be in original packaging. Electronics require a receipt.
@@ -98,7 +98,7 @@ Previous conversation: Customer asked about shipping times. We responded that st
 #### ✅ Best Practice
 
 <LLMPlayground 
-  defaultMode="simple"
+  defaultMode="chat"
   defaultInput={`<role>You are a helpful assistant</role>
 
 <context>
@@ -157,7 +157,7 @@ This approach uses prompt instructions to request XML output combined with XML p
 
 
 <LLMPlayground 
-  defaultMode="simple"
+  defaultMode="chat"
   defaultInput={`  <task>Classify customer sentiment</task>
 
   <examples>

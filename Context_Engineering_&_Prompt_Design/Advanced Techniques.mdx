@@ -17,9 +17,9 @@ import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
 **The Problem:**
 
 <LLMPlayground 
-  defaultMode="simple"
+  defaultMode="chat"
   defaultInput={`What's 15% tip on a $47.83 bill?`}
-  placeholderResponse={`$7.17`}
+  response={`$7.17`}
   height="400px"
 />
 
@@ -30,11 +30,11 @@ But what if you need to debug a wrong answer? You can't see the reasoning.
 The expected response would be something like (note: the response shown below is a placeholder example, not a real API response):
 
 <LLMPlayground 
-  defaultMode="simple"
+  defaultMode="chat"
   defaultInput={`Calculate 15% tip on a $47.83 bill.
 
 Think step by step:`}
-  placeholderResponse={`Step 1: Convert 15% to decimal: 0.15
+  response={`Step 1: Convert 15% to decimal: 0.15
 Step 2: Multiply: $47.83 × 0.15 = $7.1745
 Step 3: Round to cents: $7.17
 

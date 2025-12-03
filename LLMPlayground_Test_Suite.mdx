@@ -1,0 +1,335 @@
+---
+title: "LLMPlayground Test Suite"
+description: "Visual test suite for LLMPlayground component covering all use cases"
+sidebarTitle: "Playground Test Suite"
+icon: "test"
+---
+
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
+
+# LLMPlayground Visual Test Suite
+
+This page serves as a comprehensive visual test suite for the LLMPlayground component, covering all use cases and edge cases.
+
+## Chat Mode - Basic
+
+Basic chat mode with default settings.
+
+<LLMPlayground 
+  height="400px"
+/>
+
+---
+
+## Chat Mode - With Default Input
+
+Chat mode with pre-filled input text.
+
+<LLMPlayground 
+  defaultInput="What is the capital of France?"
+  height="400px"
+/>
+
+---
+
+## Chat Mode - With keepInput Enabled
+
+Input persists after submission, enabling continuous conversation.
+
+<LLMPlayground 
+  defaultInput="Hello, how are you?"
+  keepInput={true}
+  height="500px"
+/>
+
+---
+
+## Chat Mode - With Response
+
+*Shows placeholder response as an assistant message bubble. When combined with defaultInput, both the input and response are displayed as a conversation.*
+
+<LLMPlayground 
+  defaultInput="What is the capital of France?"
+  response="The capital of France is Paris. It is located in the north-central part of the country and is known for its rich history, art, culture, and iconic landmarks such as the Eiffel Tower, Louvre Museum, and Notre-Dame Cathedral."
+  height="500px"
+/>
+
+---
+
+## Chat Mode - Custom Height (Tall)
+
+Testing with a taller height setting.
+
+<LLMPlayground 
+  defaultInput="Write a short story about a robot learning to paint."
+  height="700px"
+/>
+
+---
+
+## Chat Mode - Custom Height (Short)
+
+Testing with a shorter height setting.
+
+<LLMPlayground 
+  defaultInput="What is 2+2?"
+  height="300px"
+/>
+
+---
+
+## Chat Mode - Custom Model and Temperature
+
+Testing with different model and temperature settings.
+
+<LLMPlayground 
+  defaultInput="Write a creative haiku about artificial intelligence."
+  defaultModel="gpt-4o"
+  defaultTemperature={1.5}
+  height="500px"
+/>
+
+---
+
+## Chat Mode - With Comments in Input
+
+Testing input with comments (comments are filtered out before sending).
+
+<LLMPlayground 
+  defaultInput={`// This is a comment that won't be sent to the API
+What is machine learning?
+
+// Another comment
+Explain it simply.`}
+  height="500px"
+/>
+
+---
+
+## Chat Mode - Empty State
+
+Empty playground with no default input or placeholder.
+
+<LLMPlayground 
+  height="400px"
+/>
+
+---
+
+## Advanced Mode - Basic
+
+Basic advanced mode with system and user messages.
+
+<LLMPlayground 
+  defaultMode="advanced"
+  defaultMessages={[
+    {
+      role: "system",
+      content: "You are a helpful assistant that explains concepts clearly."
+    },
+    {
+      role: "user",
+      content: "What is the difference between AI and machine learning?"
+    }
+  ]}
+  height="500px"
+/>
+
+---
+
+## Advanced Mode - Multiple Messages
+
+Advanced mode with multiple message exchanges.
+
+<LLMPlayground 
+  defaultMode="advanced"
+  defaultMessages={[
+    {
+      role: "system",
+      content: "You are a coding tutor."
+    },
+    {
+      role: "user",
+      content: "What is a closure in JavaScript?"
+    },
+    {
+      role: "assistant",
+      content: "A closure is a function that has access to variables in its outer (enclosing) lexical scope, even after the outer function has returned."
+    },
+    {
+      role: "user",
+      content: "Can you give me an example?"
+    }
+  ]}
+  height="600px"
+/>
+
+---
+
+## Advanced Mode - Empty Messages
+
+Advanced mode with empty message fields.
+
+<LLMPlayground 
+  defaultMode="advanced"
+  height="500px"
+/>
+
+---
+
+## Edge Cases
+
+### Very Long Input
+
+Testing with a very long input text.
+
+<LLMPlayground 
+  defaultInput={`This is a very long input text to test how the component handles lengthy content. It should properly wrap and display the text in a readable format. The textarea should auto-resize to accommodate the content, and the chat interface should handle long messages gracefully. Let's see how it looks with multiple paragraphs and lines of text that extend beyond the normal input length.`}
+  height="500px"
+/>
+
+---
+
+### Special Characters and Unicode
+
+Testing with special characters and unicode.
+
+<LLMPlayground 
+  defaultInput="Hello! 👋 How are you? 你好 ¿Cómo estás? 🚀"
+  height="400px"
+/>
+
+---
+
+### Multi-line Input
+
+Testing with multi-line input.
+
+<LLMPlayground 
+  defaultInput={`Line 1
+Line 2
+Line 3
+Line 4`}
+  height="400px"
+/>
+
+---
+
+## Configuration Tests
+
+### Default Temperature (0.7)
+
+<LLMPlayground 
+  defaultInput="Write a creative story about a cat."
+  defaultTemperature={0.7}
+  height="500px"
+/>
+
+---
+
+### Low Temperature (0.0)
+
+<LLMPlayground 
+  defaultInput="What is the capital of France?"
+  defaultTemperature={0.0}
+  height="400px"
+/>
+
+---
+
+### High Temperature (2.0)
+
+<LLMPlayground 
+  defaultInput="Write a creative poem about space."
+  defaultTemperature={2.0}
+  height="500px"
+/>
+
+---
+
+### Different Models
+
+#### GPT-4o Mini
+
+<LLMPlayground 
+  defaultInput="Explain recursion in programming."
+  defaultModel="gpt-4o-mini"
+  height="400px"
+/>
+
+---
+
+#### GPT-4o
+
+<LLMPlayground 
+  defaultInput="Explain recursion in programming."
+  defaultModel="gpt-4o"
+  height="400px"
+/>
+
+---
+
+#### GPT-4 Turbo
+
+<LLMPlayground 
+  defaultInput="Explain recursion in programming."
+  defaultModel="gpt-4-turbo"
+  height="400px"
+/>
+
+---
+
+#### GPT-3.5 Turbo
+
+<LLMPlayground 
+  defaultInput="Explain recursion in programming."
+  defaultModel="gpt-3.5-turbo"
+  height="400px"
+/>
+
+---
+
+## Chat Interface Tests
+
+### Conversation Flow with keepInput
+
+Test the conversation flow where input persists.
+
+<LLMPlayground 
+  keepInput={true}
+  height="600px"
+/>
+
+---
+
+### Placeholder as First Message
+
+Placeholder appears as the first assistant message.
+
+<LLMPlayground 
+  response="I'm here to help! Ask me anything about programming, science, or general knowledge."
+  height="500px"
+/>
+
+---
+
+## Summary
+
+This test suite covers:
+
+- ✅ Basic simple mode
+- ✅ Simple mode with default input
+- ✅ Simple mode with keepInput enabled
+- ✅ Simple mode with placeholder response
+- ✅ Combined default input and placeholder
+- ✅ Custom heights (short, tall, default)
+- ✅ Custom models and temperatures
+- ✅ Input with comments
+- ✅ Empty states
+- ✅ Advanced mode (basic and multi-message)
+- ✅ Edge cases (long text, special characters, multi-line)
+- ✅ Different model configurations
+- ✅ Conversation flow testing
+
+Use this page to visually verify that all features work correctly and the UI renders properly in different scenarios.
+
