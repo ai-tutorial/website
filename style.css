@@ -1,0 +1,943 @@
+/* LLMPlayground Component Styles */
+
+/* Keyframes */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Section Label */
+.llm-section-label {
+  margin-bottom: 6px;
+  color: #a3a3a3;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Textarea Base Styles */
+.llm-textarea-base {
+  flex: 1;
+  width: 100%;
+  background-color: #1a1a1a;
+  border: 1px solid #262626;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 0.8em;
+  font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-weight: normal;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  line-height: 18px;
+  letter-spacing: 0px;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.llm-textarea-enabled {
+  color: #f5f5f5;
+}
+
+.llm-textarea-disabled {
+  color: #525252;
+  cursor: not-allowed;
+}
+
+/* Error Message */
+.llm-error-message {
+  padding: 8px 10px;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  color: #f87171;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Response Box */
+.llm-response-box {
+  color: #e5e5e5;
+  font-size: 0.8em;
+  font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-weight: normal;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  line-height: 18px;
+  letter-spacing: 0px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  padding: 12px;
+  background-color: #1a1a1a;
+  border-radius: 6px;
+  border: 1px solid #262626;
+}
+
+/* Chat Interface Styles */
+.llm-chat-interface {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background-color: #0b141a;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.llm-chat-message {
+  display: flex;
+  margin-bottom: 8px;
+  padding: 0 12px;
+  position: relative;
+}
+
+.llm-chat-message-user {
+  justify-content: flex-end;
+}
+
+.llm-chat-message-assistant {
+  justify-content: flex-start;
+}
+
+.llm-chat-bubble {
+  max-width: 70%;
+  padding: 8px 12px;
+  color: #e9edef;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  font-family: system-ui, -apple-system, sans-serif;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.llm-chat-bubble-user {
+  border-radius: 18px 18px 4px 18px;
+  background-color: #005c4b;
+}
+
+.llm-chat-bubble-assistant {
+  border-radius: 18px 18px 18px 4px;
+  background-color: #202c33;
+}
+
+.llm-chat-bubble-placeholder {
+  opacity: 0.7;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.llm-chat-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8696a0;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.llm-chat-loading {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+  padding: 0 12px;
+}
+
+.llm-chat-loading-bubble {
+  padding: 8px 12px;
+  border-radius: 18px 18px 18px 4px;
+  background-color: #202c33;
+  color: #8696a0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.llm-chat-loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Chat Input Styles */
+.llm-chat-input-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 32px;
+  max-height: 120px;
+  background-color: #2a3942;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.llm-chat-input-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: hidden;
+  z-index: 1;
+  min-height: 32px;
+  height: auto;
+  padding: 6px 16px;
+  margin: 0;
+  border: none;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: normal;
+  font-style: normal;
+  font-variant: normal;
+  font-stretch: normal;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  letter-spacing: normal;
+  text-align: left;
+  text-decoration: none;
+  text-transform: none;
+  text-indent: 0;
+  text-shadow: none;
+}
+
+.llm-chat-input-placeholder {
+  color: #8696a0;
+  font-style: normal;
+}
+
+.llm-chat-input-textarea {
+  position: relative;
+  z-index: 2;
+  color: transparent;
+  caret-color: #e9edef;
+  background-color: transparent;
+  outline: none;
+  overflow-y: auto;
+  resize: none;
+  min-height: 32px;
+  max-height: 120px;
+  height: 32px;
+  width: 100%;
+  vertical-align: top;
+  overflow: hidden;
+  padding: 6px 16px;
+  margin: 0;
+  border: none;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: normal;
+  font-style: normal;
+  font-variant: normal;
+  font-stretch: normal;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  letter-spacing: normal;
+  text-align: left;
+  text-decoration: none;
+  text-transform: none;
+  text-indent: 0;
+  text-shadow: none;
+}
+
+.llm-chat-comment-line {
+  color: #6a9955;
+  font-style: italic;
+}
+
+.llm-chat-normal-line {
+  color: #e9edef;
+  font-style: normal;
+}
+
+/* API Key Form Styles */
+.llm-api-key-form {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 2px solid #f59e0b;
+  border-radius: 8px;
+  background-color: rgba(245, 158, 11, 0.05);
+}
+
+.llm-api-key-form-title {
+  margin: 0 0 8px 0;
+  color: #f5f5f5;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.llm-api-key-form-description {
+  margin: 0;
+  color: #a3a3a3;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.llm-api-key-input {
+  flex: 1;
+  padding: 8px;
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  border: 1px solid #262626;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  font-weight: normal;
+  font-feature-settings: "liga" 0, "calt" 0;
+  line-height: 18px;
+  letter-spacing: 0px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.llm-api-key-input-error {
+  border: 1px solid #ef4444;
+}
+
+.llm-api-key-save-button {
+  padding: 8px 16px;
+  background-color: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  height: 36px;
+}
+
+.llm-api-key-save-button:disabled {
+  background-color: #1a1a1a;
+  cursor: not-allowed;
+}
+
+/* Advanced Input Styles */
+.llm-advanced-input-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.llm-advanced-message-box {
+  position: relative;
+  background-color: #151515;
+  border: 1px solid #262626;
+  border-radius: 6px;
+  padding: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.llm-advanced-message-box:hover {
+  border-color: #3a3a3a;
+}
+
+.llm-advanced-message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.llm-advanced-message-number {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #737373;
+  min-width: 50px;
+}
+
+.llm-advanced-role-select {
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  font-family: Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+}
+
+.llm-advanced-role-select-system {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.llm-advanced-role-select-user {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.llm-advanced-role-select-assistant {
+  background-color: rgba(168, 85, 247, 0.1);
+  color: #a78bfa;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.llm-advanced-remove-button {
+  padding: 2px 6px;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  transition: all 0.2s ease;
+}
+
+.llm-advanced-remove-button:disabled {
+  background-color: #1a1a1a;
+  color: #525252;
+  border-color: #262626;
+  cursor: not-allowed;
+}
+
+.llm-advanced-remove-button:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.llm-advanced-add-button {
+  padding: 6px 10px;
+  background-color: #1a1a1a;
+  color: #a3a3a3;
+  border: 1px dashed #262626;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.llm-advanced-add-button:hover {
+  background-color: #262626;
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+/* Tabs Styles */
+.llm-tabs-container {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.llm-tab-button {
+  padding: 6px 12px;
+  background-color: transparent;
+  color: #737373;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 4px 4px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace;
+}
+
+.llm-tab-button-active {
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  border-bottom: 2px solid #3b82f6;
+}
+
+.llm-tabs-content {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.llm-tab-loading {
+  color: #525252;
+  font-size: 12px;
+  font-style: italic;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: #1a1a1a;
+  border-radius: 6px;
+  border: 1px solid #262626;
+  min-height: 100px;
+}
+
+.llm-tab-empty {
+  color: #525252;
+  font-size: 12px;
+  font-style: italic;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background-color: #1a1a1a;
+  border-radius: 6px;
+  border: 1px solid #262626;
+  min-height: 100px;
+}
+
+.llm-json-viewer {
+  min-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  padding: 12px;
+  font-size: 0.7em;
+  line-height: 16px;
+  background-color: #0f0f0f;
+  border: 1px solid #1a1a1a;
+}
+
+/* Submit Button Styles */
+.llm-submit-button {
+  padding: 6px 16px;
+  background-color: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  letter-spacing: -0.01em;
+}
+
+.llm-submit-button:disabled {
+  background-color: #1a1a1a;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.llm-submit-button:hover:not(:disabled) {
+  background-color: #2563eb;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.llm-submit-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.llm-chat-send-button {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 0;
+  background-color: #00a884;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.llm-chat-send-button:disabled {
+  background-color: #8696a0;
+  cursor: not-allowed;
+}
+
+.llm-chat-send-button:hover:not(:disabled) {
+  background-color: #06cf9c;
+}
+
+.llm-chat-send-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* Settings Panel Styles */
+.llm-settings-panel {
+  width: 220px;
+  border-left: 1px solid #1a1a1a;
+  background-color: #151515;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.llm-settings-title {
+  margin: 0 0 12px 0;
+  color: #f5f5f5;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.llm-settings-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #a3a3a3;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.llm-settings-select {
+  width: 100%;
+  padding: 8px 10px;
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  border: 1px solid #262626;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace;
+}
+
+.llm-settings-select:focus {
+  border-color: #3b82f6;
+}
+
+.llm-settings-range-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.llm-settings-range-value {
+  color: #737373;
+  font-size: 12px;
+  font-family: Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  font-weight: 600;
+  background-color: #1a1a1a;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid #262626;
+}
+
+.llm-settings-range {
+  width: 100%;
+  height: 6px;
+  background-color: #1a1a1a;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+.llm-settings-range-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #525252;
+}
+
+/* Footer Styles */
+.llm-footer {
+  padding: 4px 12px;
+  background-color: #1e1e1e;
+  border-top: 1px solid #2d2d2d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: #999;
+}
+
+.llm-footer-toggle-button {
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #d4d4d4;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 11px;
+}
+
+.llm-footer-toggle-button:hover {
+  background-color: #2a2a2a;
+  border-color: #3a3a3a;
+}
+
+.llm-footer-toggle-button-active {
+  background: #2a2a2a;
+}
+
+.llm-footer-toggle-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.llm-footer-toggle-icon {
+  transition: transform 0.2s ease;
+}
+
+.llm-footer-toggle-icon-open {
+  transform: rotate(180deg);
+}
+
+/* Warning Banner Styles */
+.llm-warning-banner {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 6px;
+  margin-left: 12px;
+  margin-right: 12px;
+  font-size: 12px;
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Main Container Styles */
+.llm-playground-container {
+  width: 100%;
+  background-color: #0f0f0f;
+  border-radius: 12px;
+  border: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+.llm-playground-container-chat {
+  background-color: #0b141a;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.llm-playground-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.llm-playground-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.llm-playground-input-area {
+  padding: 8px 12px;
+  background-color: #0b141a;
+  border-top: 1px solid #202c33;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.llm-playground-advanced-input-area {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  overflow: hidden;
+  background-color: #0f0f0f;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.llm-playground-response-area {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  background-color: #0f0f0f;
+  border-bottom: 1px solid #1a1a1a;
+  min-height: 200px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.llm-playground-actions-area {
+  padding: 10px 12px;
+  background-color: #151515;
+  border-top: 1px solid #1a1a1a;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Additional utility classes */
+.llm-api-key-form-link {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.llm-api-key-form-link:hover {
+  text-decoration: underline;
+}
+
+.llm-form-group {
+  margin-bottom: 12px;
+}
+
+.llm-form-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.llm-error-message-small {
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.llm-error-message-top {
+  margin-top: 8px;
+}
+
+.llm-chat-input-wrapper {
+  flex: 1;
+}
+
+.llm-json-viewer-empty {
+  color: #525252;
+  font-style: italic;
+}
+
+.llm-response-box-placeholder {
+  color: #a3a3a3;
+  font-style: italic;
+}
+
+.llm-tab-loading-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.llm-submit-button-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.llm-submit-button-loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.llm-chat-send-icon {
+  display: block;
+  margin: 0 auto;
+}
+
+.llm-chat-send-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.llm-footer-status-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.llm-footer-status-icon {
+  display: flex;
+  align-items: center;
+  cursor: default;
+}
+
+.llm-api-key-form-wrapper {
+  padding: 12px;
+  border-top: 1px solid #1a1a1a;
+}
+
+.llm-error-wrapper {
+  padding: 8px 12px;
+  border-top: 1px solid #1a1a1a;
+}
+
+.llm-advanced-message-header-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.llm-settings-option {
+  background-color: #1a1a1a;
+}
+
+.llm-config-message {
+  font-size: 11px;
+  color: #737373;
+  font-style: italic;
+}
+
+.llm-api-key-form-section {
+  margin-bottom: 12px;
+}
+
+.llm-advanced-textarea {
+  min-height: 60px;
+  padding: 8px;
+  font-size: 0.75em;
+  line-height: 16px;
+  overflow-y: hidden;
+  resize: none;
+  height: auto;
+}
+
+.llm-response-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.llm-playground-container-base {
+  width: 100%;
+}
+

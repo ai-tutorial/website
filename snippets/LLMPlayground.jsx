@@ -46,69 +46,7 @@ export const LLMPlayground = ({
   };
 
   // ==================== STYLES ====================
-  const styles = {
-    sectionLabel: {
-      marginBottom: '6px',
-      color: '#a3a3a3',
-      fontSize: '10px',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      letterSpacing: '0.08em',
-    },
-    textareaBase: {
-      flex: 1,
-      width: '100%',
-      backgroundColor: '#1a1a1a',
-      border: '1px solid #262626',
-      borderRadius: '6px',
-      padding: '10px',
-      fontSize: '0.8em',
-      fontFamily: 'var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-      fontWeight: 'normal',
-      fontFeatureSettings: 'normal',
-      fontVariationSettings: 'normal',
-      lineHeight: '18px',
-      letterSpacing: '0px',
-      resize: 'none',
-      outline: 'none',
-      boxSizing: 'border-box',
-      transition: 'all 0.2s ease',
-    },
-    textareaEnabled: {
-      color: '#f5f5f5',
-    },
-    textareaDisabled: {
-      color: '#525252',
-      cursor: 'not-allowed',
-    },
-    errorMessage: {
-      padding: '8px 10px',
-      backgroundColor: 'rgba(239, 68, 68, 0.1)',
-      border: '1px solid rgba(239, 68, 68, 0.3)',
-      borderRadius: '6px',
-      color: '#f87171',
-      fontSize: '12px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-    },
-    responseBox: {
-      color: '#e5e5e5',
-      fontSize: '0.8em',
-      fontFamily: 'var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-      fontWeight: 'normal',
-      fontFeatureSettings: 'normal',
-      fontVariationSettings: 'normal',
-      lineHeight: '18px',
-      letterSpacing: '0px',
-      whiteSpace: 'pre-wrap',
-      wordWrap: 'break-word',
-      padding: '12px',
-      backgroundColor: '#1a1a1a',
-      borderRadius: '6px',
-      border: '1px solid #262626',
-    },
-  };
+  // Styles are now in style.css - using CSS classes instead
 
   // ==================== STATE ====================
   const isAdvancedMode = defaultMode === 'advanced' || (defaultMessages && defaultMessages.length > 0);
@@ -399,33 +337,13 @@ export const LLMPlayground = ({
     return (
       <div
         key={index}
-        style={{
-          display: 'flex',
-          justifyContent: isUser ? 'flex-end' : 'flex-start',
-          marginBottom: '8px',
-          padding: '0 12px',
-          position: 'relative',
-        }}
+        className={isUser ? 'llm-chat-message llm-chat-message-user' : 'llm-chat-message llm-chat-message-assistant'}
       >
         <div
-          style={{
-            maxWidth: '70%',
-            padding: '8px 12px',
-            borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-            backgroundColor: isUser ? '#005c4b' : '#202c33',
-            color: '#e9edef',
-            fontSize: '14px',
-            lineHeight: '1.4',
-            wordWrap: 'break-word',
-            whiteSpace: 'pre-wrap',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
-          opacity: isPlaceholder ? 0.7 : 1,
-          border: isPlaceholder ? '1px dashed rgba(255, 255, 255, 0.3)' : 'none',
-        }}
-      >
-        {message.content}
-      </div>
+          className={`llm-chat-bubble ${isUser ? 'llm-chat-bubble-user' : 'llm-chat-bubble-assistant'} ${isPlaceholder ? 'llm-chat-bubble-placeholder' : ''}`}
+        >
+          {message.content}
+        </div>
       </div>
     );
   };
@@ -452,34 +370,9 @@ export const LLMPlayground = ({
     const hasPlaceholderMessages = placeholderMessages.length > 0;
     
     return (
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-          backgroundColor: '#0b141a',
-          paddingTop: '12px',
-          paddingBottom: '12px',
-        }}
-      >
+      <div className="llm-chat-interface">
         {hasPlaceholderMessages && (
-          <div
-            style={{
-              padding: '8px 12px',
-              marginBottom: '8px',
-              backgroundColor: 'rgba(245, 158, 11, 0.1)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              borderRadius: '6px',
-              marginLeft: '12px',
-              marginRight: '12px',
-              fontSize: '12px',
-              color: '#fbbf24',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
+          <div className="llm-warning-banner">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
             </svg>
@@ -487,44 +380,16 @@ export const LLMPlayground = ({
           </div>
         )}
         {allMessages.length === 0 && placeholderMessages.length === 0 && !isLoading && (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#8696a0',
-              fontSize: '14px',
-              fontStyle: 'italic',
-            }}
-          >
+          <div className="llm-chat-empty-state">
             Start a conversation with OpenAI LLM using the API key you provided!
           </div>
         )}
         {placeholderMessages.map((msg, idx) => renderChatMessage(msg, `placeholder-${idx}`, true))}
         {allMessages.map((msg, idx) => renderChatMessage(msg, `real-${idx}`, false))}
         {isLoading && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'flex-start',
-              marginBottom: '8px',
-              padding: '0 12px',
-            }}
-          >
-            <div
-              style={{
-                padding: '8px 12px',
-                borderRadius: '18px 18px 18px 4px',
-                backgroundColor: '#202c33',
-                color: '#8696a0',
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+          <div className="llm-chat-loading">
+            <div className="llm-chat-loading-bubble">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="llm-chat-loading-spinner">
                 <path d="M21 12a9 9 0 11-6.219-8.56"></path>
               </svg>
               <span>Thinking...</span>
@@ -537,27 +402,9 @@ export const LLMPlayground = ({
   };
 
   const renderApiKeyForm = () => (
-    <div
-      style={{
-        marginBottom: '12px',
-        padding: '12px',
-        border: '2px solid #f59e0b',
-        borderRadius: '8px',
-        backgroundColor: 'rgba(245, 158, 11, 0.05)',
-      }}
-    >
-      <div style={{ marginBottom: '12px' }}>
-        <h3
-          style={{
-            margin: '0 0 8px 0',
-            color: '#f5f5f5',
-            fontSize: '13px',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
+    <div className="llm-api-key-form">
+      <div className="llm-api-key-form-section">
+        <h3 className="llm-api-key-form-title">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
             <line x1="12" y1="9" x2="12" y2="13"></line>
@@ -565,20 +412,13 @@ export const LLMPlayground = ({
           </svg>
           <span>Configure OpenAI API Key to make the most of the tutorial</span>
         </h3>
-        <p
-          style={{
-            margin: '0',
-            color: '#a3a3a3',
-            fontSize: '11px',
-            lineHeight: '1.5',
-          }}
-        >
+        <p className="llm-api-key-form-description">
           Your API key is stored locally in your browser's storage and is never transmitted to external servers.{' '}
           <a
             href="https://platform.openai.com/api-keys"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#3b82f6', textDecoration: 'none' }}
+            className="llm-api-key-form-link"
           >
             Don't have an API key? Get one here
           </a>
@@ -586,8 +426,8 @@ export const LLMPlayground = ({
       </div>
       
       <form onSubmit={handleApiKeySubmit}>
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+        <div className="llm-form-group">
+          <div className="llm-form-row">
             <input
               id="api-key-input"
               type="password"
@@ -598,23 +438,7 @@ export const LLMPlayground = ({
               }}
               placeholder="OpenAI API Key (sk-...)"
               disabled={isSavingKey}
-              style={{
-                flex: 1,
-                padding: '8px',
-                backgroundColor: '#1a1a1a',
-                color: '#f5f5f5',
-                border: error ? '1px solid #ef4444' : '1px solid #262626',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontFamily: 'Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace',
-                fontWeight: 'normal',
-                fontFeatureSettings: '"liga" 0, "calt" 0',
-                lineHeight: '18px',
-                letterSpacing: '0px',
-                boxSizing: 'border-box',
-                outline: 'none',
-                transition: 'border-color 0.2s',
-              }}
+              className={error ? 'llm-api-key-input llm-api-key-input-error' : 'llm-api-key-input'}
               onBlur={(e) => {
                 e.target.style.borderColor = error ? '#ef4444' : '#262626';
               }}
@@ -622,18 +446,9 @@ export const LLMPlayground = ({
             <button
               type="submit"
               disabled={isSavingKey || !apiKeyInput.trim()}
+              className="llm-api-key-save-button"
               style={{
-                padding: '8px 16px',
                 backgroundColor: isSavingKey || !apiKeyInput.trim() ? '#1a1a1a' : '#3b82f6',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: isSavingKey || !apiKeyInput.trim() ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap',
-                height: '36px',
               }}
             >
               {isSavingKey ? 'Saving...' : 'Save'}
@@ -641,7 +456,7 @@ export const LLMPlayground = ({
           </div>
         </div>
         {error && (
-          <div style={{ ...styles.errorMessage, marginBottom: '10px', padding: '6px 8px', fontSize: '11px' }}>
+          <div className="llm-error-message llm-error-message-small">
             {error}
           </div>
         )}
@@ -650,62 +465,11 @@ export const LLMPlayground = ({
   );
 
   const renderChatInput = () => {
-    const commonTextStyles = {
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      fontSize: '15px',
-      lineHeight: '20px',
-      fontWeight: 'normal',
-      fontStyle: 'normal',
-      fontVariant: 'normal',
-      fontStretch: 'normal',
-      fontFeatureSettings: 'normal',
-      fontVariationSettings: 'normal',
-      letterSpacing: 'normal',
-      textAlign: 'left',
-      textDecoration: 'none',
-      textTransform: 'none',
-      textIndent: '0',
-      textShadow: 'none',
-    };
-
-    const commonLayoutStyles = {
-      padding: '6px 16px',
-      margin: '0',
-      border: 'none',
-      boxSizing: 'border-box',
-    };
-
     return (
-      <div
-        style={{
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: '32px',
-          maxHeight: '120px',
-          backgroundColor: '#2a3942',
-          borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-        }}
-      >
+      <div className="llm-chat-input-container">
         <div
           ref={textareaBackgroundRef}
-          style={{
-            position: 'absolute',
-            top: '0',
-            left: '0',
-            right: '0',
-            bottom: '0',
-            pointerEvents: 'none',
-            whiteSpace: 'pre-wrap',
-            wordWrap: 'break-word',
-            overflow: 'hidden',
-            zIndex: 1,
-            minHeight: '32px',
-            height: 'auto',
-            ...commonTextStyles,
-            ...commonLayoutStyles,
-          }}
+          className="llm-chat-input-background"
         >
           {input ? (
             input.split('\n').map((line, idx) => {
@@ -713,10 +477,7 @@ export const LLMPlayground = ({
               return (
                 <span
                   key={idx}
-                  style={{
-                    color: isComment ? '#6a9955' : '#e9edef',
-                    fontStyle: isComment ? 'italic' : 'normal',
-                  }}
+                  className={isComment ? 'llm-chat-comment-line' : 'llm-chat-normal-line'}
                 >
                   {line || '\u00A0'}
                   {idx < input.split('\n').length - 1 && '\n'}
@@ -724,7 +485,7 @@ export const LLMPlayground = ({
               );
             })
           ) : (
-            <span style={{ color: '#8696a0', fontStyle: 'normal' }}>
+            <span className="llm-chat-input-placeholder">
               Type a message
             </span>
           )}
@@ -746,24 +507,7 @@ export const LLMPlayground = ({
           }}
           placeholder=""
           disabled={isLoading}
-          style={{
-            position: 'relative',
-            zIndex: 2,
-            color: 'transparent',
-            caretColor: '#e9edef',
-            backgroundColor: 'transparent',
-            outline: 'none',
-            overflowY: 'auto',
-            resize: 'none',
-            minHeight: '32px',
-            maxHeight: '120px',
-            height: '32px',
-            width: '100%',
-            verticalAlign: 'top',
-            overflow: 'hidden',
-            ...commonTextStyles,
-            ...commonLayoutStyles,
-          }}
+          className="llm-chat-input-textarea"
           onBlur={(e) => {
             const container = e.target.parentElement;
             if (container) {
@@ -777,27 +521,11 @@ export const LLMPlayground = ({
   };
 
   const renderAdvancedInput = () => (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        overflowY: 'auto',
-        minHeight: 0,
-      }}
-    >
+    <div className="llm-advanced-input-container">
       {messages.map((message, index) => (
         <div 
           key={index} 
-          style={{ 
-            position: 'relative',
-            backgroundColor: '#151515',
-            border: '1px solid #262626',
-            borderRadius: '6px',
-            padding: '8px',
-            transition: 'border-color 0.2s ease',
-          }}
+          className="llm-advanced-message-box"
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = '#3a3a3a';
           }}
@@ -805,16 +533,9 @@ export const LLMPlayground = ({
             e.currentTarget.style.borderColor = '#262626';
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0 }}>
-              <span style={{ 
-                fontSize: '9px', 
-                fontWeight: 700, 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.05em',
-                color: '#737373',
-                minWidth: '50px'
-              }}>
+          <div className="llm-advanced-message-header">
+            <div className="llm-advanced-message-header-row">
+              <span className="llm-advanced-message-number">
                 #{index + 1}
               </span>
               <select
@@ -825,27 +546,11 @@ export const LLMPlayground = ({
                   setMessages(newMessages);
                 }}
                 disabled={isLoading}
-                style={{
-                  padding: '3px 6px',
-                  backgroundColor: message.role === 'system' ? 'rgba(59, 130, 246, 0.1)' : 
-                                  message.role === 'user' ? 'rgba(34, 197, 94, 0.1)' : 
-                                  'rgba(168, 85, 247, 0.1)',
-                  color: message.role === 'system' ? '#60a5fa' : 
-                         message.role === 'user' ? '#4ade80' : 
-                         '#a78bfa',
-                  border: `1px solid ${message.role === 'system' ? 'rgba(59, 130, 246, 0.3)' : 
-                                        message.role === 'user' ? 'rgba(34, 197, 94, 0.3)' : 
-                                        'rgba(168, 85, 247, 0.3)'}`,
-                  borderRadius: '4px',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  outline: 'none',
-                  fontFamily: 'Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  transition: 'all 0.2s ease',
-                }}
+                className={`llm-advanced-role-select ${
+                  message.role === 'system' ? 'llm-advanced-role-select-system' :
+                  message.role === 'user' ? 'llm-advanced-role-select-user' :
+                  'llm-advanced-role-select-assistant'
+                }`}
                 onBlur={(e) => {
                   e.target.style.boxShadow = 'none';
                 }}
@@ -862,21 +567,7 @@ export const LLMPlayground = ({
                 setMessages(newMessages.length > 0 ? newMessages : [{ role: 'system', content: '' }]);
               }}
               disabled={isLoading || messages.length <= 1}
-              style={{
-                padding: '2px 6px',
-                backgroundColor: messages.length <= 1 ? '#1a1a1a' : 'rgba(239, 68, 68, 0.1)',
-                color: messages.length <= 1 ? '#525252' : '#f87171',
-                border: `1px solid ${messages.length <= 1 ? '#262626' : 'rgba(239, 68, 68, 0.3)'}`,
-                borderRadius: '4px',
-                fontSize: '10px',
-                cursor: messages.length <= 1 ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '20px',
-                height: '20px',
-                transition: 'all 0.2s ease',
-              }}
+              className="llm-advanced-remove-button"
               onMouseEnter={(e) => {
                 if (!isLoading && messages.length > 1) {
                   e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
@@ -912,17 +603,7 @@ export const LLMPlayground = ({
             }}
             placeholder={`Enter ${message.role} message content...`}
             disabled={isLoading}
-            style={{
-              ...styles.textareaBase,
-              ...styles.textareaEnabled,
-              minHeight: '60px',
-              padding: '8px',
-              fontSize: '0.75em',
-              lineHeight: '16px',
-              overflowY: 'hidden',
-              resize: 'none',
-              height: 'auto',
-            }}
+            className="llm-textarea-base llm-textarea-enabled llm-advanced-textarea"
           />
         </div>
       ))}
@@ -933,23 +614,7 @@ export const LLMPlayground = ({
           setMessages([...messages, { role: 'user', content: '' }]);
         }}
         disabled={isLoading}
-        style={{
-          padding: '6px 10px',
-          backgroundColor: '#1a1a1a',
-          color: '#a3a3a3',
-          border: '1px dashed #262626',
-          borderRadius: '6px',
-          fontSize: '10px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '4px',
-          transition: 'all 0.2s ease',
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-        }}
+        className="llm-advanced-add-button"
         onMouseEnter={(e) => {
           e.target.style.backgroundColor = '#262626';
           e.target.style.borderColor = '#3b82f6';
@@ -972,7 +637,7 @@ export const LLMPlayground = ({
 
   const renderTabs = () => (
     <>
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', borderBottom: '1px solid #1a1a1a' }}>
+      <div className="llm-tabs-container">
         {[
           { key: TABS.RESPONSE, label: 'Response' },
           { key: TABS.REQUEST, label: 'API Request JSON' },
@@ -982,84 +647,36 @@ export const LLMPlayground = ({
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: activeTab === tab.key ? '#1a1a1a' : 'transparent',
-              color: activeTab === tab.key ? '#f5f5f5' : '#737373',
-              border: 'none',
-              borderBottom: activeTab === tab.key ? '2px solid #3b82f6' : '2px solid transparent',
-              borderRadius: '4px 4px 0 0',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              fontFamily: 'Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace',
-            }}
+            className={activeTab === tab.key ? 'llm-tab-button llm-tab-button-active' : 'llm-tab-button'}
           >
             {tab.label}
           </button>
         ))}
       </div>
       
-      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <div className="llm-tabs-content">
         {activeTab === TABS.RESPONSE && (
           <>
             {output ? (
-              <div style={styles.responseBox}>{output}</div>
+              <div className="llm-response-box">{output}</div>
             ) : isLoading ? (
-              <div
-                style={{
-                  color: '#525252',
-                  fontSize: '12px',
-                  fontStyle: 'italic',
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '12px',
-                  backgroundColor: '#1a1a1a',
-                  borderRadius: '6px',
-                  border: '1px solid #262626',
-                  minHeight: '100px',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+              <div className="llm-tab-loading">
+                <span className="llm-tab-loading-content">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="llm-chat-loading-spinner">
                     <path d="M21 12a9 9 0 11-6.219-8.56"></path>
                   </svg>
                   Generating response...
                 </span>
               </div>
             ) : response ? (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                }}
-              >
-                <label style={styles.sectionLabel}>Response (Expected response, press submit to get actual response)</label>
-                <div style={{ ...styles.responseBox, color: '#a3a3a3', fontStyle: 'italic' }}>
+              <div className="llm-response-section">
+                <label className="llm-section-label">Response (Expected response, press submit to get actual response)</label>
+                <div className="llm-response-box llm-response-box-placeholder">
                   {response}
                 </div>
               </div>
             ) : (
-              <div
-                style={{
-                  color: '#525252',
-                  fontSize: '12px',
-                  fontStyle: 'italic',
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '12px',
-                  backgroundColor: '#1a1a1a',
-                  borderRadius: '6px',
-                  border: '1px solid #262626',
-                  minHeight: '100px',
-                }}
-              >
+              <div className="llm-tab-empty">
                 Response will appear here
               </div>
             )}
@@ -1068,22 +685,10 @@ export const LLMPlayground = ({
         
         {activeTab === TABS.REQUEST && (
           <div
-            style={{
-              ...styles.textareaBase,
-              ...styles.textareaEnabled,
-              minHeight: '200px',
-              overflowY: 'auto',
-              whiteSpace: 'pre-wrap',
-              wordWrap: 'break-word',
-              padding: '12px',
-              fontSize: '0.7em',
-              lineHeight: '16px',
-              backgroundColor: '#0f0f0f',
-              border: '1px solid #1a1a1a',
-            }}
+            className="llm-textarea-base llm-textarea-enabled llm-json-viewer"
           >
             {lastSentJson ? JSON.stringify(lastSentJson, null, 2) : (
-              <span style={{ color: '#525252', fontStyle: 'italic' }}>
+              <span className="llm-json-viewer-empty">
                 No request data. Submit a request to see the JSON.
               </span>
             )}
@@ -1092,22 +697,10 @@ export const LLMPlayground = ({
         
         {activeTab === TABS.API_RESPONSE && (
           <div
-            style={{
-              ...styles.textareaBase,
-              ...styles.textareaEnabled,
-              minHeight: '200px',
-              overflowY: 'auto',
-              whiteSpace: 'pre-wrap',
-              wordWrap: 'break-word',
-              padding: '12px',
-              fontSize: '0.7em',
-              lineHeight: '16px',
-              backgroundColor: '#0f0f0f',
-              border: '1px solid #1a1a1a',
-            }}
+            className="llm-textarea-base llm-textarea-enabled llm-json-viewer"
           >
             {lastResponseJson ? JSON.stringify(lastResponseJson, null, 2) : (
-              <span style={{ color: '#525252', fontStyle: 'italic' }}>
+              <span className="llm-json-viewer-empty">
                 No response data. Submit a request to see the API response JSON.
               </span>
             )}
@@ -1125,35 +718,13 @@ export const LLMPlayground = ({
   // ==================== MAIN RENDER ====================
   return (
     <div
+      className={mode === 'chat' ? 'llm-playground-container llm-playground-container-chat llm-playground-container-base' : 'llm-playground-container llm-playground-container-base'}
       style={{
-        width: '100%',
         height,
-        backgroundColor: mode === 'chat' ? '#0b141a' : '#0f0f0f',
-        borderRadius: '12px',
-        border: '1px solid #2a2a2a',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        fontFamily: mode === 'chat' ? 'system-ui, -apple-system, sans-serif' : 'Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          flex: 1,
-          overflow: 'hidden',
-          position: 'relative',
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
+      <div className="llm-playground-main">
+        <div className="llm-playground-content">
           {mode === 'chat' ? (
             <>
               {/* Chat messages area */}
@@ -1161,15 +732,15 @@ export const LLMPlayground = ({
               
               {/* API Key form - shown above input if not configured */}
               {!apiKey && (
-                <div style={{ padding: '12px', borderTop: '1px solid #1a1a1a' }}>
+                <div className="llm-api-key-form-wrapper">
                   {renderApiKeyForm()}
                 </div>
               )}
               
               {/* Error message */}
               {error && (
-                <div style={{ padding: '8px 12px', borderTop: '1px solid #1a1a1a' }}>
-                  <div style={styles.errorMessage}>
+                <div className="llm-error-wrapper">
+                  <div className="llm-error-message">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -1181,40 +752,17 @@ export const LLMPlayground = ({
               )}
               
               {/* Input area at bottom */}
-              <div
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#0b141a',
-                  borderTop: '1px solid #202c33',
-                  display: 'flex',
-                  gap: '8px',
-                  alignItems: 'flex-end',
-                }}
-              >
-                <div style={{ flex: 1 }}>
+              <div className="llm-playground-input-area">
+                <div className="llm-chat-input-wrapper">
                   {renderChatInput()}
                 </div>
                 {apiKey && (
                   <button
                     onClick={handleSubmit}
                     disabled={isLoading || !isFormValid}
+                    className="llm-chat-send-button"
                     style={{
-                      width: '32px',
-                      height: '32px',
-                      minWidth: '32px',
-                      minHeight: '32px',
-                      padding: '0',
-                      margin: '0',
                       backgroundColor: isLoading || !isFormValid ? '#8696a0' : '#00a884',
-                      border: 'none',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
-                      transition: 'background-color 0.2s ease',
-                      flexShrink: 0,
-                      outline: 'none',
                     }}
                     onMouseEnter={(e) => {
                       if (!isLoading && isFormValid) {
@@ -1247,7 +795,7 @@ export const LLMPlayground = ({
                         stroke="#000" 
                         strokeWidth="2.5"
                         strokeLinecap="round"
-                        style={{ animation: 'spin 1s linear infinite' }}
+                        className="llm-chat-send-spinner"
                       >
                         <path d="M21 12a9 9 0 11-6.219-8.56"></path>
                       </svg>
@@ -1257,10 +805,7 @@ export const LLMPlayground = ({
                         height="16" 
                         viewBox="0 0 24 24" 
                         fill="#000"
-                        style={{ 
-                          display: 'block',
-                          margin: '0 auto',
-                        }}
+                        className="llm-chat-send-icon"
                       >
                         <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/>
                       </svg>
@@ -1273,21 +818,16 @@ export const LLMPlayground = ({
             <>
               {/* Advanced mode - keep existing layout */}
               <div
+                className="llm-playground-advanced-input-area"
                 style={{
                   flex: (hasSubmitted || (response && response.trim())) ? '0 0 auto' : '1 1 100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  padding: '12px',
-                  overflow: 'hidden',
                   borderBottom: (hasSubmitted || (response && response.trim())) ? '1px solid #1a1a1a' : 'none',
-                  backgroundColor: '#0f0f0f',
-                  minHeight: (hasSubmitted || (response && response.trim())) ? 'auto' : 'auto',
                 }}
               >
                 {renderAdvancedInput()}
                 {!apiKey && renderApiKeyForm()}
                 {error && (
-                  <div style={{ ...styles.errorMessage, marginTop: '8px' }}>
+                  <div className="llm-error-message llm-error-message-top">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -1299,31 +839,16 @@ export const LLMPlayground = ({
               </div>
 
               {(hasSubmitted || (response && response.trim())) && (
-                <div
-                  style={{
-                    flex: '0 0 auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    padding: '12px',
-                    backgroundColor: '#0f0f0f',
-                    borderBottom: '1px solid #1a1a1a',
-                    minHeight: '200px',
-                    maxHeight: '70vh',
-                    overflowY: 'auto',
-                  }}
-                >
+                <div className="llm-playground-response-area">
                   {!apiKey && !(response && response.trim()) ? (
                     <>
-                      <label style={styles.sectionLabel}>Prompt</label>
+                      <label className="llm-section-label">Prompt</label>
                     <textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Enter your prompt here... (Configure API key to enable)"
                         disabled={true}
-                        style={{
-                          ...styles.textareaBase,
-                          ...styles.textareaDisabled,
-                        }}
+                        className="llm-textarea-base llm-textarea-disabled"
                       />
                     </>
                   ) : (
@@ -1333,31 +858,15 @@ export const LLMPlayground = ({
               )}
 
               {(apiKey || (response && response.trim())) && (
-                <div
-                  style={{
-                    padding: '10px 12px',
-                    backgroundColor: '#151515',
-                    borderTop: '1px solid #1a1a1a',
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                  }}
-                >
+                <div className="llm-playground-actions-area">
                   {apiKey ? (
                     <button
                       onClick={handleSubmit}
                       disabled={isLoading || !isFormValid}
+                      className="llm-submit-button"
                       style={{
-                        padding: '6px 16px',
                         backgroundColor: isLoading || !isFormValid ? '#1a1a1a' : '#3b82f6',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: isLoading || !isFormValid ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s ease',
                         boxShadow: isLoading || !isFormValid ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
-                        letterSpacing: '-0.01em',
                       }}
                       onMouseEnter={(e) => {
                         if (!isLoading && isFormValid) {
@@ -1380,8 +889,8 @@ export const LLMPlayground = ({
                       }}
                     >
                       {isLoading ? (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                        <span className="llm-submit-button-loading">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="llm-submit-button-loading-spinner">
                             <path d="M21 12a9 9 0 11-6.219-8.56"></path>
                           </svg>
                           Processing...
@@ -1391,7 +900,7 @@ export const LLMPlayground = ({
                       )}
                     </button>
                   ) : (
-                    <div style={{ fontSize: '11px', color: '#737373', fontStyle: 'italic' }}>
+                    <div className="llm-config-message">
                       Configure API key above to submit and get actual response
                     </div>
                   )}
@@ -1403,68 +912,33 @@ export const LLMPlayground = ({
 
         {apiKey && isSettingsOpen && (
           <div
+            className="llm-settings-panel"
             style={{
               width: `${SETTINGS_PANEL_WIDTH}px`,
-              borderLeft: '1px solid #1a1a1a',
-              backgroundColor: '#151515',
-              padding: '12px',
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
             }}
           >
             <div>
-              <h4
-                style={{
-                  margin: '0 0 12px 0',
-                  color: '#f5f5f5',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
+              <h4 className="llm-settings-title">
                 Settings
               </h4>
             </div>
 
             <div>
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  color: '#a3a3a3',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                }}
-              >
+              <label className="llm-settings-label">
                 Model
               </label>
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
                 disabled={isLoading}
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  backgroundColor: '#1a1a1a',
-                  color: '#f5f5f5',
-                  border: '1px solid #262626',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                  fontFamily: 'Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace',
-                }}
+                className="llm-settings-select"
                 onBlur={(e) => {
                   e.target.style.borderColor = '#262626';
                   e.target.style.boxShadow = 'none';
                 }}
               >
                 {MODELS.map((m) => (
-                  <option key={m.value} value={m.value} style={{ backgroundColor: '#1a1a1a' }}>
+                  <option key={m.value} value={m.value} className="llm-settings-option">
                     {m.label}
                   </option>
                 ))}
@@ -1472,35 +946,11 @@ export const LLMPlayground = ({
             </div>
 
             <div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '8px',
-                }}
-              >
-                <label
-                  style={{
-                    color: '#a3a3a3',
-                    fontSize: '11px',
-                    fontWeight: 500,
-                  }}
-                >
+              <div className="llm-settings-range-container">
+                <label className="llm-settings-label">
                   Temperature
                 </label>
-                <span
-                  style={{
-                    color: '#737373',
-                    fontSize: '12px',
-                    fontFamily: 'Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace',
-                    fontWeight: 600,
-                    backgroundColor: '#1a1a1a',
-                    padding: '3px 6px',
-                    borderRadius: '4px',
-                    border: '1px solid #262626',
-                  }}
-                >
+                <span className="llm-settings-range-value">
                   {temperature.toFixed(1)}
                 </span>
               </div>
@@ -1512,25 +962,9 @@ export const LLMPlayground = ({
                 value={temperature}
                 onChange={(e) => setTemperature(parseFloat(e.target.value))}
                 disabled={isLoading}
-                style={{
-                  width: '100%',
-                  height: '6px',
-                  backgroundColor: '#1a1a1a',
-                  borderRadius: '3px',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  WebkitAppearance: 'none',
-                }}
+                className="llm-settings-range"
               />
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  marginTop: '6px',
-                  fontSize: '11px',
-                  color: '#525252',
-                }}
-              >
+              <div className="llm-settings-range-labels">
                 <span>0.0</span>
                 <span>1.0</span>
                 <span>2.0</span>
@@ -1540,27 +974,11 @@ export const LLMPlayground = ({
         )}
       </div>
 
-      <div
-        style={{
-          padding: '4px 12px',
-          backgroundColor: '#1e1e1e',
-          borderTop: '1px solid #2d2d2d',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
-          fontSize: '11px',
-          color: '#999',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="llm-footer">
+        <div className="llm-footer-status-container">
           <span>OpenAI key status:</span>
           <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              cursor: 'default',
-            }}
+            className="llm-footer-status-icon"
             title={apiKey ? 'API Key configured' : 'API Key not configured'}
           >
             {apiKey ? (
@@ -1585,21 +1003,7 @@ export const LLMPlayground = ({
               }
             }}
             disabled={forceSettingsOpen}
-            style={{
-              background: isSettingsOpen ? '#2a2a2a' : 'transparent',
-              border: '1px solid #2a2a2a',
-              cursor: forceSettingsOpen ? 'not-allowed' : 'pointer',
-              padding: '4px 8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px',
-              color: '#d4d4d4',
-              borderRadius: '4px',
-              transition: 'all 0.2s ease',
-              fontSize: '11px',
-              opacity: forceSettingsOpen ? 0.6 : 1,
-            }}
+            className={isSettingsOpen ? 'llm-footer-toggle-button llm-footer-toggle-button-active' : 'llm-footer-toggle-button'}
             onMouseEnter={(e) => {
               if (!forceSettingsOpen) {
                 e.target.style.backgroundColor = '#2a2a2a';
@@ -1623,10 +1027,7 @@ export const LLMPlayground = ({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{
-                transform: isSettingsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s ease',
-              }}
+              className={isSettingsOpen ? 'llm-footer-toggle-icon llm-footer-toggle-icon-open' : 'llm-footer-toggle-icon'}
             >
               {isSettingsOpen ? (
                 <polyline points="18 15 12 9 6 15"></polyline>
