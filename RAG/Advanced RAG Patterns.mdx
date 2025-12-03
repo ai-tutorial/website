@@ -329,7 +329,7 @@ class IterativeRAG {
             max_tokens: 100
         });
         
-        return response.choices[0].message.content?.trim() || "";
+        return response.choices[0].message.content || "";
     }
     
     async query(question: string): Promise<{

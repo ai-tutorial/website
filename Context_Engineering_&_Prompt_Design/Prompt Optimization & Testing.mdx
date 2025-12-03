@@ -119,7 +119,7 @@ async function testPrompt(promptTemplate: string, evalData: Array<{ message: str
         const prompt = promptTemplate.replace("{message}", item.message);
         const prediction = await llm.generate(prompt);
         
-        if (prediction.trim().toLowerCase() === item.label) {
+        if (prediction.toLowerCase() === item.label) {
             correct++;
         }
     }
@@ -136,7 +136,7 @@ async function analyzeFailures(promptTemplate: string, evalData: Array<{ message
         const prompt = promptTemplate.replace("{message}", item.message);
         const prediction = await llm.generate(prompt);
         
-        if (prediction.trim().toLowerCase() !== item.label) {
+        if (prediction.toLowerCase() !== item.label) {
             failures.push({
                 input: item.message,
                 expected: item.label,

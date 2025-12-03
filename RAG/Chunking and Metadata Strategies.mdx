@@ -162,8 +162,8 @@ function semanticChunking(
         }
         
         const chunk = text.slice(currentPos, bestSplit);
-        if (chunk.trim()) {
-            chunks.push(chunk.trim());
+        if (chunk) {
+            chunks.push(chunk);
         }
         
         // Move forward with overlap
@@ -338,12 +338,12 @@ function structureAwareChunking(
         if (["h1", "h2", "h3"].includes(tagName)) {
             const level = parseInt(tagName[1]);  // h1=1, h2=2, h3=3
             currentContext = currentContext.slice(0, level - 1);  // Trim deeper levels
-            currentContext.push(element.textContent.trim());
+            currentContext.push(element.textContent);
         }
         
         // For content elements, create chunk with context
         else if (["p", "li"].includes(tagName)) {
-            const content = element.textContent.trim();
+            const content = element.textContent;
             
             // Build chunk with hierarchical context
             const chunkText = currentContext.join(" > ") + "\n\n" + content;

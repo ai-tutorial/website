@@ -167,68 +167,25 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 32px;
-  max-height: 120px;
+  min-height: 48px;
+  max-height: 240px;
   background-color: #2a3942;
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.llm-chat-input-background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow: hidden;
-  z-index: 1;
-  min-height: 32px;
-  height: auto;
-  padding: 6px 16px;
-  margin: 0;
-  border: none;
-  box-sizing: border-box;
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 15px;
-  line-height: 20px;
-  font-weight: normal;
-  font-style: normal;
-  font-variant: normal;
-  font-stretch: normal;
-  font-feature-settings: normal;
-  font-variation-settings: normal;
-  letter-spacing: normal;
-  text-align: left;
-  text-decoration: none;
-  text-transform: none;
-  text-indent: 0;
-  text-shadow: none;
-}
-
-.llm-chat-input-placeholder {
-  color: #8696a0;
-  font-style: normal;
-}
-
 .llm-chat-input-textarea {
-  position: relative;
-  z-index: 2;
-  color: transparent;
+  color: #e9edef;
   caret-color: #e9edef;
   background-color: transparent;
   outline: none;
   overflow-y: auto;
   resize: none;
-  min-height: 32px;
-  max-height: 120px;
-  height: 32px;
+  min-height: 48px;
+  max-height: 240px;
   width: 100%;
   vertical-align: top;
-  overflow: hidden;
-  padding: 6px 16px;
+  padding: 14px;
   margin: 0;
   border: none;
   box-sizing: border-box;
@@ -236,27 +193,8 @@
   font-size: 15px;
   line-height: 20px;
   font-weight: normal;
-  font-style: normal;
-  font-variant: normal;
-  font-stretch: normal;
-  font-feature-settings: normal;
-  font-variation-settings: normal;
-  letter-spacing: normal;
-  text-align: left;
-  text-decoration: none;
-  text-transform: none;
-  text-indent: 0;
-  text-shadow: none;
-}
-
-.llm-chat-comment-line {
-  color: #6a9955;
-  font-style: italic;
-}
-
-.llm-chat-normal-line {
-  color: #e9edef;
-  font-style: normal;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 /* API Key Form Styles */

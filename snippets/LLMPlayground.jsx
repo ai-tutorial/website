@@ -163,7 +163,6 @@ export const LLMPlayground = ({
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
   const textareaRef = useRef(null);
-  const textareaBackgroundRef = useRef(null);
   const advancedTextareaRefs = useRef({});
   const [messages, setMessages] = useState(() => {
     if (defaultMessages && defaultMessages.length > 0) {
@@ -241,30 +240,20 @@ export const LLMPlayground = ({
     // Reset height to get accurate scrollHeight
     textarea.style.height = '0px';
     const scrollHeight = textarea.scrollHeight;
-    // One line = line-height (20px) + padding top (6px) + padding bottom (6px) = 32px
+    // One line = line-height (20px) + padding top (14px) + padding bottom (14px) = 48px
     // But we need to ensure it's exactly one line when empty
-    const minHeight = 32;
-    const newHeight = Math.max(scrollHeight, minHeight);
+    const minHeight = 48;
+    const maxHeight = 240; // Max height to allow scrolling for long text
+    const newHeight = Math.min(Math.max(scrollHeight, minHeight), maxHeight);
     textarea.style.height = `${newHeight}px`;
   }, []);
 
-  // Auto-resize chat mode textarea and sync background
+  // Auto-resize chat mode textarea
   useEffect(() => {
     if (textareaRef.current) {
-      // Set height to 0 first to get accurate scrollHeight
-      textareaRef.current.style.height = '0px';
-      const scrollHeight = textareaRef.current.scrollHeight;
-      const minHeight = 32; // One line: 20px line-height + 6px top + 6px bottom
-      const newHeight = Math.max(scrollHeight, minHeight);
-      textareaRef.current.style.height = `${newHeight}px`;
-      
-      // Sync background div height with textarea
-      if (textareaBackgroundRef.current) {
-        textareaBackgroundRef.current.style.height = `${newHeight}px`;
-        textareaBackgroundRef.current.style.minHeight = `${newHeight}px`;
-      }
+      autoResizeTextarea(textareaRef.current);
     }
-  }, [input]);
+  }, [input, autoResizeTextarea]);
 
   // Scroll to bottom when new messages are added (but not on initial mount)
   useEffect(() => {
@@ -558,45 +547,14 @@ export const LLMPlayground = ({
   const renderChatInput = () => {
     return (
       <div className="llm-chat-input-container">
-        <div
-          ref={textareaBackgroundRef}
-          className="llm-chat-input-background"
-        >
-          {input ? (
-            input.split('\n').map((line, idx) => {
-              const isComment = line.trim().startsWith('//');
-              return (
-                <span
-                  key={idx}
-                  className={isComment ? 'llm-chat-comment-line' : 'llm-chat-normal-line'}
-                >
-                  {line || '\u00A0'}
-                  {idx < input.split('\n').length - 1 && '\n'}
-                </span>
-              );
-            })
-          ) : (
-            <span className="llm-chat-input-placeholder">
-              Type a message
-            </span>
-          )}
-        </div>
         <textarea
           ref={textareaRef}
           value={input}
           onChange={(e) => {
             setInput(e.target.value);
             autoResizeTextarea(e.target);
-            // Sync background div height
-            if (textareaBackgroundRef.current) {
-              const scrollHeight = e.target.scrollHeight;
-              const height = Math.max(scrollHeight, 32);
-              const maxHeight = Math.min(height, 120);
-              textareaBackgroundRef.current.style.height = `${maxHeight}px`;
-              textareaBackgroundRef.current.style.minHeight = `${maxHeight}px`;
-            }
           }}
-          placeholder=""
+          placeholder="Type a message"
           disabled={isLoading}
           className="llm-chat-input-textarea"
           onBlur={(e) => {

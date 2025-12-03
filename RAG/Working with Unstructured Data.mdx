@@ -64,7 +64,7 @@ async function extractDigitalPdf(pdfPath: string): Promise<string> {
     // const data = await pdfParse(pdfBytes);
     // text = data.text;
     
-    return text.trim();
+    return text;
 }
 
 // Fast and accurate for PDFs created from digital sources
@@ -138,7 +138,7 @@ async function extractScannedPdf(pdfPath: string): Promise<string> {
     }
     
     await worker.terminate();
-    return text.trim();
+    return text;
 }
 
 // OCR challenges:
@@ -232,7 +232,7 @@ class PDFProcessor {
         try {
             const sample = await extractDigitalPdf(pdfPath);
             // If we extracted meaningful text (> 100 chars), likely digital
-            return sample.trim().length > 100;
+            return sample.length > 100;
         } catch {
             return false;
         }
@@ -548,7 +548,7 @@ async function extractImageText(imagePath: string): Promise<string> {
     const { data: { text } } = await worker.recognize(await image.getBufferAsync(Jimp.MIME_PNG));
     await worker.terminate();
     
-    return text.trim();
+    return text;
 }
 ```
 </CodeGroup>
