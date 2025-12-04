@@ -31,7 +31,7 @@ Many teams iterate on prompts by "vibes" - does the output look good? - or by fi
 <CodeEditor 
   file="src/module1/sentiment_classification.ts" 
   functionName="main"
-  lines="33-66"
+  lines="43-96"
   title="Customer Sentiment Classification with Prompt Testing"
 />
 
@@ -60,27 +60,10 @@ Don't deploy a new prompt to 100% of users immediately.
 
 <CodeGroup>
 
-```python Python
-results = {
-    "v2_prompt": {
-        "success_rate": 0.87,
-        "avg_latency": 1.2,
-        "cost_per_request": 0.05,
-        "satisfaction": 0.82
-    },
-    "v3_prompt": {
-        "success_rate": 0.93,  # Better!
-        "avg_latency": 1.4,    # Slightly slower
-        "cost_per_request": 0.07,  # Slightly more expensive
-        "satisfaction": 0.89   # Much better!
-    }
-}
-
-# Decision: v3 wins → roll out to 50%, then 100%
-```
 
 
-```ts TypeScript
+
+```ts Pseudocode
 const results = {
     v2_prompt: {
         success_rate: 0.87,
@@ -110,7 +93,7 @@ const results = {
 <CodeEditor 
   file="src/module1/prompt_injection.ts" 
   functionName="main"
-  lines="32-47"
+  lines="33-43"
   title="Prompt Injection Attack and Defense"
 />
 
@@ -121,7 +104,7 @@ const results = {
 <CodeEditor 
   file="src/module1/context_stuffing.ts" 
   functionName="main"
-  lines="32-44"
+  lines="33-47"
   title="Context Stuffing Attack and Defense"
 />
 
@@ -132,7 +115,7 @@ const results = {
 <CodeEditor 
   file="src/module1/ambiguous_output_parsing.ts" 
   functionName="main"
-  lines="33-40"
+  lines="32-40"
   title="Ambiguous Output Parsing Problem and Solution"
 />
 
