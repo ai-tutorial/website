@@ -99,18 +99,7 @@ But what if you need to debug a wrong answer? You can't see the reasoning. The e
 
 **Claude-Specific Feature:** Claude can expose its "thinking" before answering using special tags.
 
-<CodeGroup>
-
-```python Python
-prompt = """
-Analyze this complex legal document...
-Think before you write the analysis report in <thinking> tags.
-"""
-```
-
-
-```ts TypeScript
-const prompt = `
+```python Prompt
 <thinking>
 Let me analyze this complex legal document...
 - First, I'll identify the key clauses
@@ -119,10 +108,7 @@ Let me analyze this complex legal document...
 </thinking>
 
 [Your actual task here]
-`;
 ```
-
-</CodeGroup>
 
 **Why This Matters:**
 
@@ -133,41 +119,6 @@ Let me analyze this complex legal document...
 **Thinking tags can also be used to guide Claude steps:**
 
 <CodeGroup>
-
-```python Python
-def analyze_contract(contract_text: str) -> dict:
-    prompt = f"""
-<document>
-{contract_text}
-</document>
-
-<thinking>
-I need to analyze this contract for:
-1. Key obligations
-2. Termination clauses
-3. Liability limits
-4. Red flags
-
-Let me work through each section...
-</thinking>
-
-Provide a JSON response with:
-- obligations: list of key obligations
-- risks: list of potential risks
-- recommendations: list of recommended actions
-"""
-    
-    response = claude.generate(prompt)
-    
-    # Parse thinking section for audit trail
-    thinking = extract_between_tags(response, "thinking")
-    result = extract_json(response)
-    
-    return {
-        "analysis": result,
-        "reasoning": thinking,  # Store for compliance/review
-    }
-```
 
 
 ```ts TypeScript
@@ -233,65 +184,10 @@ flowchart LR
     style D fill:#c8e6c9
 ```
 
-**Example: Customer Support Automation:** [Full runnable customer support automation notebook](https://colab.research.google.com/drive/1CcvRKX8KdzHVwh5XRG2vWhzA-15-zWna?usp=drive_link)
-
-<CodeGroup>
-
-```python Python
-async def handle_support_ticket(ticket: str):
-    # Step 1: Classify urgency
-    urgency = await classify_urgency(ticket)
-    
-    # Step 2: Extract key details (only if high urgency)
-    if urgency == "high":
-        details = await extract_details(ticket)
-        
-        # Step 3: Search knowledge base
-        relevant_docs = await search_kb(details["issue"])
-        
-        # Step 4: Generate response
-        response = await generate_response(
-            ticket=ticket,
-            docs=relevant_docs,
-            urgency=urgency
-        )
-    else:
-        # Low urgency: simpler path
-        response = await generate_response(ticket)
-    
-    return response
-```
-
-
-```ts TypeScript
-async function handleSupportTicket(ticket: string): Promise<string> {
-    // Step 1: Classify urgency
-    const urgency = await classifyUrgency(ticket);
-    
-    // Step 2: Extract key details (only if high urgency)
-    let response: string;
-    if (urgency === "high") {
-        const details = await extractDetails(ticket);
-        
-        // Step 3: Search knowledge base
-        const relevantDocs = await searchKb(details.issue);
-        
-        // Step 4: Generate response
-        response = await generateResponse({
-            ticket: ticket,
-            docs: relevantDocs,
-            urgency: urgency
-        });
-    } else {
-        // Low urgency: simpler path
-        response = await generateResponse({ ticket });
-    }
-    
-    return response;
-}
-```
-
-</CodeGroup>
+<CodeEditor 
+  file="src/module1/prompt_chaining.ts" 
+  title="Prompt Chaining"
+/> 
 
 **Benefits:**
 
