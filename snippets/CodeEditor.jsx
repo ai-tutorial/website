@@ -11,9 +11,9 @@ import { useRef, useState, useEffect } from '/snippets/react';
  * @param {string} [props.height='650px'] - Height of the iframe
  * @param {string} props.functionName - Required. Name of the function being demonstrated (for documentation purposes)
  */
-export const CodeEditor = ({ 
-  file = 'src/hello_world.ts', 
-  lines, 
+export const CodeEditor = ({
+  file = 'src/hello_world.ts',
+  lines,
   title = 'Code Example',
   repo = 'ai-tutorial/typescript-examples',
   height = '650px',
@@ -25,6 +25,7 @@ export const CodeEditor = ({
   }
   const hasCreatedEnvRef = useRef(false);
   const vmRef = useRef(null);
+  const [isMaximized, setIsMaximized] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -76,10 +77,10 @@ export const CodeEditor = ({
     if (apiKey && apiKey.trim()) {
       const trimmedKey = apiKey.trim();
       localStorage.setItem(STORAGE_KEY, trimmedKey);
-      
+
       // Dispatch custom event for components to listen to
       dispatchApiKeyChanged();
-      
+
       return true;
     }
     return false;
@@ -97,7 +98,7 @@ export const CodeEditor = ({
       // Use isApiKeyConfigured to check if key is properly configured
       const configured = isApiKeyConfigured();
       let envContent;
-      
+
       if (configured) {
         // Get the stored key and use it
         const apiKey = getApiKey();
@@ -153,7 +154,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 
     if (typeof window !== 'undefined') {
       window.addEventListener('apiKeyChanged', handleApiKeyChanged);
-      
+
       return () => {
         window.removeEventListener('apiKeyChanged', handleApiKeyChanged);
       };
@@ -185,9 +186,9 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
         return { valid: false, error: 'Rate limit exceeded. Please try again later.' };
       } else {
         const errorData = await response.json().catch(() => ({}));
-        return { 
-          valid: false, 
-          error: errorData.error?.message || `API request failed with status ${response.status}` 
+        return {
+          valid: false,
+          error: errorData.error?.message || `API request failed with status ${response.status}`
         };
       }
     } catch (err) {
@@ -258,7 +259,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 
   // Get the base file path (without line numbers) for execution
   const baseFilePath = file || 'src/hello_world.ts';
-  
+
   // Build the file path with optional line numbers for display
   let filePath = baseFilePath;
   if (lines) {
@@ -339,7 +340,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
       try {
         // Load SDK and connect to VM
         const sdk = await loadSDK();
-        
+
         // Prevent multiple connections
         if (vmRef.current) {
           return;
@@ -347,7 +348,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 
         const vm = await sdk.connect(iframe);
         vmRef.current = vm;
-        
+
         // Create .env file once VM is connected
         if (!hasCreatedEnvRef.current && vm) {
           await updateEnvFile(vm);
@@ -378,15 +379,15 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             </svg>
             Configure OpenAI API Key
           </h2>
-          
+
           <p className="code-editor-dialog-description">
-            All interactive examples execute entirely within your browser environment, ensuring complete security and privacy. 
+            All interactive examples execute entirely within your browser environment, ensuring complete security and privacy.
             Your API key is stored locally in your browser's storage and is never transmitted to external servers.
           </p>
 
           <div className="code-editor-info-box">
             <p className="code-editor-info-box-title">
-              Don't have an API key?. 
+              Don't have an API key?.
             </p>
             <p className="code-editor-info-box-text">
               Get one at{' '}
@@ -482,16 +483,59 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
     );
   }
 
+  const toggleMaximize = () => setIsMaximized(!isMaximized);
+
   return (
-    <iframe
-      ref={iframeRef}
-      src={stackblitzUrl}
-      className="code-editor-iframe"
-      style={{ height: height }}
-      title={title || 'Code Example'}
-      allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
-      sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
-    />
+    <div
+      className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''}`}
+    >
+      {!isMaximized && (
+        <div className="code-editor-header">
+          <div className="code-editor-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            {title}
+          </div>
+          <div className="code-editor-controls">
+            <button
+              className="code-editor-maximize-button"
+              onClick={toggleMaximize}
+              title="Maximize (Focus Mode)"
+              type="button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isMaximized && (
+        <button
+          className="code-editor-maximize-button floating-minimize"
+          onClick={toggleMaximize}
+          title="Minimize"
+          type="button"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 14h6v6" /><path d="M20 10h-6V4" /><path d="M14 10l7-7" /><path d="M3 21l7-7" />
+          </svg>
+        </button>
+      )}
+
+      <iframe
+        ref={iframeRef}
+        src={stackblitzUrl}
+        className="code-editor-iframe"
+        style={{ height: isMaximized ? 'auto' : height, flex: isMaximized ? 1 : 'none' }}
+        title={title || 'Code Example'}
+        allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+        sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+      />
+    </div>
   );
 };
 

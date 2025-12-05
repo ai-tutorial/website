@@ -2,8 +2,13 @@
 
 /* Keyframes */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Section Label */
@@ -1102,7 +1107,139 @@
 .code-editor-iframe {
   width: 100%;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0 0 8px 8px;
+  /* Rounded only at bottom */
   overflow: hidden;
+  background-color: #1e1e1e;
+  display: block;
+  /* Match editor theme */
 }
 
+/* CodeEditor Header Styles */
+.code-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 11px 8px 16px;
+  background-color: #252526;
+  border-bottom: 1px solid #1e1e1e;
+  border-radius: 8px 8px 0 0;
+}
+
+.code-editor-title {
+  color: #e1e1e1;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.02em;
+}
+
+.code-editor-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* CodeEditor Maximize Styles */
+.code-editor-wrapper {
+  position: relative;
+  width: 100%;
+  transition: all 0.3s ease;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  /* Ensure basic stacking */
+}
+
+.code-editor-wrapper.maximized {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999;
+  padding: 10px;
+  background-color: rgba(10, 10, 10, 0.98);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(10px);
+}
+
+/* Ensure iframe takes full height in maximized mode */
+/* Ensure iframe takes full height in maximized mode */
+.code-editor-wrapper.maximized .code-editor-iframe {
+  flex: 1 !important;
+  height: auto !important;
+  border-radius: 0 0 8px 8px;
+  box-shadow: none;
+  border: none;
+}
+
+.code-editor-maximize-button {
+  background-color: transparent;
+  border: none;
+  color: #858585;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 1;
+  /* Always visible */
+}
+
+.code-editor-wrapper:hover .code-editor-maximize-button,
+.code-editor-wrapper.maximized .code-editor-maximize-button {
+  opacity: 1;
+}
+
+.code-editor-maximize-button:hover {
+  background-color: #3e3e42;
+  color: white;
+  transform: none;
+  box-shadow: none;
+}
+
+.code-editor-maximize-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Add an overlay when maximized to focus attention */
+.code-editor-overlay {
+  display: none;
+}
+
+.code-editor-wrapper.maximized+.code-editor-overlay {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
+}
+
+.code-editor-maximize-button.floating-minimize {
+  position: absolute;
+  top: 15px;
+  right: 16px;
+  background-color: rgba(30, 30, 30, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.code-editor-maximize-button.floating-minimize:hover {
+  background-color: rgba(50, 50, 50, 0.8);
+  transform: scale(1.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
