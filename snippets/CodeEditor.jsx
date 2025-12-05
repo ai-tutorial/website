@@ -17,7 +17,8 @@ export const CodeEditor = ({
   title = 'Code Example',
   repo = 'ai-tutorial/typescript-examples',
   height = '650px',
-  functionName
+  functionName,
+  theme: userTheme
 }) => {
   // Validate required parameter
   if (!functionName) {
@@ -32,6 +33,29 @@ export const CodeEditor = ({
   const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [detectedTheme, setDetectedTheme] = useState('dark');
+
+  // Theme detection logic
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setDetectedTheme(isDark ? 'dark' : 'light');
+    };
+
+    checkTheme();
+
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const theme = userTheme || detectedTheme;
 
   /**
    * Helper functions for managing OpenAI API key in localStorage
@@ -280,7 +304,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
   }
 
   // Build StackBlitz iframe URL
-  const stackblitzUrl = `https://stackblitz.com/github/${repo}?file=${encodeURIComponent(filePath)}&embed=1&view=editor`;
+  const stackblitzUrl = `https://stackblitz.com/github/${repo}?file=${encodeURIComponent(filePath)}&embed=1&view=editor&theme=${theme}`;
 
   // Load SDK dynamically
   const loadSDK = () => {
@@ -488,6 +512,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
   return (
     <div
       className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''}`}
+      data-theme={theme}
     >
       {!isMaximized && (
         <div className="code-editor-header">

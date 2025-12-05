@@ -1,4 +1,76 @@
-/* LLMPlayground Component Styles */
+/* LLMPlayground & CodeEditor Component Styles */
+
+:root {
+  /* Common Colors */
+  --llm-accent-blue: #3b82f6;
+  --llm-accent-green: #22c55e;
+  --llm-accent-red: #ef4444;
+  --llm-accent-orange: #f59e0b;
+
+  /* Dark Theme (Default) */
+  --llm-bg-primary: #0f0f0f;
+  /* Main background */
+  --llm-bg-secondary: #1a1a1a;
+  /* Panels, inputs, message boxes */
+  --llm-bg-tertiary: #151515;
+  /* Settings, specific boxes */
+  --llm-bg-hover: #262626;
+  /* Hover states */
+
+  --llm-border-color: #262626;
+  --llm-border-hover: #3a3a3a;
+
+  --llm-text-primary: #f5f5f5;
+  /* Main text */
+  --llm-text-secondary: #a3a3a3;
+  /* Secondary text */
+  --llm-text-tertiary: #737373;
+  /* Muted text */
+  --llm-text-disabled: #525252;
+  --llm-text-inverse: #ffffff;
+  /* Text on colored buttons */
+
+  /* Chat Specific - Dark */
+  --llm-chat-bg: #0b141a;
+  --llm-chat-bubble-user: #005c4b;
+  --llm-chat-bubble-assistant: #202c33;
+  --llm-chat-input-bg: #2a3942;
+  --llm-chat-text: #e9edef;
+  --llm-chat-meta: #8696a0;
+
+  /* Code Editor Specific - Dark */
+  --llm-code-editor-header: #252526;
+  --llm-code-editor-border: #1e1e1e;
+}
+
+[data-theme='light'] {
+  /* Light Theme Overrides */
+  --llm-bg-primary: #ffffff;
+  --llm-bg-secondary: #f3f4f6;
+  --llm-bg-tertiary: #f9fafb;
+  --llm-bg-hover: #e5e7eb;
+
+  --llm-border-color: #e5e7eb;
+  --llm-border-hover: #d1d5db;
+
+  --llm-text-primary: #111827;
+  --llm-text-secondary: #4b5563;
+  --llm-text-tertiary: #6b7280;
+  --llm-text-disabled: #9ca3af;
+  --llm-text-inverse: #ffffff;
+
+  /* Chat Specific - Light (WhatsApp-ish) */
+  --llm-chat-bg: #efeae2;
+  --llm-chat-bubble-user: #d9fdd3;
+  --llm-chat-bubble-assistant: #ffffff;
+  --llm-chat-input-bg: #ffffff;
+  --llm-chat-text: #111827;
+  --llm-chat-meta: #6b7280;
+
+  /* Code Editor Specific - Light */
+  --llm-code-editor-header: #f3f4f6;
+  --llm-code-editor-border: #e5e7eb;
+}
 
 /* Keyframes */
 @keyframes spin {
@@ -14,7 +86,7 @@
 /* Section Label */
 .llm-section-label {
   margin-bottom: 6px;
-  color: #a3a3a3;
+  color: var(--llm-text-secondary);
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
@@ -25,8 +97,8 @@
 .llm-textarea-base {
   flex: 1;
   width: 100%;
-  background-color: #1a1a1a;
-  border: 1px solid #262626;
+  background-color: var(--llm-bg-secondary);
+  border: 1px solid var(--llm-border-color);
   border-radius: 6px;
   padding: 10px;
   font-size: 0.8em;
@@ -40,14 +112,15 @@
   outline: none;
   box-sizing: border-box;
   transition: all 0.2s ease;
+  color: var(--llm-text-primary);
 }
 
 .llm-textarea-enabled {
-  color: #f5f5f5;
+  color: var(--llm-text-primary);
 }
 
 .llm-textarea-disabled {
-  color: #525252;
+  color: var(--llm-text-disabled);
   cursor: not-allowed;
 }
 
@@ -57,7 +130,7 @@
   background-color: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 6px;
-  color: #f87171;
+  color: var(--llm-accent-red);
   font-size: 12px;
   display: flex;
   align-items: center;
@@ -66,7 +139,7 @@
 
 /* Response Box */
 .llm-response-box {
-  color: #e5e5e5;
+  color: var(--llm-text-primary);
   font-size: 0.8em;
   font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-weight: normal;
@@ -77,9 +150,9 @@
   white-space: pre-wrap;
   word-wrap: break-word;
   padding: 12px;
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
   border-radius: 6px;
-  border: 1px solid #262626;
+  border: 1px solid var(--llm-border-color);
 }
 
 /* Chat Interface Styles */
@@ -88,7 +161,7 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  background-color: #0b141a;
+  background-color: var(--llm-chat-bg);
   padding-top: 12px;
   padding-bottom: 12px;
 }
@@ -111,7 +184,7 @@
 .llm-chat-bubble {
   max-width: 70%;
   padding: 8px 12px;
-  color: #e9edef;
+  color: var(--llm-chat-text);
   font-size: 14px;
   line-height: 1.4;
   word-wrap: break-word;
@@ -122,17 +195,22 @@
 
 .llm-chat-bubble-user {
   border-radius: 18px 18px 4px 18px;
-  background-color: #005c4b;
+  background-color: var(--llm-chat-bubble-user);
 }
 
 .llm-chat-bubble-assistant {
   border-radius: 18px 18px 18px 4px;
-  background-color: #202c33;
+  background-color: var(--llm-chat-bubble-assistant);
 }
 
 .llm-chat-bubble-placeholder {
   opacity: 0.7;
   border: 1px dashed rgba(255, 255, 255, 0.3);
+  /* Keep as semi-transparent white for contrast on various backgrounds */
+}
+
+[data-theme='light'] .llm-chat-bubble-placeholder {
+  border: 1px dashed rgba(0, 0, 0, 0.2);
 }
 
 .llm-chat-empty-state {
@@ -140,7 +218,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #8696a0;
+  color: var(--llm-chat-meta);
   font-size: 14px;
   font-style: italic;
 }
@@ -155,8 +233,8 @@
 .llm-chat-loading-bubble {
   padding: 8px 12px;
   border-radius: 18px 18px 18px 4px;
-  background-color: #202c33;
-  color: #8696a0;
+  background-color: var(--llm-chat-bubble-assistant);
+  color: var(--llm-chat-meta);
   font-size: 14px;
   display: flex;
   align-items: center;
@@ -172,27 +250,28 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 48px;
+  min-height: 60px;
   max-height: 240px;
-  background-color: #2a3942;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--llm-chat-input-bg);
+  border-radius: 20px;
+  border: 1px solid rgba(128, 128, 128, 0.1);
 }
 
 .llm-chat-input-textarea {
-  color: #e9edef;
-  caret-color: #e9edef;
+  color: var(--llm-chat-text);
+  caret-color: var(--llm-chat-text);
   background-color: transparent;
   outline: none;
   overflow-y: auto;
   resize: none;
-  min-height: 48px;
+  min-height: 60px;
   max-height: 240px;
   width: 100%;
   vertical-align: top;
-  padding: 14px;
+  padding: 20px 24px;
   margin: 0;
   border: none;
+  border-radius: 20px;
   box-sizing: border-box;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 15px;
@@ -206,14 +285,14 @@
 .llm-api-key-form {
   margin-bottom: 12px;
   padding: 12px;
-  border: 2px solid #f59e0b;
+  border: 2px solid var(--llm-accent-orange);
   border-radius: 8px;
   background-color: rgba(245, 158, 11, 0.05);
 }
 
 .llm-api-key-form-title {
   margin: 0 0 8px 0;
-  color: #f5f5f5;
+  color: var(--llm-text-primary);
   font-size: 13px;
   font-weight: 600;
   display: flex;
@@ -223,7 +302,7 @@
 
 .llm-api-key-form-description {
   margin: 0;
-  color: #a3a3a3;
+  color: var(--llm-text-secondary);
   font-size: 11px;
   line-height: 1.5;
 }
@@ -231,9 +310,9 @@
 .llm-api-key-input {
   flex: 1;
   padding: 8px;
-  background-color: #1a1a1a;
-  color: #f5f5f5;
-  border: 1px solid #262626;
+  background-color: var(--llm-bg-secondary);
+  color: var(--llm-text-primary);
+  border: 1px solid var(--llm-border-color);
   border-radius: 6px;
   font-size: 12px;
   font-family: Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace;
@@ -247,12 +326,12 @@
 }
 
 .llm-api-key-input-error {
-  border: 1px solid #ef4444;
+  border: 1px solid var(--llm-accent-red);
 }
 
 .llm-api-key-save-button {
   padding: 8px 16px;
-  background-color: #3b82f6;
+  background-color: var(--llm-accent-blue);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -265,7 +344,7 @@
 }
 
 .llm-api-key-save-button:disabled {
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
   cursor: not-allowed;
 }
 
@@ -281,15 +360,15 @@
 
 .llm-advanced-message-box {
   position: relative;
-  background-color: #151515;
-  border: 1px solid #262626;
+  background-color: var(--llm-bg-tertiary);
+  border: 1px solid var(--llm-border-color);
   border-radius: 6px;
   padding: 8px;
   transition: border-color 0.2s ease;
 }
 
 .llm-advanced-message-box:hover {
-  border-color: #3a3a3a;
+  border-color: var(--llm-border-hover);
 }
 
 .llm-advanced-message-header {
@@ -305,7 +384,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #737373;
+  color: var(--llm-text-tertiary);
   min-width: 50px;
 }
 
@@ -343,7 +422,7 @@
 .llm-advanced-remove-button {
   padding: 2px 6px;
   background-color: rgba(239, 68, 68, 0.1);
-  color: #f87171;
+  color: var(--llm-accent-red);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 4px;
   font-size: 10px;
@@ -357,9 +436,9 @@
 }
 
 .llm-advanced-remove-button:disabled {
-  background-color: #1a1a1a;
-  color: #525252;
-  border-color: #262626;
+  background-color: var(--llm-bg-secondary);
+  color: var(--llm-text-disabled);
+  border-color: var(--llm-border-color);
   cursor: not-allowed;
 }
 
@@ -370,9 +449,9 @@
 
 .llm-advanced-add-button {
   padding: 6px 10px;
-  background-color: #1a1a1a;
-  color: #a3a3a3;
-  border: 1px dashed #262626;
+  background-color: var(--llm-bg-secondary);
+  color: var(--llm-text-secondary);
+  border: 1px dashed var(--llm-border-color);
   border-radius: 6px;
   font-size: 10px;
   font-weight: 600;
@@ -387,8 +466,8 @@
 }
 
 .llm-advanced-add-button:hover {
-  background-color: #262626;
-  border-color: #3b82f6;
+  background-color: var(--llm-bg-hover);
+  border-color: var(--llm-accent-blue);
   color: #60a5fa;
 }
 
@@ -397,13 +476,13 @@
   display: flex;
   gap: 4px;
   margin-bottom: 8px;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--llm-bg-secondary);
 }
 
 .llm-tab-button {
   padding: 6px 12px;
   background-color: transparent;
-  color: #737373;
+  color: var(--llm-text-tertiary);
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 4px 4px 0 0;
@@ -415,9 +494,9 @@
 }
 
 .llm-tab-button-active {
-  background-color: #1a1a1a;
-  color: #f5f5f5;
-  border-bottom: 2px solid #3b82f6;
+  background-color: var(--llm-bg-secondary);
+  color: var(--llm-text-primary);
+  border-bottom: 2px solid var(--llm-accent-blue);
 }
 
 .llm-tabs-content {
@@ -430,7 +509,7 @@
 }
 
 .llm-tab-loading {
-  color: #525252;
+  color: var(--llm-text-disabled);
   font-size: 12px;
   font-style: italic;
   flex: 1;
@@ -438,14 +517,14 @@
   align-items: center;
   justify-content: center;
   padding: 12px;
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
   border-radius: 6px;
-  border: 1px solid #262626;
+  border: 1px solid var(--llm-border-color);
   min-height: 100px;
 }
 
 .llm-tab-empty {
-  color: #525252;
+  color: var(--llm-text-disabled);
   font-size: 12px;
   font-style: italic;
   flex: 1;
@@ -453,9 +532,9 @@
   align-items: center;
   justify-content: center;
   padding: 12px;
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
   border-radius: 6px;
-  border: 1px solid #262626;
+  border: 1px solid var(--llm-border-color);
   min-height: 100px;
 }
 
@@ -467,14 +546,15 @@
   padding: 12px;
   font-size: 0.7em;
   line-height: 16px;
-  background-color: #0f0f0f;
-  border: 1px solid #1a1a1a;
+  background-color: var(--llm-bg-primary);
+  border: 1px solid var(--llm-bg-secondary);
+  color: var(--llm-text-primary);
 }
 
 /* Submit Button Styles */
 .llm-submit-button {
   padding: 6px 16px;
-  background-color: #3b82f6;
+  background-color: var(--llm-accent-blue);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -487,9 +567,10 @@
 }
 
 .llm-submit-button:disabled {
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
   cursor: not-allowed;
   box-shadow: none;
+  color: var(--llm-text-disabled);
 }
 
 .llm-submit-button:hover:not(:disabled) {
@@ -519,10 +600,11 @@
   transition: background-color 0.2s ease;
   flex-shrink: 0;
   outline: none;
+  color: white;
 }
 
 .llm-chat-send-button:disabled {
-  background-color: #8696a0;
+  background-color: var(--llm-text-disabled);
   cursor: not-allowed;
 }
 
@@ -537,8 +619,8 @@
 /* Settings Panel Styles */
 .llm-settings-panel {
   width: 220px;
-  border-left: 1px solid #1a1a1a;
-  background-color: #151515;
+  border-left: 1px solid var(--llm-bg-secondary);
+  background-color: var(--llm-bg-tertiary);
   padding: 12px;
   overflow-y: auto;
   display: flex;
@@ -548,7 +630,7 @@
 
 .llm-settings-title {
   margin: 0 0 12px 0;
-  color: #f5f5f5;
+  color: var(--llm-text-primary);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -558,7 +640,7 @@
 .llm-settings-label {
   display: block;
   margin-bottom: 6px;
-  color: #a3a3a3;
+  color: var(--llm-text-secondary);
   font-size: 11px;
   font-weight: 500;
 }
@@ -566,9 +648,9 @@
 .llm-settings-select {
   width: 100%;
   padding: 8px 10px;
-  background-color: #1a1a1a;
-  color: #f5f5f5;
-  border: 1px solid #262626;
+  background-color: var(--llm-bg-secondary);
+  color: var(--llm-text-primary);
+  border: 1px solid var(--llm-border-color);
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
@@ -578,7 +660,7 @@
 }
 
 .llm-settings-select:focus {
-  border-color: #3b82f6;
+  border-color: var(--llm-accent-blue);
 }
 
 .llm-settings-range-container {
@@ -589,20 +671,20 @@
 }
 
 .llm-settings-range-value {
-  color: #737373;
+  color: var(--llm-text-tertiary);
   font-size: 12px;
   font-family: Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace;
   font-weight: 600;
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
   padding: 3px 6px;
   border-radius: 4px;
-  border: 1px solid #262626;
+  border: 1px solid var(--llm-border-color);
 }
 
 .llm-settings-range {
   width: 100%;
   height: 6px;
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
@@ -614,44 +696,44 @@
   justify-content: space-between;
   margin-top: 6px;
   font-size: 11px;
-  color: #525252;
+  color: var(--llm-text-disabled);
 }
 
 /* Footer Styles */
 .llm-footer {
   padding: 4px 12px;
-  background-color: #1e1e1e;
-  border-top: 1px solid #2d2d2d;
+  background-color: var(--llm-code-editor-border);
+  border-top: 1px solid var(--llm-border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   font-size: 11px;
-  color: #999;
+  color: var(--llm-text-secondary);
 }
 
 .llm-footer-toggle-button {
   background: transparent;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--llm-border-color);
   cursor: pointer;
   padding: 4px 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  color: #d4d4d4;
+  color: var(--llm-text-secondary);
   border-radius: 4px;
   transition: all 0.2s ease;
   font-size: 11px;
 }
 
 .llm-footer-toggle-button:hover {
-  background-color: #2a2a2a;
-  border-color: #3a3a3a;
+  background-color: var(--llm-bg-hover);
+  border-color: var(--llm-border-hover);
 }
 
 .llm-footer-toggle-button-active {
-  background: #2a2a2a;
+  background: var(--llm-bg-hover);
 }
 
 .llm-footer-toggle-button:disabled {
@@ -677,7 +759,7 @@
   margin-left: 12px;
   margin-right: 12px;
   font-size: 12px;
-  color: #fbbf24;
+  color: var(--llm-accent-orange);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -686,9 +768,9 @@
 /* Main Container Styles */
 .llm-playground-container {
   width: 100%;
-  background-color: #0f0f0f;
+  background-color: var(--llm-bg-primary);
   border-radius: 12px;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--llm-border-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -697,7 +779,7 @@
 }
 
 .llm-playground-container-chat {
-  background-color: #0b141a;
+  background-color: var(--llm-chat-bg);
   font-family: system-ui, -apple-system, sans-serif;
 }
 
@@ -719,8 +801,8 @@
 
 .llm-playground-input-area {
   padding: 8px 12px;
-  background-color: #0b141a;
-  border-top: 1px solid #202c33;
+  background-color: var(--llm-chat-bg);
+  border-top: 1px solid var(--llm-border-color);
   display: flex;
   gap: 8px;
   align-items: flex-end;
@@ -732,8 +814,8 @@
   flex-direction: column;
   padding: 12px;
   overflow: hidden;
-  background-color: #0f0f0f;
-  border-bottom: 1px solid #1a1a1a;
+  background-color: var(--llm-bg-primary);
+  border-bottom: 1px solid var(--llm-bg-secondary);
 }
 
 .llm-playground-response-area {
@@ -741,8 +823,8 @@
   display: flex;
   flex-direction: column;
   padding: 12px;
-  background-color: #0f0f0f;
-  border-bottom: 1px solid #1a1a1a;
+  background-color: var(--llm-bg-primary);
+  border-bottom: 1px solid var(--llm-bg-secondary);
   min-height: 200px;
   max-height: 400px;
   overflow-y: auto;
@@ -750,15 +832,15 @@
 
 .llm-playground-actions-area {
   padding: 10px 12px;
-  background-color: #151515;
-  border-top: 1px solid #1a1a1a;
+  background-color: var(--llm-bg-tertiary);
+  border-top: 1px solid var(--llm-bg-secondary);
   display: flex;
   justify-content: flex-end;
 }
 
 /* Additional utility classes */
 .llm-api-key-form-link {
-  color: #3b82f6;
+  color: var(--llm-accent-blue);
   text-decoration: none;
 }
 
@@ -791,12 +873,12 @@
 }
 
 .llm-json-viewer-empty {
-  color: #525252;
+  color: var(--llm-text-disabled);
   font-style: italic;
 }
 
 .llm-response-box-placeholder {
-  color: #a3a3a3;
+  color: var(--llm-text-secondary);
   font-style: italic;
 }
 
@@ -839,12 +921,12 @@
 
 .llm-api-key-form-wrapper {
   padding: 12px;
-  border-top: 1px solid #1a1a1a;
+  border-top: 1px solid var(--llm-bg-secondary);
 }
 
 .llm-error-wrapper {
   padding: 8px 12px;
-  border-top: 1px solid #1a1a1a;
+  border-top: 1px solid var(--llm-bg-secondary);
 }
 
 .llm-advanced-message-header-row {
@@ -856,12 +938,12 @@
 }
 
 .llm-settings-option {
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
 }
 
 .llm-config-message {
   font-size: 11px;
-  color: #737373;
+  color: var(--llm-text-tertiary);
   font-style: italic;
 }
 
@@ -900,17 +982,17 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background-color: #0f0f0f;
+  background-color: var(--llm-bg-primary);
 }
 
 .code-editor-dialog-box {
   max-width: 520px;
   width: 100%;
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
   padding: 2.5rem;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  border: 2px solid #f59e0b;
+  border: 2px solid var(--llm-accent-orange);
 }
 
 .code-editor-dialog-title {
@@ -918,7 +1000,7 @@
   margin-bottom: 1.25rem;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #f5f5f5;
+  color: var(--llm-text-primary);
   letter-spacing: -0.025em;
   display: flex;
   align-items: center;
@@ -927,7 +1009,7 @@
 
 .code-editor-dialog-description {
   margin-bottom: 1rem;
-  color: #a3a3a3;
+  color: var(--llm-text-secondary);
   line-height: 1.7;
   font-size: 0.875rem;
 }
@@ -935,19 +1017,19 @@
 .code-editor-info-box {
   margin-bottom: 1.5rem;
   padding: 1rem 1.25rem;
-  background-color: #151515;
+  background-color: var(--llm-bg-tertiary);
   border-radius: 8px;
   font-size: 0.8125rem;
-  color: #a3a3a3;
+  color: var(--llm-text-secondary);
   line-height: 1.6;
-  border: 1px solid #262626;
+  border: 1px solid var(--llm-border-color);
 }
 
 .code-editor-info-box-title {
   margin: 0;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: #d4d4d4;
+  color: var(--llm-text-primary);
 }
 
 .code-editor-info-box-text {
@@ -955,7 +1037,7 @@
 }
 
 .code-editor-link {
-  color: #3b82f6;
+  color: var(--llm-accent-blue);
   text-decoration: none;
   font-weight: 500;
   border-bottom: 1px solid transparent;
@@ -963,7 +1045,7 @@
 }
 
 .code-editor-link:hover {
-  border-bottom-color: #3b82f6;
+  border-bottom-color: var(--llm-accent-blue);
 }
 
 .code-editor-link-break {
@@ -979,16 +1061,16 @@
   margin-bottom: 0.625rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #d4d4d4;
+  color: var(--llm-text-primary);
 }
 
 .code-editor-input {
   width: 100%;
   padding: 0.875rem;
   font-size: 0.8125rem;
-  background-color: #0f0f0f;
-  color: #f5f5f5;
-  border: 2px solid #262626;
+  background-color: var(--llm-bg-primary);
+  color: var(--llm-text-primary);
+  border: 2px solid var(--llm-border-color);
   border-radius: 6px;
   font-family: monospace;
   box-sizing: border-box;
@@ -997,12 +1079,12 @@
 }
 
 .code-editor-input:focus {
-  border-color: #3b82f6;
+  border-color: var(--llm-accent-blue);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .code-editor-input-error {
-  border-color: #ef4444;
+  border-color: var(--llm-accent-red);
 }
 
 .code-editor-input:disabled {
@@ -1023,19 +1105,19 @@
 .code-editor-message-error {
   background-color: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  color: var(--llm-accent-red);
 }
 
 .code-editor-message-success {
   background-color: rgba(34, 197, 94, 0.1);
   border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #4ade80;
+  color: var(--llm-accent-green);
 }
 
 .code-editor-message-info {
   background-color: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #60a5fa;
+  color: var(--llm-accent-blue);
 }
 
 .code-editor-message-icon {
@@ -1048,7 +1130,7 @@
   font-size: 0.9375rem;
   font-weight: 600;
   color: white;
-  background-color: #3b82f6;
+  background-color: var(--llm-accent-blue);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -1063,7 +1145,7 @@
 }
 
 .code-editor-button:disabled {
-  background-color: #1a1a1a;
+  background-color: var(--llm-bg-secondary);
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -1073,18 +1155,18 @@
   padding: 0.625rem 1rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #737373;
+  color: var(--llm-text-tertiary);
   background-color: transparent;
-  border: 1px solid #262626;
+  border: 1px solid var(--llm-border-color);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .code-editor-button-secondary:hover:not(:disabled) {
-  background-color: #151515;
-  border-color: #404040;
-  color: #a3a3a3;
+  background-color: var(--llm-bg-tertiary);
+  border-color: var(--llm-border-hover);
+  color: var(--llm-text-secondary);
 }
 
 .code-editor-button-secondary:disabled {
@@ -1094,9 +1176,9 @@
 .code-editor-footer {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
-  border-top: 1px solid #262626;
+  border-top: 1px solid var(--llm-border-color);
   font-size: 0.75rem;
-  color: #737373;
+  color: var(--llm-text-tertiary);
   line-height: 1.6;
 }
 
@@ -1108,11 +1190,9 @@
   width: 100%;
   border: 0;
   border-radius: 0 0 8px 8px;
-  /* Rounded only at bottom */
   overflow: hidden;
-  background-color: #1e1e1e;
+  background-color: var(--llm-code-editor-border);
   display: block;
-  /* Match editor theme */
 }
 
 /* CodeEditor Header Styles */
@@ -1121,13 +1201,13 @@
   justify-content: space-between;
   align-items: center;
   padding: 4px 11px 4px 16px;
-  background-color: #252526;
-  border-bottom: 1px solid #1e1e1e;
+  background-color: var(--llm-code-editor-header);
+  border-bottom: 1px solid var(--llm-code-editor-border);
   border-radius: 8px 8px 0 0;
 }
 
 .code-editor-title {
-  color: #e1e1e1;
+  color: var(--llm-text-secondary);
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 12px;
   font-weight: 600;
@@ -1151,7 +1231,6 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  /* Ensure basic stacking */
 }
 
 .code-editor-wrapper.maximized {
@@ -1169,8 +1248,10 @@
   backdrop-filter: blur(10px);
 }
 
-/* Ensure iframe takes full height in maximized mode */
-/* Ensure iframe takes full height in maximized mode */
+[data-theme='light'] .code-editor-wrapper.maximized {
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
 .code-editor-wrapper.maximized .code-editor-iframe {
   flex: 1 !important;
   height: auto !important;
@@ -1182,7 +1263,7 @@
 .code-editor-maximize-button {
   background-color: transparent;
   border: none;
-  color: #858585;
+  color: var(--llm-text-secondary);
   width: 24px;
   height: 24px;
   border-radius: 4px;
@@ -1192,7 +1273,6 @@
   justify-content: center;
   transition: all 0.2s ease;
   opacity: 1;
-  /* Always visible */
 }
 
 .code-editor-wrapper:hover .code-editor-maximize-button,
@@ -1201,8 +1281,8 @@
 }
 
 .code-editor-maximize-button:hover {
-  background-color: #3e3e42;
-  color: white;
+  background-color: var(--llm-bg-hover);
+  color: var(--llm-text-primary);
   transform: none;
   box-shadow: none;
 }
@@ -1238,8 +1318,14 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+[data-theme='light'] .code-editor-maximize-button.floating-minimize {
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--llm-text-primary);
+}
+
 .code-editor-maximize-button.floating-minimize:hover {
-  background-color: rgba(50, 50, 50, 0.8);
+  background-color: var(--llm-bg-hover);
   transform: scale(1.05);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }

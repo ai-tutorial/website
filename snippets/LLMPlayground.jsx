@@ -25,7 +25,8 @@ export const LLMPlayground = ({
 
   response = '',
   forceSettingsOpen = false,
-  title
+  title,
+  theme: userTheme
 }) => {
   // ==================== CONSTANTS ====================
   const STORAGE_KEY = 'openai_api_key';
@@ -194,6 +195,32 @@ export const LLMPlayground = ({
   const toggleMaximize = () => setIsMaximized(!isMaximized);
 
   const headerTitle = title || (defaultMode === 'advanced' ? 'Advanced Playground' : 'LLM Playground');
+
+  // ==================== THEME DETECTION ====================
+  const [detectedTheme, setDetectedTheme] = useState('dark');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setDetectedTheme(isDark ? 'dark' : 'light');
+    };
+
+    // Initial check
+    checkTheme();
+
+    // Observer for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const theme = userTheme || detectedTheme;
 
   // ==================== EFFECTS ====================
   useEffect(() => {
@@ -539,16 +566,13 @@ export const LLMPlayground = ({
               disabled={isSavingKey}
               className={error ? 'llm-api-key-input llm-api-key-input-error' : 'llm-api-key-input'}
               onBlur={(e) => {
-                e.target.style.borderColor = error ? '#ef4444' : '#262626';
+                e.target.style.borderColor = error ? 'var(--llm-accent-red)' : 'var(--llm-border-color)';
               }}
             />
             <button
               type="submit"
               disabled={isSavingKey || !apiKeyInput.trim()}
               className="llm-api-key-save-button"
-              style={{
-                backgroundColor: isSavingKey || !apiKeyInput.trim() ? '#1a1a1a' : '#3b82f6',
-              }}
             >
               {isSavingKey ? 'Saving...' : 'Save'}
             </button>
@@ -595,10 +619,10 @@ export const LLMPlayground = ({
           key={index}
           className="llm-advanced-message-box"
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#3a3a3a';
+            e.currentTarget.style.borderColor = 'var(--llm-border-hover)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#262626';
+            e.currentTarget.style.borderColor = 'var(--llm-border-color)';
           }}
         >
           <div className="llm-advanced-message-header">
@@ -635,18 +659,6 @@ export const LLMPlayground = ({
               }}
               disabled={isLoading || messages.length <= 1}
               className="llm-advanced-remove-button"
-              onMouseEnter={(e) => {
-                if (!isLoading && messages.length > 1) {
-                  e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-                  e.target.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isLoading && messages.length > 1) {
-                  e.target.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                  e.target.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-                }
-              }}
               title="Remove message"
             >
               <IconClose size={10} />
@@ -679,16 +691,6 @@ export const LLMPlayground = ({
         }}
         disabled={isLoading}
         className="llm-advanced-add-button"
-        onMouseEnter={(e) => {
-          e.target.style.backgroundColor = '#262626';
-          e.target.style.borderColor = '#3b82f6';
-          e.target.style.color = '#60a5fa';
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.backgroundColor = '#1a1a1a';
-          e.target.style.borderColor = '#262626';
-          e.target.style.color = '#a3a3a3';
-        }}
       >
         <IconPlus size={12} />
         Add Message
@@ -776,7 +778,7 @@ export const LLMPlayground = ({
 
   // ==================== MAIN RENDER ====================
   return (
-    <div className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''}`}>
+    <div className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''}`} data-theme={theme}>
       {!isMaximized && (
         <div className="code-editor-header">
           <div className="code-editor-title">
@@ -820,7 +822,7 @@ export const LLMPlayground = ({
           flex: isMaximized ? 1 : 'none',
           borderTopLeftRadius: isMaximized ? '12px' : '0',
           borderTopRightRadius: isMaximized ? '12px' : '0',
-          borderTop: isMaximized ? '1px solid #2a2a2a' : 'none'
+          borderTop: isMaximized ? '1px solid var(--llm-border-color)' : 'none'
         }}
       >
         <div className="llm-playground-main">
@@ -857,29 +859,6 @@ export const LLMPlayground = ({
                       onClick={handleSubmit}
                       disabled={isLoading || !isFormValid}
                       className="llm-chat-send-button"
-                      style={{
-                        backgroundColor: isLoading || !isFormValid ? '#8696a0' : '#00a884',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isLoading && isFormValid) {
-                          e.target.style.backgroundColor = '#06cf9c';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isLoading && isFormValid) {
-                          e.target.style.backgroundColor = '#00a884';
-                        }
-                      }}
-                      onMouseDown={(e) => {
-                        if (!isLoading && isFormValid) {
-                          e.target.style.transform = 'scale(0.95)';
-                        }
-                      }}
-                      onMouseUp={(e) => {
-                        if (!isLoading && isFormValid) {
-                          e.target.style.transform = 'scale(1)';
-                        }
-                      }}
                       aria-label="Send message"
                     >
                       {isLoading ? (
@@ -898,7 +877,7 @@ export const LLMPlayground = ({
                   className="llm-playground-advanced-input-area"
                   style={{
                     flex: (hasSubmitted || (response && response.trim())) ? '0 0 auto' : '1 1 100%',
-                    borderBottom: (hasSubmitted || (response && response.trim())) ? '1px solid #1a1a1a' : 'none',
+                    borderBottom: (hasSubmitted || (response && response.trim())) ? '1px solid var(--llm-bg-secondary)' : 'none',
                   }}
                 >
                   {renderAdvancedInput()}
@@ -937,29 +916,6 @@ export const LLMPlayground = ({
                         onClick={handleSubmit}
                         disabled={isLoading || !isFormValid}
                         className="llm-submit-button"
-                        style={{
-                          backgroundColor: isLoading || !isFormValid ? '#1a1a1a' : '#3b82f6',
-                          boxShadow: isLoading || !isFormValid ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isLoading && isFormValid) {
-                            e.target.style.backgroundColor = '#2563eb';
-                            e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
-                            e.target.style.transform = 'translateY(-1px)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isLoading && isFormValid) {
-                            e.target.style.backgroundColor = '#3b82f6';
-                            e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
-                            e.target.style.transform = 'translateY(0)';
-                          }
-                        }}
-                        onMouseDown={(e) => {
-                          if (!isLoading && isFormValid) {
-                            e.target.style.transform = 'translateY(0)';
-                          }
-                        }}
                       >
                         {isLoading ? (
                           <span className="llm-submit-button-loading">
@@ -1004,7 +960,7 @@ export const LLMPlayground = ({
                   disabled={isLoading}
                   className="llm-settings-select"
                   onBlur={(e) => {
-                    e.target.style.borderColor = '#262626';
+                    e.target.style.borderColor = 'var(--llm-border-color)';
                     e.target.style.boxShadow = 'none';
                   }}
                 >
@@ -1068,18 +1024,6 @@ export const LLMPlayground = ({
               }}
               disabled={forceSettingsOpen}
               className={isSettingsOpen ? 'llm-footer-toggle-button llm-footer-toggle-button-active' : 'llm-footer-toggle-button'}
-              onMouseEnter={(e) => {
-                if (!forceSettingsOpen) {
-                  e.target.style.backgroundColor = '#2a2a2a';
-                  e.target.style.borderColor = '#3a3a3a';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!forceSettingsOpen) {
-                  e.target.style.backgroundColor = isSettingsOpen ? '#2a2a2a' : 'transparent';
-                  e.target.style.borderColor = '#2a2a2a';
-                }
-              }}
               aria-label="Toggle settings"
             >
               <IconChevron
