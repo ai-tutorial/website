@@ -1027,6 +1027,12 @@
   color: #4ade80;
 }
 
+.code-editor-message-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
 .code-editor-message-icon {
   font-size: 1rem;
 }

@@ -229,7 +229,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 
     // Validate the API key with OpenAI
     setIsValidating(true);
-    setError('Validating API key...');
+    setError(''); // Clear any previous errors
     const validation = await validateApiKey(trimmedKey);
     setIsValidating(false);
 
@@ -424,7 +424,14 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
               />
             </div>
 
-            {error && (
+            {isValidating && (
+              <div className="code-editor-message code-editor-message-info">
+                <span className="code-editor-message-icon">⏳</span>
+                <span>Validating API key...</span>
+              </div>
+            )}
+
+            {error && !isValidating && (
               <div className="code-editor-message code-editor-message-error">
                 <span className="code-editor-message-icon">⚠️</span>
                 <span>{error}</span>
