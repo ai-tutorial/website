@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from '/snippets/react';
+const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
 /**
  * LLMPlayground component for interactive LLM testing
