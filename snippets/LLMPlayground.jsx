@@ -22,8 +22,10 @@ export const LLMPlayground = ({
   keepInput = false,
   defaultMode = 'chat',
   defaultMessages = [],
+
   response = '',
-  forceSettingsOpen = false
+  forceSettingsOpen = false,
+  title
 }) => {
   // ==================== CONSTANTS ====================
   const STORAGE_KEY = 'openai_api_key';
@@ -31,7 +33,7 @@ export const LLMPlayground = ({
   const SETTINGS_PANEL_WIDTH = 220;
   const API_URL = 'https://api.openai.com/v1/chat/completions';
   const MAX_TOKENS = 2000;
-  
+
   const MODELS = [
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
     { value: 'gpt-4o', label: 'GPT-4o' },
@@ -48,17 +50,17 @@ export const LLMPlayground = ({
   // ==================== ICON HELPERS ====================
   const IconWarningSun = ({ size = 14, className = '' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
     </svg>
   );
 
   const IconLoadingSpinner = ({ size = 14, className = '', strokeColor = 'currentColor', strokeWidth = '2', strokeLinecap = 'butt' }) => (
-    <svg 
-      width={size} 
-      height={size} 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke={strokeColor} 
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={strokeColor}
       strokeWidth={strokeWidth}
       strokeLinecap={strokeLinecap}
       className={className}
@@ -98,14 +100,14 @@ export const LLMPlayground = ({
   );
 
   const IconSend = ({ size = 16, fillColor = '#000', className = '' }) => (
-    <svg 
-      width={size} 
-      height={size} 
-      viewBox="0 0 24 24" 
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
       fill={fillColor}
       className={className}
     >
-      <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z"/>
+      <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z" />
     </svg>
   );
 
@@ -187,6 +189,11 @@ export const LLMPlayground = ({
     const stored = localStorage.getItem(SETTINGS_PANEL_KEY);
     return stored !== null ? stored === 'true' : true;
   });
+
+  const [isMaximized, setIsMaximized] = useState(false);
+  const toggleMaximize = () => setIsMaximized(!isMaximized);
+
+  const headerTitle = title || (defaultMode === 'advanced' ? 'Advanced Playground' : 'LLM Playground');
 
   // ==================== EFFECTS ====================
   useEffect(() => {
@@ -339,7 +346,7 @@ export const LLMPlayground = ({
     if (e?.preventDefault) {
       e.preventDefault();
     }
-    
+
     if (!apiKey || isLoading || !isFormValid) {
       return;
     }
@@ -347,7 +354,7 @@ export const LLMPlayground = ({
     setIsLoading(true);
     setError('');
     setHasSubmitted(true);
-    
+
     if (mode === 'advanced') {
       setLastResponseJson(null);
       setActiveTab(TABS.RESPONSE);
@@ -355,7 +362,7 @@ export const LLMPlayground = ({
 
     let requestMessages = [];
     let userMessageContent = '';
-    
+
     if (mode === 'chat') {
       const filteredInput = filterComments(input);
       if (!filteredInput) {
@@ -365,10 +372,10 @@ export const LLMPlayground = ({
       }
       userMessageContent = filteredInput;
       requestMessages = [{ role: 'user', content: filteredInput }];
-      
+
       // Add user message to conversation history
       setConversationHistory(prev => [...prev, { role: 'user', content: filteredInput }]);
-      
+
       // Clear input if keepInput is false
       if (!keepInput) {
         setInput('');
@@ -389,7 +396,7 @@ export const LLMPlayground = ({
       temperature,
       max_tokens: MAX_TOKENS
     };
-    
+
     setLastSentJson(jsonPayload);
 
     try {
@@ -409,7 +416,7 @@ export const LLMPlayground = ({
 
       const data = await response.json();
       const newResponse = data.choices[0]?.message?.content || 'No response generated';
-      
+
       if (mode === 'advanced') {
         setLastResponseJson(data);
         setOutput(newResponse);
@@ -451,7 +458,7 @@ export const LLMPlayground = ({
   const renderChatInterface = () => {
     const allMessages = [...conversationHistory];
     const placeholderMessages = [];
-    
+
     // If there's a response and no conversation yet, show both input and response
     // response requires defaultInput to be present - if response exists but no defaultInput, don't show placeholder messages
     if (response && !hasSubmitted && conversationHistory.length === 0) {
@@ -466,9 +473,9 @@ export const LLMPlayground = ({
       }
       // If response is provided but no defaultInput, the response won't be shown (as per requirement)
     }
-    
+
     const hasPlaceholderMessages = placeholderMessages.length > 0;
-    
+
     return (
       <div className="llm-chat-interface">
         {hasPlaceholderMessages && (
@@ -516,7 +523,7 @@ export const LLMPlayground = ({
           </a>
         </p>
       </div>
-      
+
       <form onSubmit={handleApiKeySubmit}>
         <div className="llm-form-group">
           <div className="llm-form-row">
@@ -584,8 +591,8 @@ export const LLMPlayground = ({
   const renderAdvancedInput = () => (
     <div className="llm-advanced-input-container">
       {messages.map((message, index) => (
-        <div 
-          key={index} 
+        <div
+          key={index}
           className="llm-advanced-message-box"
           onMouseEnter={(e) => {
             e.currentTarget.style.borderColor = '#3a3a3a';
@@ -607,11 +614,10 @@ export const LLMPlayground = ({
                   setMessages(newMessages);
                 }}
                 disabled={isLoading}
-                className={`llm-advanced-role-select ${
-                  message.role === 'system' ? 'llm-advanced-role-select-system' :
+                className={`llm-advanced-role-select ${message.role === 'system' ? 'llm-advanced-role-select-system' :
                   message.role === 'user' ? 'llm-advanced-role-select-user' :
-                  'llm-advanced-role-select-assistant'
-                }`}
+                    'llm-advanced-role-select-assistant'
+                  }`}
                 onBlur={(e) => {
                   e.target.style.boxShadow = 'none';
                 }}
@@ -665,7 +671,7 @@ export const LLMPlayground = ({
           />
         </div>
       ))}
-      
+
       <button
         type="button"
         onClick={() => {
@@ -708,7 +714,7 @@ export const LLMPlayground = ({
           </button>
         ))}
       </div>
-      
+
       <div className="llm-tabs-content">
         {activeTab === TABS.RESPONSE && (
           <>
@@ -735,7 +741,7 @@ export const LLMPlayground = ({
             )}
           </>
         )}
-        
+
         {activeTab === TABS.REQUEST && (
           <div
             className="llm-textarea-base llm-textarea-enabled llm-json-viewer"
@@ -747,7 +753,7 @@ export const LLMPlayground = ({
             )}
           </div>
         )}
-        
+
         {activeTab === TABS.API_RESPONSE && (
           <div
             className="llm-textarea-base llm-textarea-enabled llm-json-viewer"
@@ -770,279 +776,323 @@ export const LLMPlayground = ({
 
   // ==================== MAIN RENDER ====================
   return (
-    <div
-      className={mode === 'chat' ? 'llm-playground-container llm-playground-container-chat llm-playground-container-base' : 'llm-playground-container llm-playground-container-base'}
-      style={{
-        height,
-      }}
-    >
-      <div className="llm-playground-main">
-        <div className="llm-playground-content">
-          {mode === 'chat' ? (
-            <>
-              {/* API Key form - shown first if not configured */}
-              {!apiKey && (
-                <div className="llm-api-key-form-wrapper">
-                  {renderApiKeyForm()}
-                </div>
-              )}
-              
-              {/* Chat messages area */}
-              {renderChatInterface()}
-              
-              {/* Error message */}
-              {error && (
-                <div className="llm-error-wrapper">
-                  <div className="llm-error-message">
-                    <IconError size={14} />
-                    {error}
+    <div className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''}`}>
+      {!isMaximized && (
+        <div className="code-editor-header">
+          <div className="code-editor-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            {headerTitle}
+          </div>
+          <div className="code-editor-controls">
+            <button
+              className="code-editor-maximize-button"
+              onClick={toggleMaximize}
+              title="Maximize (Focus Mode)"
+              type="button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isMaximized && (
+        <button
+          className="code-editor-maximize-button floating-minimize"
+          onClick={toggleMaximize}
+          title="Minimize"
+          type="button"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 14h6v6" /><path d="M20 10h-6V4" /><path d="M14 10l7-7" /><path d="M3 21l7-7" />
+          </svg>
+        </button>
+      )}
+
+      <div
+        className={mode === 'chat' ? 'llm-playground-container llm-playground-container-chat llm-playground-container-base' : 'llm-playground-container llm-playground-container-base'}
+        style={{
+          height: isMaximized ? 'auto' : height,
+          flex: isMaximized ? 1 : 'none',
+          borderTopLeftRadius: isMaximized ? '12px' : '0',
+          borderTopRightRadius: isMaximized ? '12px' : '0',
+          borderTop: isMaximized ? '1px solid #2a2a2a' : 'none'
+        }}
+      >
+        <div className="llm-playground-main">
+          <div className="llm-playground-content">
+            {mode === 'chat' ? (
+              <>
+                {/* API Key form - shown first if not configured */}
+                {!apiKey && (
+                  <div className="llm-api-key-form-wrapper">
+                    {renderApiKeyForm()}
                   </div>
-                </div>
-              )}
-              
-              {/* Input area at bottom */}
-              <div className="llm-playground-input-area">
-                <div className="llm-chat-input-wrapper">
-                  {renderChatInput()}
-                </div>
-                {apiKey && (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={isLoading || !isFormValid}
-                    className="llm-chat-send-button"
-                    style={{
-                      backgroundColor: isLoading || !isFormValid ? '#8696a0' : '#00a884',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isLoading && isFormValid) {
-                        e.target.style.backgroundColor = '#06cf9c';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isLoading && isFormValid) {
-                        e.target.style.backgroundColor = '#00a884';
-                      }
-                    }}
-                    onMouseDown={(e) => {
-                      if (!isLoading && isFormValid) {
-                        e.target.style.transform = 'scale(0.95)';
-                      }
-                    }}
-                    onMouseUp={(e) => {
-                      if (!isLoading && isFormValid) {
-                        e.target.style.transform = 'scale(1)';
-                      }
-                    }}
-                    aria-label="Send message"
-                  >
-                    {isLoading ? (
-                      <IconLoadingSpinner size={16} strokeColor="#000" strokeWidth="2.5" strokeLinecap="round" className="llm-chat-send-spinner" />
-                    ) : (
-                      <IconSend size={16} fillColor="#000" className="llm-chat-send-icon" />
-                    )}
-                  </button>
                 )}
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Advanced mode - keep existing layout */}
-              <div
-                className="llm-playground-advanced-input-area"
-                style={{
-                  flex: (hasSubmitted || (response && response.trim())) ? '0 0 auto' : '1 1 100%',
-                  borderBottom: (hasSubmitted || (response && response.trim())) ? '1px solid #1a1a1a' : 'none',
-                }}
-              >
-                {renderAdvancedInput()}
-                {!apiKey && renderApiKeyForm()}
+
+                {/* Chat messages area */}
+                {renderChatInterface()}
+
+                {/* Error message */}
                 {error && (
-                  <div className="llm-error-message llm-error-message-top">
-                    <IconError size={14} />
-                    {error}
+                  <div className="llm-error-wrapper">
+                    <div className="llm-error-message">
+                      <IconError size={14} />
+                      {error}
+                    </div>
                   </div>
                 )}
-              </div>
 
-              {(hasSubmitted || (response && response.trim())) && (
-                <div ref={responseAreaRef} className="llm-playground-response-area">
-                  {!apiKey && !(response && response.trim()) ? (
-                    <>
-                      <label className="llm-section-label">Prompt</label>
-                    <textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder="Enter your prompt here... (Configure API key to enable)"
-                        disabled={true}
-                        className="llm-textarea-base llm-textarea-disabled"
-                      />
-                    </>
-                  ) : (
-                    renderTabs()
-                  )}
-                </div>
-              )}
-
-              {(apiKey || (response && response.trim())) && (
-                <div className="llm-playground-actions-area">
-                  {apiKey ? (
+                {/* Input area at bottom */}
+                <div className="llm-playground-input-area">
+                  <div className="llm-chat-input-wrapper">
+                    {renderChatInput()}
+                  </div>
+                  {apiKey && (
                     <button
                       onClick={handleSubmit}
                       disabled={isLoading || !isFormValid}
-                      className="llm-submit-button"
+                      className="llm-chat-send-button"
                       style={{
-                        backgroundColor: isLoading || !isFormValid ? '#1a1a1a' : '#3b82f6',
-                        boxShadow: isLoading || !isFormValid ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
+                        backgroundColor: isLoading || !isFormValid ? '#8696a0' : '#00a884',
                       }}
                       onMouseEnter={(e) => {
                         if (!isLoading && isFormValid) {
-                          e.target.style.backgroundColor = '#2563eb';
-                          e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
-                          e.target.style.transform = 'translateY(-1px)';
+                          e.target.style.backgroundColor = '#06cf9c';
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!isLoading && isFormValid) {
-                          e.target.style.backgroundColor = '#3b82f6';
-                          e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
-                          e.target.style.transform = 'translateY(0)';
+                          e.target.style.backgroundColor = '#00a884';
                         }
                       }}
                       onMouseDown={(e) => {
                         if (!isLoading && isFormValid) {
-                          e.target.style.transform = 'translateY(0)';
+                          e.target.style.transform = 'scale(0.95)';
                         }
                       }}
+                      onMouseUp={(e) => {
+                        if (!isLoading && isFormValid) {
+                          e.target.style.transform = 'scale(1)';
+                        }
+                      }}
+                      aria-label="Send message"
                     >
                       {isLoading ? (
-                        <span className="llm-submit-button-loading">
-                          <IconLoadingSpinner size={12} className="llm-submit-button-loading-spinner" />
-                          Processing...
-                        </span>
+                        <IconLoadingSpinner size={16} strokeColor="#000" strokeWidth="2.5" strokeLinecap="round" className="llm-chat-send-spinner" />
                       ) : (
-                        'Submit'
+                        <IconSend size={16} fillColor="#000" className="llm-chat-send-icon" />
                       )}
                     </button>
-                  ) : (
-                    <div className="llm-config-message">
-                      Configure API key above to submit and get actual response
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Advanced mode - keep existing layout */}
+                <div
+                  className="llm-playground-advanced-input-area"
+                  style={{
+                    flex: (hasSubmitted || (response && response.trim())) ? '0 0 auto' : '1 1 100%',
+                    borderBottom: (hasSubmitted || (response && response.trim())) ? '1px solid #1a1a1a' : 'none',
+                  }}
+                >
+                  {renderAdvancedInput()}
+                  {!apiKey && renderApiKeyForm()}
+                  {error && (
+                    <div className="llm-error-message llm-error-message-top">
+                      <IconError size={14} />
+                      {error}
                     </div>
                   )}
                 </div>
-              )}
-            </>
+
+                {(hasSubmitted || (response && response.trim())) && (
+                  <div ref={responseAreaRef} className="llm-playground-response-area">
+                    {!apiKey && !(response && response.trim()) ? (
+                      <>
+                        <label className="llm-section-label">Prompt</label>
+                        <textarea
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          placeholder="Enter your prompt here... (Configure API key to enable)"
+                          disabled={true}
+                          className="llm-textarea-base llm-textarea-disabled"
+                        />
+                      </>
+                    ) : (
+                      renderTabs()
+                    )}
+                  </div>
+                )}
+
+                {(apiKey || (response && response.trim())) && (
+                  <div className="llm-playground-actions-area">
+                    {apiKey ? (
+                      <button
+                        onClick={handleSubmit}
+                        disabled={isLoading || !isFormValid}
+                        className="llm-submit-button"
+                        style={{
+                          backgroundColor: isLoading || !isFormValid ? '#1a1a1a' : '#3b82f6',
+                          boxShadow: isLoading || !isFormValid ? 'none' : '0 2px 4px rgba(59, 130, 246, 0.2)',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isLoading && isFormValid) {
+                            e.target.style.backgroundColor = '#2563eb';
+                            e.target.style.boxShadow = '0 4px 6px rgba(59, 130, 246, 0.3)';
+                            e.target.style.transform = 'translateY(-1px)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isLoading && isFormValid) {
+                            e.target.style.backgroundColor = '#3b82f6';
+                            e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.2)';
+                            e.target.style.transform = 'translateY(0)';
+                          }
+                        }}
+                        onMouseDown={(e) => {
+                          if (!isLoading && isFormValid) {
+                            e.target.style.transform = 'translateY(0)';
+                          }
+                        }}
+                      >
+                        {isLoading ? (
+                          <span className="llm-submit-button-loading">
+                            <IconLoadingSpinner size={12} className="llm-submit-button-loading-spinner" />
+                            Processing...
+                          </span>
+                        ) : (
+                          'Submit'
+                        )}
+                      </button>
+                    ) : (
+                      <div className="llm-config-message">
+                        Configure API key above to submit and get actual response
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {apiKey && isSettingsOpen && (
+            <div
+              className="llm-settings-panel"
+              style={{
+                width: `${SETTINGS_PANEL_WIDTH}px`,
+              }}
+            >
+              <div>
+                <h4 className="llm-settings-title">
+                  Settings
+                </h4>
+              </div>
+
+              <div>
+                <label className="llm-settings-label">
+                  Model
+                </label>
+                <select
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  disabled={isLoading}
+                  className="llm-settings-select"
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#262626';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                >
+                  {MODELS.map((m) => (
+                    <option key={m.value} value={m.value} className="llm-settings-option">
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <div className="llm-settings-range-container">
+                  <label className="llm-settings-label">
+                    Temperature
+                  </label>
+                  <span className="llm-settings-range-value">
+                    {temperature.toFixed(1)}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  disabled={isLoading}
+                  className="llm-settings-range"
+                />
+                <div className="llm-settings-range-labels">
+                  <span>0.0</span>
+                  <span>1.0</span>
+                  <span>2.0</span>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
-        {apiKey && isSettingsOpen && (
-          <div
-            className="llm-settings-panel"
-            style={{
-              width: `${SETTINGS_PANEL_WIDTH}px`,
-            }}
-          >
-            <div>
-              <h4 className="llm-settings-title">
-                Settings
-              </h4>
+        <div className="llm-footer">
+          <div className="llm-footer-status-container">
+            <span>OpenAI key status:</span>
+            <div
+              className="llm-footer-status-icon"
+              title={apiKey ? 'API Key configured' : 'API Key not configured'}
+            >
+              {apiKey ? (
+                <IconCheckmark size={14} strokeColor="#22c55e" />
+              ) : (
+                <IconXStatus size={14} strokeColor="#ef4444" />
+              )}
             </div>
-
-            <div>
-              <label className="llm-settings-label">
-                Model
-              </label>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                disabled={isLoading}
-                className="llm-settings-select"
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#262626';
-                  e.target.style.boxShadow = 'none';
-                }}
-              >
-                {MODELS.map((m) => (
-                  <option key={m.value} value={m.value} className="llm-settings-option">
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <div className="llm-settings-range-container">
-                <label className="llm-settings-label">
-                  Temperature
-                </label>
-                <span className="llm-settings-range-value">
-                  {temperature.toFixed(1)}
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="2"
-                step="0.1"
-                value={temperature}
-                onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                disabled={isLoading}
-                className="llm-settings-range"
+          </div>
+          {apiKey && (
+            <button
+              onClick={() => {
+                if (!forceSettingsOpen) {
+                  setIsSettingsOpen(!isSettingsOpen);
+                }
+              }}
+              disabled={forceSettingsOpen}
+              className={isSettingsOpen ? 'llm-footer-toggle-button llm-footer-toggle-button-active' : 'llm-footer-toggle-button'}
+              onMouseEnter={(e) => {
+                if (!forceSettingsOpen) {
+                  e.target.style.backgroundColor = '#2a2a2a';
+                  e.target.style.borderColor = '#3a3a3a';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!forceSettingsOpen) {
+                  e.target.style.backgroundColor = isSettingsOpen ? '#2a2a2a' : 'transparent';
+                  e.target.style.borderColor = '#2a2a2a';
+                }
+              }}
+              aria-label="Toggle settings"
+            >
+              <IconChevron
+                size={12}
+                isOpen={isSettingsOpen}
+                className={isSettingsOpen ? 'llm-footer-toggle-icon llm-footer-toggle-icon-open' : 'llm-footer-toggle-icon'}
               />
-              <div className="llm-settings-range-labels">
-                <span>0.0</span>
-                <span>1.0</span>
-                <span>2.0</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="llm-footer">
-        <div className="llm-footer-status-container">
-          <span>OpenAI key status:</span>
-          <div
-            className="llm-footer-status-icon"
-            title={apiKey ? 'API Key configured' : 'API Key not configured'}
-          >
-            {apiKey ? (
-              <IconCheckmark size={14} strokeColor="#22c55e" />
-            ) : (
-              <IconXStatus size={14} strokeColor="#ef4444" />
-            )}
-          </div>
+              <span>Settings</span>
+            </button>
+          )}
         </div>
-        {apiKey && (
-          <button
-            onClick={() => {
-              if (!forceSettingsOpen) {
-                setIsSettingsOpen(!isSettingsOpen);
-              }
-            }}
-            disabled={forceSettingsOpen}
-            className={isSettingsOpen ? 'llm-footer-toggle-button llm-footer-toggle-button-active' : 'llm-footer-toggle-button'}
-            onMouseEnter={(e) => {
-              if (!forceSettingsOpen) {
-                e.target.style.backgroundColor = '#2a2a2a';
-                e.target.style.borderColor = '#3a3a3a';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!forceSettingsOpen) {
-                e.target.style.backgroundColor = isSettingsOpen ? '#2a2a2a' : 'transparent';
-                e.target.style.borderColor = '#2a2a2a';
-              }
-            }}
-            aria-label="Toggle settings"
-          >
-            <IconChevron 
-              size={12} 
-              isOpen={isSettingsOpen} 
-              className={isSettingsOpen ? 'llm-footer-toggle-icon llm-footer-toggle-icon-open' : 'llm-footer-toggle-icon'} 
-            />
-            <span>Settings</span>
-          </button>
-        )}
       </div>
     </div>
   );

@@ -1120,7 +1120,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 11px 8px 16px;
+  padding: 4px 11px 4px 16px;
   background-color: #252526;
   border-bottom: 1px solid #1e1e1e;
   border-radius: 8px 8px 0 0;
@@ -1129,7 +1129,7 @@
 .code-editor-title {
   color: #e1e1e1;
   font-family: system-ui, -apple-system, sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -1183,8 +1183,8 @@
   background-color: transparent;
   border: none;
   color: #858585;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 4px;
   cursor: pointer;
   display: flex;
@@ -1208,8 +1208,8 @@
 }
 
 .code-editor-maximize-button svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 /* Add an overlay when maximized to focus attention */
