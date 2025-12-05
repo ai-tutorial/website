@@ -3,9 +3,7 @@
   "theme": "aspen",
   "name": "AI Tutorial",
   "colors": {
-    "primary": "#CC5500",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0D9373"
   },
   "favicon": "/favicon.png",
   "navigation": {
