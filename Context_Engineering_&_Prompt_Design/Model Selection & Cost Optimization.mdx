@@ -82,34 +82,20 @@ Mark reusable parts of your prompt for caching:
 **Production Economics:**
 
 <CodeGroup>
-```python Python
-# Scenario: Customer support chatbot
-# - Knowledge base: 50K tokens
-# - Avg conversation: 5 queries
-# - Cache hit rate: 80% (users ask follow-ups quickly)
 
-without_caching = 10_000 queries * 50K tokens * $3/1M = $1,500
-with_caching = (
-    (10_000 * 0.2) * 50K  # Cache misses (20%)
-    + (10_000 * 0.8) * 5K  # Cache hits (90% reduction)
-) * $3/1M = $450
-
-savings = $1,050 (70% reduction)
-```
-
-```ts TypeScript
+```ts Pseudocode
 // Scenario: Customer support chatbot
 // - Knowledge base: 50K tokens
 // - Avg conversation: 5 queries
 // - Cache hit rate: 80% (users ask follow-ups quickly)
 
-const withoutCaching = 10_000 * 50_000 * (3 / 1_000_000) = 1_500;  // $1,500
-const withCaching = (
-    (10_000 * 0.2) * 50_000  // Cache misses (20%)
-    + (10_000 * 0.8) * 5_000  // Cache hits (90% reduction)
-) * (3 / 1_000_000) = 450;  // $450
+without_caching = 10_000 queries * 50K tokens * $3/1M = $1,500
+with_caching = (
+    (10_000 * 0.2) * 50K   // Cache misses (20%)
+    + (10_000 * 0.8) * 5K  // Cache hits (90% reduction)
+) * $3/1M = $450
 
-const savings = 1_050;  // $1,050 (70% reduction)
+savings = $1,050 (70% reduction)
 ```
 </CodeGroup>
 
