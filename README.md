@@ -72,8 +72,8 @@ Changes are automatically deployed to production after pushing to the default br
 
 ## Contributors
 
-- **Pablo Luna** - 
-- **Paulo Veiga** - Contributor
+- **Pablo Luna** -  ([LinkedIn](https://www.linkedin.com/in/luna-pablo/))
+- **Paulo Veiga** - Head of Engineering ([LinkedIn](https://www.linkedin.com/in/paulo-gustavo-veiga-877b572/))
 
 
 

@@ -3,27 +3,35 @@ title: "Structured Prompt Engineering"
 description: "Design structured prompts that often reduce hallucinations"
 sidebarTitle: "Structured Prompt Engineering"
 icon: "book"
+mode: "wide"
 ---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx'; 
 
 ## The Anatomy of a Production Prompt
 
 **The Core Components:**
 
-1. **Role/Persona** - Sets behavior and expertise level
-2. **Context** - Background information needed
+1. **Role/Persona** - Sets behavior and expertise level ( values: user, assistant, system)
+2. **Context** - Background information needed 
 3. **Instructions** - What to do, step by step
 4. **Constraints** - What NOT to do, output format
 5. **Examples** - Few-shot demonstrations (optional)
 6. **Input** - The actual data to process
 
-**Basic Template:** [Full runnable structured prompt notebook](https://colab.research.google.com/drive/15hKw-5PONe0DKkDmYVfLviFJUoK3aBcn?usp=drive_link)
 
-```python
-prompt = """
-[ROLE]
-You are an experienced customer support specialist for AcmeCo.
+If we put all these components together, we get the following prompt. This promt looks more complex than the previous one, but this reflects the complexity of the task and the context needed to complete it when you use the API. 
 
-[CONTEXT]
+<LLMPlayground 
+  defaultMode="advanced"
+  defaultMessages={[
+    {
+      role: "system",
+      content: "You are an experienced customer support specialist for AcmeCo."
+    },
+    {
+      role: "user",
+      content: `[CONTEXT]
 AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, no questions asked. After 30 days, refunds require manager approval.
 
 [INSTRUCTIONS]
@@ -38,9 +46,22 @@ Analyze the customer message below and:
 - If uncertain, recommend manager review
 
 [INPUT]
-Customer message: customer_message
-"""
-```
+Customer message: I purchased a subscription 25 days ago and the software keeps crashing. I want my money back immediately.`
+    }
+  ]}
+  height="400px"
+/>
+
+The playground constructs the final prompt from these components, which is then sent to the OpenAI API as part of the JSON message payload. You can see the exact JSON payload that will be sent in the "OpenAI JSON Message" section after submitting.
+
+**Let's put all this together in code**
+
+<CodeEditor 
+  file="src/module1/structured_prompt_anatomy.ts" 
+  functionName="main"
+  lines="31-86"
+  title="Structured Prompt Anatomy"
+/> 
 
 **Practice Check:**
 
@@ -62,40 +83,42 @@ Customer message: customer_message
 - Tags create clear boundaries in the context
 - Reduced hallucinations in controlled studies
 
-**Before (Ambiguous):**
+### Practical Implication
 
-```python
-prompt = f"""
-System: You are a helpful assistant.
-User question: {user_input}
-Background context: {knowledge_base}
-Previous conversation: {history}
-"""
-# LLM might confuse where context ends and question begins
-```
+Compare these two approaches to structuring prompts:
 
-**After (Clear):**
+#### ❌ Antipattern
 
-```python
-prompt = f"""
-<role>You are a helpful assistant</role>
+<LLMPlayground 
+  defaultMode="chat"
+  defaultInput={`System: You are a helpful assistant.
+User question: What is the return policy?
+Background context: Our store offers a 30-day return window for all purchases. Items must be in original packaging. Electronics require a receipt.
+Previous conversation: Customer asked about shipping times. We responded that standard shipping takes 5-7 business days.`}
+  height="400px"
+/>
+
+#### ✅ Best Practice
+
+<LLMPlayground 
+  defaultMode="chat"
+  defaultInput={`<role>You are a helpful assistant</role>
 
 <context>
-<knowledge_base>
-{knowledge_base}
-</knowledge_base>
+  <knowledge_base>
+    Our store offers a 30-day return window for all purchases. Items must be in original packaging. Electronics require a receipt.
+  </knowledge_base>
 
-<conversation_history>
-{history}
-</conversation_history>
+  <conversation_history>
+    Customer asked about shipping times. We responded that standard shipping takes 5-7 business days.
+  </conversation_history>
 </context>
 
 <user_question>
-{user_input}
-</user_question>
-"""
-# Crystal clear boundaries
-```
+  What is the return policy?
+</user_question>`}
+  height="400px"
+/>
 
 **In Production:**
 
@@ -106,90 +129,30 @@ prompt = f"""
 
 **Pattern:**
 
-[Full runnable xml tags prompt notebook](https://colab.research.google.com/drive/1ahlRfau34JcmKc7WtBa3FdPqBye-DF9M?usp=drive_link)
+Compare these two approaches:
 
-<CodeGroup>
+### Example 1: Schema in Prompt
 
-```python Python
-def format_docs(docs):
-    return "\n".join(f"- {doc}" for doc in docs)
+This approach includes the XML schema and example in the prompt itself, instructing the model to follow the XML structure.
 
-def build_support_prompt(query: str, customer_data: dict, relevant_docs: list) -> str:
-    return f"""
-<system_role>
-You are AcmeCo's senior customer support specialist.
-</system_role>
+<CodeEditor 
+  file="src/module1/structured_outputs_xml_schema_in_prompt.ts" 
+  functionName="main"
+  lines="50-93"
+  title="Structured Outputs: XML Schema in Prompt"
+/> 
 
-<policy_documents>
-{format_docs(relevant_docs)}
-</policy_documents>
+### Example 2: Structured Outputs (XML Mode)
 
-<customer_context>
-<account_tier>{customer_data['tier']}</account_tier>
-<account_age_days>{customer_data['age_days']}</account_age_days>
-<previous_issues>{customer_data['issue_count']}</previous_issues>
-</customer_context>
+This approach uses prompt instructions to request XML output combined with XML parsing and validation. Note that OpenAI's API doesn't have a native XML response format like json_object, so we rely on prompt engineering and parsing.
 
-<customer_query>
-{query}
-</customer_query>
+<CodeEditor 
+  file="src/module1/structured_outputs_xml_mode.ts" 
+  functionName="main"
+  lines="50-96"
+  title="Structured Outputs: XML Mode"
+/> 
 
-<response_instructions>
-Analyze the query and provide:
-1. Issue category (billing, technical, account)
-2. Urgency level (low, medium, high)
-3. Recommended action
-4. Suggested response to customer
-
-Output as JSON with keys: category, urgency, action, response
-</response_instructions>
-"""
-```
-
-
-```ts TypeScript
-function formatDocs(docs: string[]): string {
-    return docs.map(doc => `- ${doc}`).join("\n");
-}
-
-function buildSupportPrompt(
-    query: string,
-    customerData: { tier: string; age_days: number; issue_count: number },
-    relevantDocs: string[]
-): string {
-    return `
-<system_role>
-You are AcmeCo's senior customer support specialist.
-</system_role>
-
-<policy_documents>
-${formatDocs(relevantDocs)}
-</policy_documents>
-
-<customer_context>
-<account_tier>${customerData.tier}</account_tier>
-<account_age_days>${customerData.age_days}</account_age_days>
-<previous_issues>${customerData.issue_count}</previous_issues>
-</customer_context>
-
-<customer_query>
-${query}
-</customer_query>
-
-<response_instructions>
-Analyze the query and provide:
-1. Issue category (billing, technical, account)
-2. Urgency level (low, medium, high)
-3. Recommended action
-4. Suggested response to customer
-
-Output as JSON with keys: category, urgency, action, response
-</response_instructions>
-`;
-}
-```
-
-</CodeGroup>
 
 ## Few-Shot Examples: Teaching by Showing
 
@@ -199,66 +162,33 @@ Output as JSON with keys: category, urgency, action, response
 - Specific output format required
 - Edge cases need clarification
 
-**Pattern:** [Full runnable few-shot examples notebook](https://colab.research.google.com/drive/1dCxVNAqgUY8bTiLXv32dvH5NyHSfZ67r?usp=drive_link)
 
-<CodeGroup>
+<LLMPlayground 
+  defaultMode="chat"
+  defaultInput={`  <task>Classify customer sentiment</task>
 
-```python Python
-prompt = f"""
-<task>Classify customer sentiment</task>
+  <examples>
+    <example>
+      <input>Your product is amazing! Best purchase ever.</input>
+      <output>positive</output>
+    </example>
 
-<examples>
-<example>
-<input>Your product is amazing! Best purchase ever.</input>
-<output>positive</output>
-</example>
+    <example>
+      <input>It's okay, does the job but nothing special.</input>
+      <output>neutral</output>
+    </example>
 
-<example>
-<input>It's okay, does the job but nothing special.</input>
-<output>neutral</output>
-</example>
+    <example>
+      <input>Terrible quality. Broke after one week. Demanding refund!</input>
+      <output>negative</output>
+    </example>
+  </examples>
 
-<example>
-<input>Terrible quality. Broke after one week. Demanding refund!</input>
-<output>negative</output>
-</example>
-</examples>
-
-<input_to_classify>
-{customer_message}
-</input_to_classify>
-"""
-```
-
-
-```ts TypeScript
-const prompt = `
-<task>Classify customer sentiment</task>
-
-<examples>
-<example>
-<input>Your product is amazing! Best purchase ever.</input>
-<output>positive</output>
-</example>
-
-<example>
-<input>It's okay, does the job but nothing special.</input>
-<output>neutral</output>
-</example>
-
-<example>
-<input>Terrible quality. Broke after one week. Demanding refund!</input>
-<output>negative</output>
-</example>
-</examples>
-
-<input_to_classify>
-${customerMessage}
-</input_to_classify>
-`;
-```
-
-</CodeGroup>
+  <input_to_classify>
+    The shipping was fast and the product arrived in perfect condition. Would buy again!
+  </input_to_classify>`}
+  height="500px"
+/>
 
 **Quality Over Quantity:**
 
@@ -266,245 +196,85 @@ ${customerMessage}
 - More examples = more tokens = higher cost
 - Examples should cover edge cases, not just obvious ones
 
-**Production Note:** Store examples separately and inject only relevant ones:
-
-<CodeGroup>
-
-```python Python
-example_db = {
-    "classification": [...],
-    "extraction": [...],
-    "summarization": [...]
-}
-
-def get_relevant_examples(task_type: str, limit: int = 3):
-    return example_db[task_type][:limit]
-```
-
-
-```ts TypeScript
-const exampleDb: Record<string, any[]> = {
-    classification: [...],
-    extraction: [...],
-    summarization: [...]
-};
-
-function getRelevantExamples(taskType: string, limit: number = 3): any[] {
-    return exampleDb[taskType].slice(0, limit);
-}
-```
-
-</CodeGroup>
-
-## Model-Specific Optimization
-
-Different models have different "personalities." Here's what works best for each:
-
-[Full runnable model-specific optimization notebook](https://colab.research.google.com/drive/19Ge-7okrUJ0mLOxAe0sY6QkV07X9njr0?usp=drive_link)
-
-### GPT-4 / GPT-4 Turbo
-
-<CodeGroup>
-
-```python Python
-# Strengths: Structured output, following complex instructions
-# Best practices:
-prompt = """
-{
-  "role": "senior_analyst",
-  "task": "financial_analysis",
-  "output_format": {
-    "summary": "string",
-    "key_metrics": ["string"],
-    "recommendation": "buy|hold|sell"
-  }
-}
-
-Input: {data}
-"""
-# GPT-4 excels at JSON, clear role definitions
-```
-
-
-```ts TypeScript
-// Strengths: Structured output, following complex instructions
-// Best practices:
-const prompt = `
-{
-  "role": "senior_analyst",
-  "task": "financial_analysis",
-  "output_format": {
-    "summary": "string",
-    "key_metrics": ["string"],
-    "recommendation": "buy|hold|sell"
-  }
-}
-
-Input: ${data}
-`;
-// GPT-4 excels at JSON, clear role definitions
-```
-
-</CodeGroup>
-
-### Claude (Sonnet/Opus)
-
-<CodeGroup>
-
-```python Python
-# Strengths: Natural language, complex reasoning, long context
-# Best practices:
-prompt = """
-<thinking>
-Let me work through this step by step...
-</thinking>
-
-[Your instructions here]
-"""
-# Claude benefits from explicit thinking blocks
-# Excellent with XML tags and markdown
-```
-
-
-```ts TypeScript
-// Strengths: Natural language, complex reasoning, long context
-// Best practices:
-const prompt = `
-<thinking>
-Let me work through this step by step...
-</thinking>
-
-[Your instructions here]
-`;
-// Claude benefits from explicit thinking blocks
-// Excellent with XML tags and markdown
-```
-
-</CodeGroup>
-
-### Gemini 1.5 Pro
-
-<CodeGroup>
-
-```python Python
-# Strengths: Massive context (2M tokens), multimodal
-# Best practices:
-prompt = """
-[Upload entire 500-page PDF]
-[Upload 10 images]
-[Provide conversation history]
-
-Based on ALL of the above context, answer: {query}
-"""
-# Many teams place the query at the end; validate per task (see Gemini prompting strategies)
-# Can handle entire codebases or document sets
-```
-
-
-```ts TypeScript
-// Strengths: Massive context (2M tokens), multimodal
-// Best practices:
-const prompt = `
-[Upload entire 500-page PDF]
-[Upload 10 images]
-[Provide conversation history]
-
-Based on ALL of the above context, answer: ${query}
-`;
-// Many teams place the query at the end; validate per task (see Gemini prompting strategies)
-// Can handle entire codebases or document sets
-```
-
-</CodeGroup>
-
 ## Structured Outputs with JSON Schemas
 
 **Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
 
-**Pattern:** [Full runnable structured outputs with JSON schemas notebook](https://colab.research.google.com/drive/1ivZiyimkc16BkvUYqEKtmd4xuvpLF8aU?usp=drive_link)
+Compare these two approaches:
 
-<CodeGroup>
+### Example 1: Schema in Prompt
 
-```python Python
-import jsonschema
+This approach includes the JSON schema in the prompt itself, instructing the model to follow the schema structure.
 
-CONTRACT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "parties": {"type": "array", "items": {"type": "string"}},
-        "key_dates": {"type": "array", "items": {"type": "string", "format": "date"}},
-        "obligations": {"type": "array", "items": {"type": "string"}},
-        "risk_flags": {"type": "array", "items": {"type": "string"}},
-        "summary": {"type": "string"}
-    },
-    "required": ["parties", "key_dates", "obligations", "risk_flags", "summary"],
-    "additionalProperties": False
+<CodeEditor 
+  file="src/module1/structured_outputs_schema_in_prompt.ts" 
+  functionName="main"
+  lines="39-75"
+  title="Structured Outputs: JSON Schema in Prompt"
+/> 
+
+### Example 2: Structured Outputs (JSON Mode)
+
+This approach uses OpenAI's structured outputs feature (`response_format: json_object`) combined with schema validation. This is more reliable than just including the schema in the prompt.
+
+<CodeEditor 
+  file="src/module1/structured_outputs_json_mode.ts" 
+  functionName="main"
+  lines="39-73"
+  title="Structured Outputs: JSON Mode"
+/> 
+
+See: [OpenAI Structured Outputs](https://openai.com/index/introducing-structured-outputs-in-the-api/) (2025), [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview) (2025), [Gemini Prompting Strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies) (2025) in Additional Resources.
+
+## Model-Specific Prompt Optimization
+
+Different models have different "personalities." Here's what works best for each:
+
+### GPT-4 / GPT-4 Turbo
+
+```python Prompt
+# Strengths: Structured output, following complex instructions
+# Best practices:
+{
+  "role": "senior_analyst",
+  "task": "financial_analysis",
+  "output_format": {
+    "summary": "string",
+    "key_metrics": ["string"],
+    "recommendation": "buy|hold|sell"
+  }
 }
 
-PROMPT = f"""
-<task>Summarize and extract fields from the contract</task>
-
-<constraints>
-- Output valid JSON only (no markdown, no comments)
-- Conform EXACTLY to this JSON schema (no extra fields):
-{json.dumps(CONTRACT_SCHEMA, indent=2)}
-</constraints>
-
-<contract>
-{{contract_text}}
-</contract>
-"""
-
-def validate_output(json_text: str) -> dict:
-    data = json.loads(json_text)
-    jsonschema.validate(instance=data, schema=CONTRACT_SCHEMA)
-    return data
+Input: Company revenue: $50M, growth: 15% YoY, market share: 8%
+# GPT-4 excels at JSON, clear role definitions
 ```
 
+### Claude (Sonnet/Opus)
 
-```ts TypeScript
-import * as Ajv from "ajv";
+```python Prompt
+# Strengths: Natural language, complex reasoning, long context
+# Best practices:
+<thinking>
+Let me work through this step by step...
+</thinking>
 
-const CONTRACT_SCHEMA = {
-    type: "object",
-    properties: {
-        parties: { type: "array", items: { type: "string" } },
-        key_dates: { type: "array", items: { type: "string", format: "date" } },
-        obligations: { type: "array", items: { type: "string" } },
-        risk_flags: { type: "array", items: { type: "string" } },
-        summary: { type: "string" }
-    },
-    required: ["parties", "key_dates", "obligations", "risk_flags", "summary"],
-    additionalProperties: false
-};
-
-const PROMPT = `
-<task>Summarize and extract fields from the contract</task>
-
-<constraints>
-- Output valid JSON only (no markdown, no comments)
-- Conform EXACTLY to this JSON schema (no extra fields):
-${JSON.stringify(CONTRACT_SCHEMA, null, 2)}
-</constraints>
-
-<contract>
-${contractText}
-</contract>
-`;
-
-function validateOutput(jsonText: string): any {
-    const data = JSON.parse(jsonText);
-    const ajv = new Ajv();
-    const validate = ajv.compile(CONTRACT_SCHEMA);
-    if (!validate(data)) {
-        throw new Error("Invalid schema: " + JSON.stringify(validate.errors));
-    }
-    return data;
-}
+Analyze the quarterly financial report and identify key trends and risks.
+# Claude benefits from explicit thinking blocks
+# Excellent with XML tags and markdown
 ```
 
-</CodeGroup>
+### Gemini 1.5 Pro
 
-See: OpenAI Structured Outputs (2025), Anthropic Prompt Engineering (2025), Gemini Prompting Strategies (2025) in Additional Resources.
+```python Prompt
+# Strengths: Massive context (2M tokens), multimodal
+# Best practices:
+[Upload entire 500-page PDF]
+[Upload 10 images]
+[Provide conversation history]
+
+Based on ALL of the above context, answer: What are the main findings from the research study?
+# Many teams place the query at the end; validate per task (see Gemini prompting strategies)
+# Can handle entire codebases or document sets
+```
 
 ---

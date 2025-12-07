@@ -3,6 +3,7 @@ title: "Advanced RAG Patterns"
 description: "Different advanced RAG patterns and how to use them"
 sidebarTitle: "Advanced RAG Patterns"
 icon: "book"
+mode: "wide"
 ---
 
 ## Pattern 1: GraphRAG (Knowledge Graphs + RAG)
@@ -329,7 +330,7 @@ class IterativeRAG {
             max_tokens: 100
         });
         
-        return response.choices[0].message.content?.trim() || "";
+        return response.choices[0].message.content || "";
     }
     
     async query(question: string): Promise<{

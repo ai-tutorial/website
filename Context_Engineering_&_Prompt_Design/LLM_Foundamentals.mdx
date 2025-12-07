@@ -3,19 +3,32 @@ title: "LLM Fundamentals"
 description: "Understand what's actually happening when you call a model"
 sidebarTitle: "LLM Fundamentals"
 icon: "book"
+mode: "wide"
 ---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx'; 
 
-import { CodeEmbed } from '/snippets/CodeEmbed.jsx';
 
 ## Hello World
 
-After configuring your OpenAI API key, you can run this example by executing `npm run llm:sample1` in the terminal. Give a try !
+This isn't your typical "Hello World" — we're diving straight into what makes LLMs powerful. After configuring your OpenAI API key, press Enter to see the magic happen. The code is self-explanatory, so go ahead and modify it to experiment.
 
-<CodeEmbed 
-  file="src/hello_world.ts" 
-  lines="9-17"
-  title="LLM Fundamentals - Hello World"
-/>
+<CodeEditor 
+  file="src/module1/hello_world.ts" 
+  functionName="main"
+  lines="28-40"
+  title="Hello World"
+/> 
+
+<Note>
+  **Prefer to follow along locally?** You can checkout the examples repository and run the code on your machine:
+  
+  ```bash
+  git clone https://github.com/ai-tutorial/typescript-examples
+  ```
+  
+  Then navigate to the specific example file and run it with your configured OpenAI API key.
+</Note>
 
 ## How LLMs Process Your Input
 
@@ -71,18 +84,17 @@ LLMs are trained to predict the next plausible token. They're not fact-checking 
 
 **2. Non-Determinism: Different Answers Every Time**
 
-Run the same prompt twice, get different answers. That's by design (temperature \> 0).
+Run the same prompt twice, get different answers. That's by design (temperature \> 0). Try running the same prompt multiple times with different temperature settings to see how the model generates different responses:
 
-[Full runnable non-deterministic outputs notebook](non-deterministic-outputs.ipynb)
+<LLMPlayground 
+  defaultInput="Summarize this customer complaint in 10 words:
 
-```python
-# Same prompt, different responses
-prompt = "Summarize this customer complaint in 10 words"
 
-response_1 = "Customer angry about delayed shipment, demanding refund immediately"
-response_2 = "Shipment late, customer wants money back, very upset"
-response_3 = "Delayed delivery complaint with refund request, customer frustrated"
-```
+I ordered a premium wireless headset last week with express shipping. The package arrived three days late, and the headset was damaged with scratches. The left speaker produces only static noise. I demand a full refund."
+  defaultTemperature={2.0}
+  height="500px"
+  keepInput={true}
+/>
 
 **Production Strategy:**
 
@@ -108,7 +120,7 @@ LLMs pay more attention to text at the beginning and end of the prompt. Middle c
 
 **Heuristic:** Prompt structure and placement can affect results. Many teams place the specific query toward the end; validate with your use case.
 
-\*\*Best Practice for Gemini: \*\*See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
+**Best Practice for Gemini:** See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
 
 ```
 Critical instructions at START
@@ -133,37 +145,35 @@ result = "unknown" or makes something up
 # It hasn't seen this pattern → hallucination risk
 ```
 
-**Practical Implication:** When you want structured output, give the LLM a pattern to complete:
+### Practical Implication
 
-<CodeGroup>
+When you want structured output, give the LLM a pattern to complete. Compare these two approaches:
 
-```python Python
-# ❌ Vague: "Extract the customer's name and email"
-# LLM might respond in prose: "The customer's name is John and his email is..."
+#### ❌ Antipattern
 
-# ✅ Pattern to complete:
-"""
-Extract customer information:
+First, try the vague prompt and see how the LLM responds in prose. Then try the pattern-based approach to get structured output:
 
-Name: [the customer's name]
-Email: [the customer's email address]
-"""
-# LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
-```
-
-
-```ts TypeScript
-// ❌ Vague: "Extract the customer's name and email"
+<LLMPlayground
+  defaultInput={`//  Vague: "Extract the customer's name and email"
 // LLM might respond in prose: "The customer's name is John and his email is..."
 
-// ✅ Pattern to complete:
-const prompt = `
+Extract the customer's name and email from: "Hi, I'm John Smith and you can reach me at john.smith@email.com for the order inquiry."`}
+  defaultTemperature={0.7}
+  height="500px"
+/>
+
+#### ✅ Best Practice
+
+<LLMPlayground
+  defaultInput={`// Pattern to complete:
+// LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
+
 Extract customer information:
 
 Name: [the customer's name]
 Email: [the customer's email address]
-`;
-// LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
-```
 
-</CodeGroup>
+From: "Hi, I'm John Smith and you can reach me at john.smith@email.com for the order inquiry."`}
+  defaultTemperature={0.7}
+  height="500px"
+/>

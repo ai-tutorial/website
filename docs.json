@@ -1,11 +1,9 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "palm",
+  "theme": "aspen",
   "name": "AI Tutorial",
   "colors": {
-    "primary": "#CC5500",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#0D9373"
   },
   "favicon": "/favicon.png",
   "navigation": {
@@ -117,5 +115,8 @@
       "github": "https://github.com/pluna/ai-tutorial",
       "linkedin": "https://linkedin.com/in/luna-pablo"
     }
-  }
+  },
+  "customScripts": [
+    "https://unpkg.com/@stackblitz/sdk/bundles/sdk.umd.js"
+  ]
 }

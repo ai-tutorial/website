@@ -3,7 +3,11 @@ title: "Advanced Prompting Techniques"
 description: "Apply advanced techniques to improve the performance of your prompts"
 sidebarTitle: "Advanced Prompting Techniques"
 icon: "book"
+mode: "wide"
 ---
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
 
 ## Chain-of-Thought (CoT): Making Reasoning Visible
 
@@ -15,61 +19,23 @@ icon: "book"
 
 **The Problem:**
 
-<CodeGroup>
+<LLMPlayground 
+  defaultMode="chat"
+  defaultInput={`What's 15% tip on a $47.83 bill?`}
+  response={`$7.17`}
+  height="400px"
+/>
 
-```python Python
-prompt = "What's 15% tip on a $47.83 bill?"
-response = "$7.17"  # Correct
-```
+But what if you need to debug a wrong answer? You can't see the reasoning. The expected response would be something like (note: the response shown below is a placeholder example, not a real API response):
 
-
-```ts TypeScript
-const prompt = "What's 15% tip on a $47.83 bill?";
-const response = "$7.17";  // Correct
-```
-
-</CodeGroup>
-
-But what if you need to debug a wrong answer? You can't see the reasoning.
-
-**The Solution: CoT:** [Full runnable chain-of-thought notebook](https://colab.research.google.com/drive/1CobAOn09WNGCP_u5lpC540QveepLPb7J#scrollTo=ED506cVi7H8S&line=14&uniqifier=1)
-
-<CodeGroup>
-
-```python Python
-prompt = """
-Calculate 15% tip on a $47.83 bill.
-
-Think step by step:
-"""
-
-response = """
-Step 1: Convert 15% to decimal: 0.15
-Step 2: Multiply: $47.83 × 0.15 = $7.1745
-Step 3: Round to cents: $7.17
-
-Answer: $7.17
-"""
-```
-
-
-```ts TypeScript
-const prompt = `
-Calculate 15% tip on a $47.83 bill.
-
-Think step by step:
-`;
-
-const response = `
-Step 1: Convert 15% to decimal: 0.15
-Step 2: Multiply: $47.83 × 0.15 = $7.1745
-Step 3: Round to cents: $7.17
-
-Answer: $7.17
-`;
-```
-
-</CodeGroup>
+<LLMPlayground 
+  defaultMode="advanced"
+  defaultMessages={[
+    {"role": "system", "content": "Show your reasoning steps briefly before the final answer."},
+    {"role": "user", "content": "What's a 15% tip on a $47.83 bill? Think step by step."},
+  ]}
+  height="400px"
+/>
 
 **In Production:**
 
@@ -85,59 +51,14 @@ Answer: $7.17
 
 **Production Pattern:**
 
-<CodeGroup>
-
-```python Python
-def cot_prompt(question: str) -> str:
-    return f"""
-<question>{question}</question>
-
-<instructions>
-Solve this step by step:
-1. Identify what information you need
-2. Break down the problem into sub-steps
-3. Solve each sub-step
-4. Combine into final answer
-5. Verify your answer makes sense
-</instructions>
-
-<thinking>
-[Your step-by-step reasoning here]
-</thinking>
-
-<final_answer>
-[Your final answer here]
-</final_answer>
-"""
-```
-
-
-```ts TypeScript
-function cotPrompt(question: string): string {
-    return `
-<question>${question}</question>
-
-<instructions>
-Solve this step by step:
-1. Identify what information you need
-2. Break down the problem into sub-steps
-3. Solve each sub-step
-4. Combine into final answer
-5. Verify your answer makes sense
-</instructions>
-
-<thinking>
-[Your step-by-step reasoning here]
-</thinking>
-
-<final_answer>
-[Your final answer here]
-</final_answer>
-`;
-}
-```
-
-</CodeGroup>
+<LLMPlayground 
+  defaultMode="advanced"
+  defaultMessages={[
+    {"role": "system", "content": "You are a helpful assistant that solves problems step by step."},
+    {"role": "user", "content": "<question>What's 15% tip on a $47.83 bill?</question>\n\n<instructions>\nSolve this step by step:\n1. Identify what information you need\n2. Break down the problem into sub-steps\n3. Solve each sub-step\n4. Combine into final answer\n5. Verify your answer makes sense\n</instructions>\n\n<thinking>\n[Your step-by-step reasoning here]\n</thinking>\n\n<final_answer>\n[Your final answer here]\n</final_answer>"}
+  ]}
+  height="600px"
+/>
 
 **Real-World Impact:**
 
@@ -150,80 +71,15 @@ Solve this step by step:
 **The Problem:** One response might be wrong due to non-determinism, ambiguous tasks, and/or valid solution paths.
 
 **The Solution:** Generate multiple responses and vote.
-
-[Full runnable self-consistency notebook](https://colab.research.google.com/drive/1CobAOn09WNGCP_u5lpC540QveepLPb7J#scrollTo=ED506cVi7H8S&line=14&uniqifier=1)
-
-<CodeGroup>
-
-```python Python
-async def self_consistent_answer(
-    prompt: str,
-    n: int = 5,
-    temperature: float = 0.7
-) -> str:
-    """
-    Generate multiple answers and return the most common one.
-    """
-    responses = []
-    
-    for _ in range(n):
-        response = await llm.generate(
-            prompt=prompt,
-            temperature=temperature
-        )
-        responses.append(response)
-    
-    # Count occurrences (or use semantic similarity - more about this later -)
-    from collections import Counter
-    answer_counts = Counter(responses)
-    
-    # Return most common answer
-    most_common = answer_counts.most_common(1)[0][0]
-    
-    return most_common
-```
+<CodeEditor 
+  file="src/module1/advance_self_consistency.ts" 
+  functionName="main"
+  lines="32-42"
+  title="Advanced Self-Consistency"
+/> 
 
 
-```ts TypeScript
-async function selfConsistentAnswer(
-    prompt: string,
-    n: number = 5,
-    temperature: number = 0.7
-): Promise<string> {
-    /**
-     * Generate multiple answers and return the most common one.
-     */
-    const responses: string[] = [];
-    
-    for (let i = 0; i < n; i++) {
-        const response = await llm.generate({
-            prompt: prompt,
-            temperature: temperature
-        });
-        responses.push(response);
-    }
-    
-    // Count occurrences (or use semantic similarity - more about this later)
-    const answerCounts: Record<string, number> = {};
-    for (const response of responses) {
-        answerCounts[response] = (answerCounts[response] || 0) + 1;
-    }
-    
-    // Return most common answer
-    let mostCommon = "";
-    let maxCount = 0;
-    for (const [answer, count] of Object.entries(answerCounts)) {
-        if (count > maxCount) {
-            maxCount = count;
-            mostCommon = answer;
-        }
-    }
-    
-    return mostCommon;
-}
-```
 
-</CodeGroup>
 
 **When to Use:**
 
@@ -246,18 +102,7 @@ async function selfConsistentAnswer(
 
 **Claude-Specific Feature:** Claude can expose its "thinking" before answering using special tags.
 
-<CodeGroup>
-
-```python Python
-prompt = """
-Analyze this complex legal document...
-Think before you write the analysis report in <thinking> tags.
-"""
-```
-
-
-```ts TypeScript
-const prompt = `
+```python Prompt
 <thinking>
 Let me analyze this complex legal document...
 - First, I'll identify the key clauses
@@ -266,10 +111,7 @@ Let me analyze this complex legal document...
 </thinking>
 
 [Your actual task here]
-`;
 ```
-
-</CodeGroup>
 
 **Why This Matters:**
 
@@ -280,41 +122,6 @@ Let me analyze this complex legal document...
 **Thinking tags can also be used to guide Claude steps:**
 
 <CodeGroup>
-
-```python Python
-def analyze_contract(contract_text: str) -> dict:
-    prompt = f"""
-<document>
-{contract_text}
-</document>
-
-<thinking>
-I need to analyze this contract for:
-1. Key obligations
-2. Termination clauses
-3. Liability limits
-4. Red flags
-
-Let me work through each section...
-</thinking>
-
-Provide a JSON response with:
-- obligations: list of key obligations
-- risks: list of potential risks
-- recommendations: list of recommended actions
-"""
-    
-    response = claude.generate(prompt)
-    
-    # Parse thinking section for audit trail
-    thinking = extract_between_tags(response, "thinking")
-    result = extract_json(response)
-    
-    return {
-        "analysis": result,
-        "reasoning": thinking,  # Store for compliance/review
-    }
-```
 
 
 ```ts TypeScript
@@ -380,65 +187,12 @@ flowchart LR
     style D fill:#c8e6c9
 ```
 
-**Example: Customer Support Automation:** [Full runnable customer support automation notebook](https://colab.research.google.com/drive/1CcvRKX8KdzHVwh5XRG2vWhzA-15-zWna?usp=drive_link)
-
-<CodeGroup>
-
-```python Python
-async def handle_support_ticket(ticket: str):
-    # Step 1: Classify urgency
-    urgency = await classify_urgency(ticket)
-    
-    # Step 2: Extract key details (only if high urgency)
-    if urgency == "high":
-        details = await extract_details(ticket)
-        
-        # Step 3: Search knowledge base
-        relevant_docs = await search_kb(details["issue"])
-        
-        # Step 4: Generate response
-        response = await generate_response(
-            ticket=ticket,
-            docs=relevant_docs,
-            urgency=urgency
-        )
-    else:
-        # Low urgency: simpler path
-        response = await generate_response(ticket)
-    
-    return response
-```
-
-
-```ts TypeScript
-async function handleSupportTicket(ticket: string): Promise<string> {
-    // Step 1: Classify urgency
-    const urgency = await classifyUrgency(ticket);
-    
-    // Step 2: Extract key details (only if high urgency)
-    let response: string;
-    if (urgency === "high") {
-        const details = await extractDetails(ticket);
-        
-        // Step 3: Search knowledge base
-        const relevantDocs = await searchKb(details.issue);
-        
-        // Step 4: Generate response
-        response = await generateResponse({
-            ticket: ticket,
-            docs: relevantDocs,
-            urgency: urgency
-        });
-    } else {
-        // Low urgency: simpler path
-        response = await generateResponse({ ticket });
-    }
-    
-    return response;
-}
-```
-
-</CodeGroup>
+<CodeEditor 
+  file="src/module1/prompt_chaining.ts" 
+  functionName="main"
+  lines="32-43"
+  title="Prompt Chaining"
+/> 
 
 **Benefits:**
 
