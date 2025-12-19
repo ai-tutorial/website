@@ -12,3 +12,4 @@
    - **Interactive prompt examples**: Use `LLMPlayground` component for interactive examples where users can experiment with prompts and see responses.
    - **Simple code/prompt examples**: Use markdown code blocks (e.g., `python Prompt`) for simple code or prompt examples that don't need interactivity (following the same pattern used in lines 224-235 of `Structured_Prompt_Engineering.mdx`).
    - **Code file examples**: Use `CodeEditor` component for displaying actual code files from the codebase.
+4. **Test Indentation**: Tests must be indented following the standard indentation rules (e.g., 4 spaces or 2 spaces) to ensure readability and consistency.
