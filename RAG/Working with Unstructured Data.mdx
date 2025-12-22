@@ -5,6 +5,10 @@ sidebarTitle: "Working with PDF and Images"
 icon: "book"
 mode: "wide"
 ---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
+
+# Working with PDF and Images
 
 ## The PDF and Images Challenge
 
@@ -25,274 +29,34 @@ Not all PDFs are created equal.
 
 ### Digital PDFs (Text-Based)
 
-<CodeGroup>
-```python Python
-# Digital PDFs: Extract text directly (fast, accurate)
-import PyPDF2
 
-def extract_digital_pdf(pdf_path: str) -> str:
-    """Extract text from digital (text-based) PDF."""
-    with open(pdf_path, 'rb') as file:
-        reader = PyPDF2.PdfReader(file)
-        
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() + "\n\n"
-        
-        return text.strip()
-
-# Fast and accurate for PDFs created from digital sources
-# (Word exports, generated reports, etc.)
-```
-
-```ts TypeScript
-// Digital PDFs: Extract text directly (fast, accurate)
-import * as fs from "fs";
-import { PDFDocument } from "pdf-lib";
-
-async function extractDigitalPdf(pdfPath: string): Promise<string> {
-    // Extract text from digital (text-based) PDF
-    const pdfBytes = fs.readFileSync(pdfPath);
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    
-    let text = "";
-    const pageCount = pdfDoc.getPageCount();
-    
-    // Note: pdf-lib doesn't extract text directly. Use pdf-parse or similar library
-    // This is a placeholder showing the structure
-    // For actual implementation, use: npm install pdf-parse
-    // const pdfParse = require('pdf-parse');
-    // const data = await pdfParse(pdfBytes);
-    // text = data.text;
-    
-    return text;
-}
-
-// Fast and accurate for PDFs created from digital sources
-// (Word exports, generated reports, etc.)
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_processing.ts" 
+    lines="49-67"
+    functionName="extractDigitalPdf"
+    title="Digital PDF Extraction"
+/>
 
 ### Scanned PDFs (Image-Based)
 
-<CodeGroup>
-```python Python
-# Scanned PDFs: Require OCR (slow, error-prone)
-from pdf2image import convert_from_path
-import pytesseract
-from PIL import Image
-
-def extract_scanned_pdf(pdf_path: str) -> str:
-    """
-    Extract text from scanned PDF using OCR.
-    Warning: Slow (5-10 sec per page) and error-prone.
-    """
-    # Convert PDF pages to images
-    images = convert_from_path(pdf_path, dpi=300)  # Higher DPI = better OCR
-    
-    text = ""
-    for i, image in enumerate(images):
-        # Apply OCR to each page
-        page_text = pytesseract.image_to_string(
-            image,
-            lang='eng',  # Specify language
-            config='--psm 3'  # Page segmentation mode: auto
-        )
-        
-        text += f"Page {i + 1}:\n{page_text}\n\n"
-    
-    return text.strip()
-
-# OCR challenges:
-# - Handwriting: 60-80% accuracy (unreliable)
-# - Low-quality scans: Poor results
-# - Tables: Often mangled
-# - Processing time: 5-10 seconds per page
-```
-
-```ts TypeScript
-// Scanned PDFs: Require OCR (slow, error-prone)
-// npm install pdf-poppler tesseract.js
-import * as pdfPoppler from "pdf-poppler";
-import { createWorker } from "tesseract.js";
-
-async function extractScannedPdf(pdfPath: string): Promise<string> {
-    /**
-     * Extract text from scanned PDF using OCR.
-     * Warning: Slow (5-10 sec per page) and error-prone.
-     */
-    // Convert PDF pages to images
-    const options = {
-        format: "png",
-        out_dir: "./temp",
-        page: null  // Convert all pages
-    };
-    const images = await pdfPoppler.convert(pdfPath, options);
-    
-    const worker = await createWorker("eng");
-    let text = "";
-    
-    for (let i = 0; i < images.length; i++) {
-        // Apply OCR to each page
-        const { data: { text: pageText } } = await worker.recognize(images[i]);
-        text += `Page ${i + 1}:\n${pageText}\n\n`;
-    }
-    
-    await worker.terminate();
-    return text;
-}
-
-// OCR challenges:
-// - Handwriting: 60-80% accuracy (unreliable)
-// - Low-quality scans: Poor results
-// - Tables: Often mangled
-// - Processing time: 5-10 seconds per page
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_processing.ts" 
+    lines="69-112"
+    functionName="extractScannedPdf"
+    title="Scanned PDF Extraction (OCR)"
+/>
 
 ### Combined PDF Processing Pipeline
 
-<CodeGroup>
-```python Python
-from typing import Optional
-import logging
 
-class PDFProcessor:
-    """Production-grade PDF processing with fallbacks."""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-    
-    def is_digital_pdf(self, pdf_path: str) -> bool:
-        """Heuristic: Check if PDF has extractable text."""
-        try:
-            sample = extract_digital_pdf(pdf_path)
-            # If we extracted meaningful text (> 100 chars), likely digital
-            return len(sample.strip()) > 100
-        except:
-            return False
-    
-    def process_pdf(self, pdf_path: str) -> dict:
-        """
-        Process PDF with appropriate method.
-        Returns: {text: str, method: str, confidence: float}
-        """
-        result = {
-            "text": "",
-            "method": "unknown",
-            "confidence": 0.0,
-            "warnings": []
-        }
-        
-        # Try digital extraction first (fast path)
-        if self.is_digital_pdf(pdf_path):
-            result["text"] = extract_digital_pdf(pdf_path)
-            result["method"] = "digital"
-            result["confidence"] = 0.95
-            self.logger.info(f"Digital extraction successful: {pdf_path}")
-            
-        else:
-            # Fall back to OCR (slow path)
-            self.logger.warning(f"Using OCR for: {pdf_path}")
-            result["text"] = extract_scanned_pdf(pdf_path)
-            result["method"] = "ocr"
-            result["confidence"] = 0.70  # OCR less reliable
-            result["warnings"].append("OCR used - may contain errors")
-        
-        # Quality checks
-        if len(result["text"]) < 50:
-            result["warnings"].append("Very short text extracted - possible failure")
-            result["confidence"] *= 0.5
-        
-        return result
 
-# Usage
-processor = PDFProcessor()
+<CodeEditor 
+    file="src/module2/pdf_processing.ts" 
+    lines="119-183"
+    functionName="PDFProcessor"
+    title="Combined PDF Processing Pipeline"
+/>
 
-# Digital PDF (fast)
-result = processor.process_pdf("digital_report.pdf")
-# >>> method: 'digital', confidence: 0.95, time: ~100ms
-
-# Scanned PDF (slow)
-result = processor.process_pdf("scanned_form.pdf")
-# >>> method: 'ocr', confidence: 0.70, time: ~30 seconds
-```
-
-```ts TypeScript
-import * as logging from "winston";
-
-class PDFProcessor {
-    private logger: logging.Logger;
-
-    constructor() {
-        this.logger = logging.createLogger();
-    }
-
-    async isDigitalPdf(pdfPath: string): Promise<boolean> {
-        // Heuristic: Check if PDF has extractable text
-        try {
-            const sample = await extractDigitalPdf(pdfPath);
-            // If we extracted meaningful text (> 100 chars), likely digital
-            return sample.length > 100;
-        } catch {
-            return false;
-        }
-    }
-
-    async processPdf(pdfPath: string): Promise<{
-        text: string;
-        method: string;
-        confidence: number;
-        warnings: string[];
-    }> {
-        /**
-         * Process PDF with appropriate method.
-         * Returns: {text: string, method: string, confidence: number}
-         */
-        const result = {
-            text: "",
-            method: "unknown",
-            confidence: 0.0,
-            warnings: [] as string[]
-        };
-
-        // Try digital extraction first (fast path)
-        if (await this.isDigitalPdf(pdfPath)) {
-            result.text = await extractDigitalPdf(pdfPath);
-            result.method = "digital";
-            result.confidence = 0.95;
-            this.logger.info(`Digital extraction successful: ${pdfPath}`);
-        } else {
-            // Fall back to OCR (slow path)
-            this.logger.warn(`Using OCR for: ${pdfPath}`);
-            result.text = await extractScannedPdf(pdfPath);
-            result.method = "ocr";
-            result.confidence = 0.70;  // OCR less reliable
-            result.warnings.push("OCR used - may contain errors");
-        }
-
-        // Quality checks
-        if (result.text.length < 50) {
-            result.warnings.push("Very short text extracted - possible failure");
-            result.confidence *= 0.5;
-        }
-
-        return result;
-    }
-}
-
-// Usage
-const processor = new PDFProcessor();
-
-// Digital PDF (fast)
-const result1 = await processor.processPdf("digital_report.pdf");
-// >>> method: 'digital', confidence: 0.95, time: ~100ms
-
-// Scanned PDF (slow)
-const result2 = await processor.processPdf("scanned_form.pdf");
-// >>> method: 'ocr', confidence: 0.70, time: ~30 seconds
-```
-</CodeGroup>
 
 ## Table Extraction: The Hard Problem
 
@@ -308,195 +72,23 @@ Tables are notoriously difficult for OCR and even digital PDFs.
 
 ### 1. Specialized Table Extractors
 
-<CodeGroup>
-```python Python
-# Using camelot for better table extraction
-import camelot
-
-def extract_tables_from_pdf(pdf_path: str) -> list:
-    """
-    Extract tables using specialized library.
-    Works best on digital PDFs with clear table borders.
-    """
-    # Extract all tables from PDF
-    tables = camelot.read_pdf(
-        pdf_path,
-        pages='all',
-        flavor='lattice'  # For bordered tables (vs 'stream' for unbordered)
-    )
-    
-    extracted = []
-    for table in tables:
-        # Get table as pandas DataFrame
-        df = table.df
-        
-        # Convert to structured format
-        extracted.append({
-            "page": table.page,
-            "dataframe": df,
-            "text": df.to_string(),  # For RAG embedding
-            "markdown": df.to_markdown()  # For LLM consumption
-        })
-    
-    return extracted
-
-# Example usage
-tables = extract_tables_from_pdf("financial_report.pdf")
-for t in tables:
-    print(f"Found table on page {t['page']}")
-    print(t['markdown'])
-    # Store markdown in RAG system for better LLM understanding
-```
-
-```ts TypeScript
-// Using tabula-js or similar for better table extraction
-// npm install tabula-js
-import { tabula } from "tabula-js";
-
-async function extractTablesFromPdf(pdfPath: string): Promise<Array<{
-    page: number;
-    dataframe: any;
-    text: string;
-    markdown: string;
-}>> {
-    /**
-     * Extract tables using specialized library.
-     * Works best on digital PDFs with clear table borders.
-     */
-    // Extract all tables from PDF
-    const tables = await tabula(pdfPath, { pages: "all", format: "array" });
-
-    const extracted: Array<{
-        page: number;
-        dataframe: any;
-        text: string;
-        markdown: string;
-    }> = [];
-
-    for (const table of tables) {
-        // Get table as structured data
-        // Convert to markdown format for RAG embedding
-        const markdown = convertToMarkdown(table.data);
-        
-        extracted.push({
-            page: table.page,
-            dataframe: table.data,
-            text: JSON.stringify(table.data),  // For RAG embedding
-            markdown: markdown  // For LLM consumption
-        });
-    }
-
-    return extracted;
-}
-
-// Example usage
-const tables = await extractTablesFromPdf("financial_report.pdf");
-for (const t of tables) {
-    console.log(`Found table on page ${t.page}`);
-    console.log(t.markdown);
-    // Store markdown in RAG system for better LLM understanding
-}
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_table_extraction.ts" 
+    lines="41-75"
+    functionName="extractTablesFromPdf"
+    title="Specialized Table Extraction"
+/>
 
 ### 2. Vision-Language Models for Tables
 
 Modern approach: Use multimodal models to "see" the table.
 
-<CodeGroup>
-```python Python
-# Using GPT-4 Vision to understand table structure
-import base64
-
-def extract_table_with_vision(image_path: str) -> str:
-    """
-    Use vision model to extract and structure table.
-    More robust than OCR for complex layouts.
-    """
-    # Encode image
-    with open(image_path, 'rb') as f:
-        image_data = base64.b64encode(f.read()).decode()
-    
-    response = openai.chat.completions.create(
-        model="gpt-4o",  # Vision-capable model
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Extract this table into markdown format. Preserve all data and structure."
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{image_data}"
-                        }
-                    }
-                ]
-            }
-        ],
-        max_tokens=1000
-    )
-    
-    return response.choices[0].message.content
-
-# This works remarkably well even for:
-# - Hand-drawn tables
-# - Complex multi-level headers
-# - Tables with merged cells
-# - Tables embedded in larger documents
-```
-
-```ts TypeScript
-// Using GPT-4 Vision to understand table structure
-import * as fs from "fs";
-import OpenAI from "openai";
-import * as base64 from "base64-js";
-
-const openai = new OpenAI();
-
-async function extractTableWithVision(imagePath: string): Promise<string> {
-    /**
-     * Use vision model to extract and structure table.
-     * More robust than OCR for complex layouts.
-     */
-    // Encode image
-    const imageBuffer = fs.readFileSync(imagePath);
-    const imageData = base64.fromByteArray(imageBuffer);
-
-    const response = await openai.chat.completions.create({
-        model: "gpt-4o",  // Vision-capable model
-        messages: [
-            {
-                role: "user",
-                content: [
-                    {
-                        type: "text",
-                        text: "Extract this table into markdown format. Preserve all data and structure."
-                    },
-                    {
-                        type: "image_url",
-                        image_url: {
-                            url: `data:image/jpeg;base64,${imageData}`
-                        }
-                    }
-                ]
-            }
-        ],
-        max_tokens: 1000
-    });
-
-    return response.choices[0].message.content || "";
-}
-
-// This works remarkably well even for:
-// - Hand-drawn tables
-// - Complex multi-level headers
-// - Tables with merged cells
-// - Tables embedded in larger documents
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_vision.ts" 
+    lines="44-74"
+    functionName="extractTableWithVision"
+    title="Vision-Based Table Extraction"
+/>
 
 **Production recommendation:**
 1. Try specialized extractor (camelot) first - fast and accurate for clean tables
@@ -509,141 +101,21 @@ Should you include images in your RAG pipeline? Depends on the use case.
 
 ### When to Extract Text from Images
 
-<CodeGroup>
-```python Python
-# Image contains primarily text (signage, screenshots, diagrams with labels)
-from PIL import Image
-import pytesseract
-
-def extract_image_text(image_path: str) -> str:
-    """OCR text from image."""
-    image = Image.open(image_path)
-    
-    # Preprocessing can improve OCR
-    # - Convert to grayscale
-    # - Increase contrast
-    # - Denoise
-    image = image.convert('L')  # Grayscale
-    
-    text = pytesseract.image_to_string(image)
-    return text.strip()
-```
-
-```ts TypeScript
-// Image contains primarily text (signage, screenshots, diagrams with labels)
-// npm install tesseract.js jimp
-import { createWorker } from "tesseract.js";
-import * as Jimp from "jimp";
-
-async function extractImageText(imagePath: string): Promise<string> {
-    // OCR text from image
-    const image = await Jimp.read(imagePath);
-    
-    // Preprocessing can improve OCR
-    // - Convert to grayscale
-    // - Increase contrast
-    // - Denoise
-    image.greyscale();  // Grayscale
-    
-    const worker = await createWorker("eng");
-    const { data: { text } } = await worker.recognize(await image.getBufferAsync(Jimp.MIME_PNG));
-    await worker.terminate();
-    
-    return text;
-}
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_image_ocr.ts" 
+    lines="38-58"
+    functionName="extractImageText"
+    title="Image OCR Extraction"
+/>
 
 ### When to Caption/Describe Images
 
-<CodeGroup>
-```python Python
-# Image contains visual information (charts, photos, diagrams)
-def generate_image_caption(image_path: str) -> str:
-    """
-    Generate descriptive caption using vision model.
-    Better for images where visual information matters.
-    """
-    with open(image_path, 'rb') as f:
-        image_data = base64.b64encode(f.read()).decode()
-    
-    response = openai.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Describe this image in detail. Focus on key information someone would need to understand its content and context."
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{image_data}"
-                        }
-                    }
-                ]
-            }
-        ],
-        max_tokens=300
-    )
-    
-    return response.choices[0].message.content
-
-# Example output for a bar chart:
-# "A bar chart showing quarterly revenue from Q1 to Q4 2024. 
-#  Q1: $2.3M, Q2: $2.8M, Q3: $3.1M, Q4: $3.5M. 
-#  Clear upward trend with 52% YoY growth."
-```
-
-```ts TypeScript
-// Image contains visual information (charts, photos, diagrams)
-import * as fs from "fs";
-import OpenAI from "openai";
-import * as base64 from "base64-js";
-
-const openai = new OpenAI();
-
-async function generateImageCaption(imagePath: string): Promise<string> {
-    /**
-     * Generate descriptive caption using vision model.
-     * Better for images where visual information matters.
-     */
-    const imageBuffer = fs.readFileSync(imagePath);
-    const imageData = base64.fromByteArray(imageBuffer);
-
-    const response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
-            {
-                role: "user",
-                content: [
-                    {
-                        type: "text",
-                        text: "Describe this image in detail. Focus on key information someone would need to understand its content and context."
-                    },
-                    {
-                        type: "image_url",
-                        image_url: {
-                            url: `data:image/jpeg;base64,${imageData}`
-                        }
-                    }
-                ]
-            }
-        ],
-        max_tokens: 300
-    });
-
-    return response.choices[0].message.content || "";
-}
-
-// Example output for a bar chart:
-// "A bar chart showing quarterly revenue from Q1 to Q4 2024. 
-//  Q1: $2.3M, Q2: $2.8M, Q3: $3.1M, Q4: $3.5M. 
-//  Clear upward trend with 52% YoY growth."
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_image_captioning.ts" 
+    lines="45-73"
+    functionName="generateImageCaption"
+    title="Image Captioning (Vision API)"
+/>
 
 ### Decision Framework: Text vs. Caption
 
@@ -667,372 +139,65 @@ Long documents (100+ pages) present unique challenges:
 
 **Use case:** Finding specific information (needle in haystack)
 
-<CodeGroup>
-```python Python
-def needle_in_haystack_search(
-    document_chunks: list[str],
-    query: str
-) -> str:
-    """
-    For constant-output tasks (finding specific fact).
-    Retrieve most relevant chunks, generate answer.
-    """
-    # Standard RAG approach works fine
-    relevant_chunks = retriever.search(query, chunks=document_chunks, top_k=5)
-    
-    context = "\n\n".join(relevant_chunks)
-    answer = llm.generate(f"Context: {context}\n\nQuery: {query}")
-    
-    return answer
-
-# Example: "What is the return policy?" (one specific answer)
-```
-
-```ts TypeScript
-async function needleInHaystackSearch(
-    documentChunks: string[],
-    query: string
-): Promise<string> {
-    /**
-     * For constant-output tasks (finding specific fact).
-     * Retrieve most relevant chunks, generate answer.
-     */
-    // Standard RAG approach works fine
-    const relevantChunks = await retriever.search(query, {
-        chunks: documentChunks,
-        topK: 5
-    });
-    
-    const context = relevantChunks.join("\n\n");
-    const answer = await llm.generate(`Context: ${context}\n\nQuery: ${query}`);
-    
-    return answer;
-}
-
-// Example: "What is the return policy?" (one specific answer)
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_needle_search.ts" 
+    lines="40-75"
+    functionName="needleInHaystackSearch"
+    title="Pattern 1: Constant-Output (Needle in Haystack)"
+/>
 
 ### Pattern 2: Variable-Output Tasks
 
 **Use case:** Summarization, analysis (output scales with document length)
 
-<CodeGroup>
-```python Python
-def hierarchical_summary(
-    document_chunks: list[str],
-    summary_type: str = "comprehensive"
-) -> str:
-    """
-    For variable-output tasks (summarization).
-    Uses map-reduce pattern: chunk summaries → final summary.
-    """
-    # Step 1: Summarize each chunk independently (MAP phase)
-    chunk_summaries = []
-    for chunk in document_chunks:
-        summary = llm.generate(
-            f"Summarize this section concisely:\n\n{chunk}",
-            max_tokens=150
-        )
-        chunk_summaries.append(summary)
-    
-    # Step 2: Combine chunk summaries into final summary (REDUCE phase)
-    combined = "\n\n".join(chunk_summaries)
-    
-    final_summary = llm.generate(
-        f"Create a {summary_type} summary from these section summaries:\n\n{combined}",
-        max_tokens=500
-    )
-    
-    return final_summary
-
-# This pattern scales to documents of any length
-# Cost: O(num_chunks) API calls, but manageable
-```
-
-```ts TypeScript
-async function hierarchicalSummary(
-    documentChunks: string[],
-    summaryType: string = "comprehensive"
-): Promise<string> {
-    /**
-     * For variable-output tasks (summarization).
-     * Uses map-reduce pattern: chunk summaries → final summary.
-     */
-    // Step 1: Summarize each chunk independently (MAP phase)
-    const chunkSummaries: string[] = [];
-    for (const chunk of documentChunks) {
-        const summary = await llm.generate(
-            `Summarize this section concisely:\n\n${chunk}`,
-            { maxTokens: 150 }
-        );
-        chunkSummaries.push(summary);
-    }
-
-    // Step 2: Combine chunk summaries into final summary (REDUCE phase)
-    const combined = chunkSummaries.join("\n\n");
-
-    const finalSummary = await llm.generate(
-        `Create a ${summaryType} summary from these section summaries:\n\n${combined}`,
-        { maxTokens: 500 }
-    );
-
-    return finalSummary;
-}
-
-// This pattern scales to documents of any length
-// Cost: O(num_chunks) API calls, but manageable
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_hierarchical_summary.ts" 
+    lines="38-80"
+    functionName="hierarchicalSummary"
+    title="Pattern 2: Variable-Output (Map-Reduce Summarization)"
+/>
 
 ## A Complete Unstructured Data Pipeline
 
-<CodeGroup>
-```python Python
-from pathlib import Path
-from typing import List, Dict
-import mimetypes
-
-class UnstructuredDataPipeline:
-    """Complete pipeline for processing varied document types."""
-    
-    def __init__(self):
-        self.pdf_processor = PDFProcessor()
-        self.supported_types = {
-            'application/pdf': self.process_pdf,
-            'image/jpeg': self.process_image,
-            'image/png': self.process_image,
-            'text/plain': self.process_text,
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': self.process_docx
-        }
-    
-    def process_document(self, file_path: str) -> Dict:
-        """Route document to appropriate processor."""
-        mime_type, _ = mimetypes.guess_type(file_path)
-        
-        if mime_type not in self.supported_types:
-            raise ValueError(f"Unsupported file type: {mime_type}")
-        
-        processor = self.supported_types[mime_type]
-        return processor(file_path)
-    
-    def process_pdf(self, path: str) -> Dict:
-        """Process PDF with quality checks."""
-        result = self.pdf_processor.process_pdf(path)
-        
-        # Extract tables separately if present
-        tables = extract_tables_from_pdf(path)
-        if tables:
-            result['tables'] = tables
-            result['warnings'].append(f"Found {len(tables)} tables")
-        
-        return result
-    
-    def process_image(self, path: str) -> Dict:
-        """Process image (OCR or caption based on content)."""
-        # Heuristic: If image is mostly text (screenshot), OCR
-        # If image is visual (photo, chart), caption
-        
-        text = extract_image_text(path)
-        caption = generate_image_caption(path)
-        
-        # Combine both for rich representation
-        return {
-            "text": text,
-            "caption": caption,
-            "method": "image_processing",
-            "confidence": 0.85
-        }
-    
-    def process_batch(
-        self,
-        directory: str,
-        file_pattern: str = "*.*"
-    ) -> List[Dict]:
-        """Process all documents in directory."""
-        results = []
-        
-        for file_path in Path(directory).glob(file_pattern):
-            try:
-                result = self.process_document(str(file_path))
-                result['source'] = str(file_path)
-                results.append(result)
-            except Exception as e:
-                logging.error(f"Failed to process {file_path}: {e}")
-        
-        return results
-
-# Production usage
-pipeline = UnstructuredDataPipeline()
-
-# Process entire document corpus
-results = pipeline.process_batch("./documents/")
-
-# Store in RAG system
-for doc in results:
-    if doc['confidence'] > 0.7:  # Quality threshold
-        store_in_vector_db(
-            content=doc['text'],
-            metadata={
-                'source': doc['source'],
-                'method': doc['method'],
-                'confidence': doc['confidence'],
-                'warnings': doc.get('warnings', [])
-            }
-        )
-```
-
-```ts TypeScript
-import * as fs from "fs";
-import * as path from "path";
-import * as mime from "mime-types";
-
-class UnstructuredDataPipeline {
-    private pdfProcessor: PDFProcessor;
-    private supportedTypes: Record<string, (path: string) => Promise<any>>;
-
-    /**
-     * Complete pipeline for processing varied document types.
-     */
-    constructor() {
-        this.pdfProcessor = new PDFProcessor();
-        this.supportedTypes = {
-            'application/pdf': (p) => this.processPdf(p),
-            'image/jpeg': (p) => this.processImage(p),
-            'image/png': (p) => this.processImage(p),
-            'text/plain': (p) => this.processText(p),
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': (p) => this.processDocx(p)
-        };
-    }
-
-    async processDocument(filePath: string): Promise<any> {
-        // Route document to appropriate processor
-        const mimeType = mime.lookup(filePath) || "";
-
-        if (!(mimeType in this.supportedTypes)) {
-            throw new Error(`Unsupported file type: ${mimeType}`);
-        }
-
-        const processor = this.supportedTypes[mimeType];
-        return processor(filePath);
-    }
-
-    async processPdf(filePath: string): Promise<any> {
-        // Process PDF with quality checks
-        const result = await this.pdfProcessor.processPdf(filePath);
-
-        // Extract tables separately if present
-        const tables = await extractTablesFromPdf(filePath);
-        if (tables.length > 0) {
-            result.tables = tables;
-            result.warnings.push(`Found ${tables.length} tables`);
-        }
-
-        return result;
-    }
-
-    async processImage(filePath: string): Promise<any> {
-        // Process image (OCR or caption based on content)
-        // Heuristic: If image is mostly text (screenshot), OCR
-        // If image is visual (photo, chart), caption
-
-        const text = await extractImageText(filePath);
-        const caption = await generateImageCaption(filePath);
-
-        // Combine both for rich representation
-        return {
-            text: text,
-            caption: caption,
-            method: "image_processing",
-            confidence: 0.85
-        };
-    }
-
-    async processBatch(
-        directory: string,
-        filePattern: string = "*.*"
-    ): Promise<any[]> {
-        // Process all documents in directory
-        const results: any[] = [];
-        const files = fs.readdirSync(directory);
-
-        for (const fileName of files) {
-            const filePath = path.join(directory, fileName);
-            try {
-                const result = await this.processDocument(filePath);
-                result.source = filePath;
-                results.push(result);
-            } catch (error) {
-                console.error(`Failed to process ${filePath}:`, error);
-            }
-        }
-
-        return results;
-    }
-
-    async processText(filePath: string): Promise<any> {
-        return { text: fs.readFileSync(filePath, "utf-8"), method: "text", confidence: 1.0 };
-    }
-
-    async processDocx(filePath: string): Promise<any> {
-        // Use mammoth or similar for DOCX processing
-        return { text: "", method: "docx", confidence: 0.8 };
-    }
-}
-
-// Production usage
-const pipeline = new UnstructuredDataPipeline();
-
-// Process entire document corpus
-const results = await pipeline.processBatch("./documents/");
-
-// Store in RAG system
-for (const doc of results) {
-    if (doc.confidence > 0.7) {  // Quality threshold
-        await storeInVectorDb(
-            doc.text,
-            {
-                source: doc.source,
-                method: doc.method,
-                confidence: doc.confidence,
-                warnings: doc.warnings || []
-            }
-        );
-    }
-}
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_unstructured_pipeline.ts" 
+    lines="23-119"
+    functionName="UnstructuredDataPipeline"
+    title="Complete Unstructured Data Pipeline"
+/>
 
 ## Practical Exercise (20 min)
 
 Process a mixed document corpus:
 
-<CodeGroup>
-```python Python
-# Your task:
-# 1. Process the text document at 'Assets/paul_graham_essay.txt' as 'text/plain'
-# 2. Apply your preferred chunking strategy from Lesson 2.3 and store chunk metadata
-# 3. (Optional) If you have one image and one PDF available, run image captioning/OCR and PDF extraction for comparison
-# 4. Measure processing time and quality signals (e.g., word counts, confidence)
-# 5. Identify any quality risks (e.g., overly short chunks, noisy OCR)
+```ts Pseudocode
+/**
+ * Practical Exercise: Unstructured Data Pipeline
+ */
+async function processMixedCorpus(documents: File[]) {
+  // 1. Process text document
+  const textDoc = documents.find(d => d.name === "paul_graham_essay.txt");
+  const textResult = await processText(textDoc);
+  
+  // 2. Apply chunking strategy (see Lesson 2.3)
+  const chunks = chunkDocument(textResult.content, { strategy: "semantic" });
+  storeMetadata(chunks);
 
-# Expected insights:
-# - Text/plain path is straightforward and high-confidence
-# - Chunking choice significantly affects later retrieval quality
-# - Vision/OCR add latency and uncertainty when used
+  // 3. (Optional) Compare with PDF/Image processing
+  if (hasMultimedia(documents)) {
+    const visionResult = await processVision(documents.image);
+    const pdfResult = await processPDF(documents.pdf);
+    
+    compareLatencyAndQuality(textResult, visionResult, pdfResult);
+  }
+
+  // 4. Analyze results
+  // - Measure processing time
+  // - Check for quality risks (short chunks, OCR noise)
+  // - Validate confidence scores
+}
+
+// Expected Insights:
+// - Text path is high-confidence & fast
+// - Vision/OCR adds latency & uncertainty
 ```
-
-```ts TypeScript
-// Your task:
-// 1. Process the text document at 'Assets/paul_graham_essay.txt' as 'text/plain'
-// 2. Apply your preferred chunking strategy from Lesson 2.3 and store chunk metadata
-// 3. (Optional) If you have one image and one PDF available, run image captioning/OCR and PDF extraction for comparison
-// 4. Measure processing time and quality signals (e.g., word counts, confidence)
-// 5. Identify any quality risks (e.g., overly short chunks, noisy OCR)
-
-// Expected insights:
-// - Text/plain path is straightforward and high-confidence
-// - Chunking choice significantly affects later retrieval quality
-// - Vision/OCR add latency and uncertainty when used
-```
-</CodeGroup>
