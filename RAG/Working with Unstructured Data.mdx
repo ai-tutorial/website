@@ -25,274 +25,34 @@ Not all PDFs are created equal.
 
 ### Digital PDFs (Text-Based)
 
-<CodeGroup>
-```python Python
-# Digital PDFs: Extract text directly (fast, accurate)
-import PyPDF2
 
-def extract_digital_pdf(pdf_path: str) -> str:
-    """Extract text from digital (text-based) PDF."""
-    with open(pdf_path, 'rb') as file:
-        reader = PyPDF2.PdfReader(file)
-        
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text() + "\n\n"
-        
-        return text.strip()
-
-# Fast and accurate for PDFs created from digital sources
-# (Word exports, generated reports, etc.)
-```
-
-```ts TypeScript
-// Digital PDFs: Extract text directly (fast, accurate)
-import * as fs from "fs";
-import { PDFDocument } from "pdf-lib";
-
-async function extractDigitalPdf(pdfPath: string): Promise<string> {
-    // Extract text from digital (text-based) PDF
-    const pdfBytes = fs.readFileSync(pdfPath);
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    
-    let text = "";
-    const pageCount = pdfDoc.getPageCount();
-    
-    // Note: pdf-lib doesn't extract text directly. Use pdf-parse or similar library
-    // This is a placeholder showing the structure
-    // For actual implementation, use: npm install pdf-parse
-    // const pdfParse = require('pdf-parse');
-    // const data = await pdfParse(pdfBytes);
-    // text = data.text;
-    
-    return text;
-}
-
-// Fast and accurate for PDFs created from digital sources
-// (Word exports, generated reports, etc.)
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_processing.ts" 
+    lines="49-67"
+    functionName="extractDigitalPdf"
+    title="Digital PDF Extraction"
+/>
 
 ### Scanned PDFs (Image-Based)
 
-<CodeGroup>
-```python Python
-# Scanned PDFs: Require OCR (slow, error-prone)
-from pdf2image import convert_from_path
-import pytesseract
-from PIL import Image
-
-def extract_scanned_pdf(pdf_path: str) -> str:
-    """
-    Extract text from scanned PDF using OCR.
-    Warning: Slow (5-10 sec per page) and error-prone.
-    """
-    # Convert PDF pages to images
-    images = convert_from_path(pdf_path, dpi=300)  # Higher DPI = better OCR
-    
-    text = ""
-    for i, image in enumerate(images):
-        # Apply OCR to each page
-        page_text = pytesseract.image_to_string(
-            image,
-            lang='eng',  # Specify language
-            config='--psm 3'  # Page segmentation mode: auto
-        )
-        
-        text += f"Page {i + 1}:\n{page_text}\n\n"
-    
-    return text.strip()
-
-# OCR challenges:
-# - Handwriting: 60-80% accuracy (unreliable)
-# - Low-quality scans: Poor results
-# - Tables: Often mangled
-# - Processing time: 5-10 seconds per page
-```
-
-```ts TypeScript
-// Scanned PDFs: Require OCR (slow, error-prone)
-// npm install pdf-poppler tesseract.js
-import * as pdfPoppler from "pdf-poppler";
-import { createWorker } from "tesseract.js";
-
-async function extractScannedPdf(pdfPath: string): Promise<string> {
-    /**
-     * Extract text from scanned PDF using OCR.
-     * Warning: Slow (5-10 sec per page) and error-prone.
-     */
-    // Convert PDF pages to images
-    const options = {
-        format: "png",
-        out_dir: "./temp",
-        page: null  // Convert all pages
-    };
-    const images = await pdfPoppler.convert(pdfPath, options);
-    
-    const worker = await createWorker("eng");
-    let text = "";
-    
-    for (let i = 0; i < images.length; i++) {
-        // Apply OCR to each page
-        const { data: { text: pageText } } = await worker.recognize(images[i]);
-        text += `Page ${i + 1}:\n${pageText}\n\n`;
-    }
-    
-    await worker.terminate();
-    return text;
-}
-
-// OCR challenges:
-// - Handwriting: 60-80% accuracy (unreliable)
-// - Low-quality scans: Poor results
-// - Tables: Often mangled
-// - Processing time: 5-10 seconds per page
-```
-</CodeGroup>
+<CodeEditor 
+    file="src/module2/pdf_processing.ts" 
+    lines="69-112"
+    functionName="extractScannedPdf"
+    title="Scanned PDF Extraction (OCR)"
+/>
 
 ### Combined PDF Processing Pipeline
 
-<CodeGroup>
-```python Python
-from typing import Optional
-import logging
 
-class PDFProcessor:
-    """Production-grade PDF processing with fallbacks."""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-    
-    def is_digital_pdf(self, pdf_path: str) -> bool:
-        """Heuristic: Check if PDF has extractable text."""
-        try:
-            sample = extract_digital_pdf(pdf_path)
-            # If we extracted meaningful text (> 100 chars), likely digital
-            return len(sample.strip()) > 100
-        except:
-            return False
-    
-    def process_pdf(self, pdf_path: str) -> dict:
-        """
-        Process PDF with appropriate method.
-        Returns: {text: str, method: str, confidence: float}
-        """
-        result = {
-            "text": "",
-            "method": "unknown",
-            "confidence": 0.0,
-            "warnings": []
-        }
-        
-        # Try digital extraction first (fast path)
-        if self.is_digital_pdf(pdf_path):
-            result["text"] = extract_digital_pdf(pdf_path)
-            result["method"] = "digital"
-            result["confidence"] = 0.95
-            self.logger.info(f"Digital extraction successful: {pdf_path}")
-            
-        else:
-            # Fall back to OCR (slow path)
-            self.logger.warning(f"Using OCR for: {pdf_path}")
-            result["text"] = extract_scanned_pdf(pdf_path)
-            result["method"] = "ocr"
-            result["confidence"] = 0.70  # OCR less reliable
-            result["warnings"].append("OCR used - may contain errors")
-        
-        # Quality checks
-        if len(result["text"]) < 50:
-            result["warnings"].append("Very short text extracted - possible failure")
-            result["confidence"] *= 0.5
-        
-        return result
 
-# Usage
-processor = PDFProcessor()
+<CodeEditor 
+    file="src/module2/pdf_processing.ts" 
+    lines="119-183"
+    functionName="PDFProcessor"
+    title="Combined PDF Processing Pipeline"
+/>
 
-# Digital PDF (fast)
-result = processor.process_pdf("digital_report.pdf")
-# >>> method: 'digital', confidence: 0.95, time: ~100ms
-
-# Scanned PDF (slow)
-result = processor.process_pdf("scanned_form.pdf")
-# >>> method: 'ocr', confidence: 0.70, time: ~30 seconds
-```
-
-```ts TypeScript
-import * as logging from "winston";
-
-class PDFProcessor {
-    private logger: logging.Logger;
-
-    constructor() {
-        this.logger = logging.createLogger();
-    }
-
-    async isDigitalPdf(pdfPath: string): Promise<boolean> {
-        // Heuristic: Check if PDF has extractable text
-        try {
-            const sample = await extractDigitalPdf(pdfPath);
-            // If we extracted meaningful text (> 100 chars), likely digital
-            return sample.length > 100;
-        } catch {
-            return false;
-        }
-    }
-
-    async processPdf(pdfPath: string): Promise<{
-        text: string;
-        method: string;
-        confidence: number;
-        warnings: string[];
-    }> {
-        /**
-         * Process PDF with appropriate method.
-         * Returns: {text: string, method: string, confidence: number}
-         */
-        const result = {
-            text: "",
-            method: "unknown",
-            confidence: 0.0,
-            warnings: [] as string[]
-        };
-
-        // Try digital extraction first (fast path)
-        if (await this.isDigitalPdf(pdfPath)) {
-            result.text = await extractDigitalPdf(pdfPath);
-            result.method = "digital";
-            result.confidence = 0.95;
-            this.logger.info(`Digital extraction successful: ${pdfPath}`);
-        } else {
-            // Fall back to OCR (slow path)
-            this.logger.warn(`Using OCR for: ${pdfPath}`);
-            result.text = await extractScannedPdf(pdfPath);
-            result.method = "ocr";
-            result.confidence = 0.70;  // OCR less reliable
-            result.warnings.push("OCR used - may contain errors");
-        }
-
-        // Quality checks
-        if (result.text.length < 50) {
-            result.warnings.push("Very short text extracted - possible failure");
-            result.confidence *= 0.5;
-        }
-
-        return result;
-    }
-}
-
-// Usage
-const processor = new PDFProcessor();
-
-// Digital PDF (fast)
-const result1 = await processor.processPdf("digital_report.pdf");
-// >>> method: 'digital', confidence: 0.95, time: ~100ms
-
-// Scanned PDF (slow)
-const result2 = await processor.processPdf("scanned_form.pdf");
-// >>> method: 'ocr', confidence: 0.70, time: ~30 seconds
-```
-</CodeGroup>
 
 ## Table Extraction: The Hard Problem
 
