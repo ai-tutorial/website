@@ -1,0 +1,44 @@
+---
+title: "Overview & Learning Objectives"
+description: Overview and learning objectives for RAG
+sidebarTitle: "Overview & Learning Objectives"
+icon: book
+mode: wide
+slug: rag/module-overview
+---
+
+## What You'll Learn
+
+By the end of this module, you'll be able to:
+- Implement two-stage retrieval (first-pass + reranking) pipelines
+- Choose between full-text, semantic, and hybrid search strategies
+- Optimize chunking strategies for different document types
+- Process unstructured data (PDFs, images) reliably
+- Evaluate retrieval and generation quality independently
+- Debug RAG failures using component-level analysis
+
+## Why RAG Matters in Production
+
+RAG (Retrieval-Augmented Generation) is the workhorse of production AI systems. Here's why:
+
+- **Adoption:** Many enterprises favor RAG to access current, proprietary data; reported adoption varies by survey (2024–2025).
+- **It solves the knowledge problem:** LLMs are frozen in time at training. RAG connects them to current, proprietary data
+- **Cost-effective:** Update your knowledge base without retraining; fine-tuning can incur significant one-time and ongoing costs depending on model size and infrastructure.
+- **Grounded responses:** RAG reduces hallucinations by constraining generation to retrieved context
+
+## Real-World Context
+
+**Case Study: Legal Document Analysis**
+
+A law firm tried using GPT-4 directly to answer questions about case law. Problems:
+- Hallucinated legal precedents (dangerous!)
+- Couldn't access firm's proprietary case notes
+- No way to cite sources or verify claims
+
+**The RAG Solution:**
+- Retrieved relevant cases and notes from their database
+- Constrained LLM to only use retrieved context
+- Generated answers with citations to source documents
+- **Result:** 95% accuracy, full auditability, zero hallucinations on verified cases
+
+Let's learn how they built it.

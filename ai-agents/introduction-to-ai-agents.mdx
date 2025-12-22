@@ -1,0 +1,382 @@
+---
+title: Introduction to AI Agents
+description: Introduction to AI Agents
+sidebarTitle: Introduction to AI Agents
+icon: book
+mode: wide
+slug: ai-agents/introduction-to-ai-agents
+---
+## What is an AI Agent?
+
+Let's start with the basics. You've been using LLMs for single-shot tasks:
+
+<CodeGroup>
+```python Python
+# Simple LLM call - one question, one answer
+response = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    messages=[{"role": "user", "content": "What's the capital of France?"}]
+)
+# → "Paris"
+```
+
+```ts TypeScript
+// Simple LLM call - one question, one answer
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+
+const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    messages: [{ role: "user", content: "What's the capital of France?" }]
+});
+// → "Paris"
+```
+</CodeGroup>
+
+This works great for simple questions. But what if you need to:
+- **Look up information** the LLM doesn't know (customer data, inventory levels)
+- **Take actions** in external systems (create tickets, send emails, update databases)
+- **Remember context** across multiple turns (maintain conversation state)
+- **Make decisions** based on intermediate results (if X then Y)
+
+**That's what agents do.**
+
+**Definition:** An AI agent is an LLM system that can:
+1. **Perceive** - Understand the current situation (user request, context, state)
+2. **Think** - Reason about what to do (using the LLM)
+3. **Act** - Execute actions using tools (function calls, API calls)
+4. **Remember** - Maintain state and context
+5. **Repeat** - Continue until task is complete
+
+## The Basic Agent Loop
+
+```
++-------------------------------------+
+│ 1. User Query                       │
++-------------------------------------+
+                 |
+                 v
++-------------------------------------+
+│ 2. Agent Thinks                     │
+│   "I need customer data to answer"  │
++-------------------------------------+
+                 |
+                 v
++-------------------------------------+
+│ 3. Agent Acts                       │
+│    Calls: get_customer(id="123")    │
++-------------------------------------+
+                 |
+                 v
++-------------------------------------+
+│ 4. Tool Returns Data                │
+│    {name: "Alice", orders: 5}       │
++-------------------------------------+
+                 |
+                 v
++-------------------------------------+
+│ 5. Agent Thinks Again               │
+│    "Now I can answer"               │
++-------------------------------------+
+                 |
+                 v
++-------------------------------------+
+│ 6. Agent Responds                   │
+│    "Alice has placed 5 orders"      │
++-------------------------------------+
+```
+
+## Your First Agent: Simple Tool Use
+
+Let's build the simplest possible agent - one that can look up weather information.
+
+[Full runnable example using LLMs, openai sdk, llamaindex, langchain, and googla adk](https://colab.research.google.com/drive/1-FeAz3P7uPZaclpGS0ZLdUduGfUMJ-Sq?usp=drive_link)
+[Full runnable example using koog AI in Kotlin](https://drive.google.com/file/d/1u93zy8jkYLMpS_l80khbIvjfhHnF62-I/view?usp=drive_link)
+
+<CodeGroup>
+```python Python
+from anthropic import Anthropic
+
+client = Anthropic()
+
+# Step 1: Define a tool
+tools = [{
+    "name": "get_weather",
+    "description": "Get current weather for a city. Use this when user asks about weather.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "city": {
+                "type": "string",
+                "description": "City name, e.g. 'San Francisco'"
+            }
+        },
+        "required": ["city"]
+    }
+}]
+
+# Step 2: Implement the tool function
+def get_weather(city: str) -> dict:
+    """Actually fetch weather data."""
+    # In production, call a real weather API
+    # For demo, return fake data
+    return {
+        "city": city,
+        "temperature": 72,
+        "condition": "Sunny",
+        "humidity": 45
+    }
+
+# Step 3: Create the agent loop
+def run_agent(user_message: str):
+    """Simple agent that can use one tool."""
+    
+    messages = [{"role": "user", "content": user_message}]
+    
+    # Agent loop - continue until agent stops using tools
+    while True:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            tools=tools,
+            messages=messages
+        )
+        
+        # Check if agent wants to use a tool
+        if response.stop_reason == "tool_use":
+            # Agent wants to use a tool
+            tool_use = next(
+                block for block in response.content 
+                if block.type == "tool_use"
+            )
+            
+            # Execute the tool
+            if tool_use.name == "get_weather":
+                tool_result = get_weather(**tool_use.input)
+            
+            # Add tool use and result to conversation
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({
+                "role": "user",
+                "content": [{
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": str(tool_result)
+                }]
+            })
+            
+            # Loop continues - agent will think again with tool result
+            
+        else:
+            # Agent is done - return final response
+            final_text = next(
+                block.text for block in response.content 
+                if hasattr(block, "text")
+            )
+            return final_text
+
+# Test the agent
+print(run_agent("What's the weather in San Francisco?"))
+# Agent thinks: "I need weather data"
+# Agent acts: Calls get_weather(city="San Francisco")
+# Agent responds: "It's currently 72°F and sunny in San Francisco..."
+```
+
+```ts TypeScript
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic();
+
+// Step 1: Define a tool
+const tools = [{
+    name: "get_weather",
+    description: "Get current weather for a city. Use this when user asks about weather.",
+    input_schema: {
+        type: "object",
+        properties: {
+            city: {
+                type: "string",
+                description: "City name, e.g. 'San Francisco'"
+            }
+        },
+        required: ["city"]
+    }
+}];
+
+// Step 2: Implement the tool function
+function getWeather(city: string): { city: string; temperature: number; condition: string; humidity: number } {
+    // Actually fetch weather data
+    // In production, call a real weather API
+    // For demo, return fake data
+    return {
+        city: city,
+        temperature: 72,
+        condition: "Sunny",
+        humidity: 45
+    };
+}
+
+// Step 3: Create the agent loop
+async function runAgent(userMessage: string): Promise<string> {
+    // Simple agent that can use one tool
+    
+    const messages: Array<{ role: "user" | "assistant"; content: any }> = [
+        { role: "user", content: userMessage }
+    ];
+    
+    // Agent loop - continue until agent stops using tools
+    while (true) {
+        const response = await client.messages.create({
+            model: "claude-sonnet-4-20250514",
+            max_tokens: 1024,
+            tools: tools,
+            messages: messages
+        });
+        
+        // Check if agent wants to use a tool
+        if (response.stop_reason === "tool_use") {
+            // Agent wants to use a tool
+            const toolUse = response.content.find(
+                (block: any) => block.type === "tool_use"
+            );
+            
+            // Execute the tool
+            let toolResult: any;
+            if (toolUse.name === "get_weather") {
+                toolResult = getWeather(toolUse.input.city);
+            }
+            
+            // Add tool use and result to conversation
+            messages.push({ role: "assistant", content: response.content });
+            messages.push({
+                role: "user",
+                content: [{
+                    type: "tool_result",
+                    tool_use_id: toolUse.id,
+                    content: JSON.stringify(toolResult)
+                }]
+            });
+            
+            // Loop continues - agent will think again with tool result
+            
+        } else {
+            // Agent is done - return final response
+            const finalText = response.content.find(
+                (block: any) => block.type === "text"
+            )?.text;
+            return finalText || "";
+        }
+    }
+}
+
+// Test the agent
+console.log(await runAgent("What's the weather in San Francisco?"));
+// Agent thinks: "I need weather data"
+// Agent acts: Calls get_weather(city="San Francisco")
+// Agent responds: "It's currently 72°F and sunny in San Francisco..."
+```
+</CodeGroup>
+
+**What just happened:**
+
+1. User asks about weather
+2. Agent sees it has a `get_weather` tool available
+3. Agent decides to use that tool
+4. We execute the tool and give result back to agent
+5. Agent uses the result to formulate final answer
+
+**Key Insight:** The agent made a decision. We didn't tell it "call get_weather." It reasoned that to answer the question, it needed weather data, and chose the appropriate tool.
+
+## When to Use Agents vs. Simple LLM Calls
+
+**Use a simple LLM call when:**
+- ✅ Single question with immediate answer
+- ✅ No external data needed
+- ✅ No actions to take
+- ✅ No context to maintain
+
+**Use an agent when:**
+- ✅ Need to look up external data (databases, APIs)
+- ✅ Need to take actions (create records, send messages)
+- ✅ Multi-turn conversation with context
+- ✅ Multi-step reasoning required
+- ✅ Decision making based on intermediate results
+
+**Real-World Examples:**
+
+| Task | Approach | Why |
+|------|----------|-----|
+| "Summarize this document" | Simple LLM | One-shot, no tools needed |
+| "What's my account balance?" | Agent | Needs to query database |
+| "Cancel my subscription" | Agent | Needs to execute action |
+| "Help me debug this code" | Agent (if using tools) | May need to run code, search docs |
+| "Translate this text" | Simple LLM | One-shot, no tools needed |
+
+## Agent Limitations and Considerations
+
+Agents are powerful but come with challenges:
+
+**1. Unpredictability**
+- Same query might take different paths
+- Agent might call tools in unexpected order
+- Need to handle variability
+
+**2. Cost**
+- Multiple LLM calls per query (thinking → acting → thinking)
+- Tools add latency and potential API costs
+- Need to optimize for efficiency
+
+**3. Error Handling**
+- Tools can fail
+- Agent might choose wrong tool
+- Need robust error recovery
+
+**4. Testing Complexity**
+- Can't just test input → output
+- Must test tool selection, execution paths
+- Need to mock tools for testing
+
+**The rest of this module teaches you how to handle these challenges in production.**
+
+---
+
+## Check Your Understanding
+
+1. **Concept:** What's the difference between a simple LLM call and an agent?
+   
+   <details>
+   <summary>Answer</summary>
+   
+   **Simple LLM call:**
+   - One input → one output
+   - No external data access
+   - No actions taken
+   - No state maintained
+   
+   **Agent:**
+   - Can use tools to access external data
+   - Can take actions (API calls, database updates)
+   - Maintains conversation context
+   - Iterative: think → act → think → respond
+   
+   Key difference: Agents can interact with the world beyond their training data.
+   </details>
+
+2. **Application:** User asks "Send an email to my team with today's sales numbers." Do you need an agent?
+   
+   <details>
+   <summary>Answer</summary>
+   
+   **Yes, you need an agent.** Why:
+   
+   - Need to fetch sales data (tool: `get_sales_data()`)
+   - Need to identify team members (tool: `get_team_members()`)
+   - Need to send email (tool: `send_email()`)
+   - Multi-step process with actions
+   
+   Simple LLM call can't accomplish this - it has no access to data or email system.
+   </details>
+
+---
+

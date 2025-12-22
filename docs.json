@@ -17,61 +17,61 @@
       {
         "group": "Context Engineering & Prompt Design",
         "pages": [
-          "Context_Engineering_&_Prompt_Design/Module Overview",
-          "Context_Engineering_&_Prompt_Design/LLM_Foundamentals",
-          "Context_Engineering_&_Prompt_Design/Structured_Prompt_Engineering",
-          "Context_Engineering_&_Prompt_Design/Advanced Techniques",
-          "Context_Engineering_&_Prompt_Design/Prompt Optimization & Testing",
-          "Context_Engineering_&_Prompt_Design/Model Selection & Cost Optimization",
-          "Context_Engineering_&_Prompt_Design/Production Considerations",
-          "Context_Engineering_&_Prompt_Design/Hands-On Exercise",
-          "Context_Engineering_&_Prompt_Design/Recap & Resources"
+          "prompting/module-overview",
+          "prompting/llm-foundamentals",
+          "prompting/structured-prompt-engineering",
+          "prompting/advanced-techniques",
+          "prompting/prompt-optimization-and-testing",
+          "prompting/model-selection-and-cost-optimization",
+          "prompting/production-considerations",
+          "prompting/hands-on-exercise",
+          "prompting/recap-and-resources"
         ]
       },
       {
         "group": "Retrieval Augmented Generation (RAG)",
         "pages": [
-          "RAG/Module Overview",
-          "RAG/RAG Fundamentals",
-          "RAG/Search Strategy Selection",
-          "RAG/Chunking and Metadata Strategies",
-          "RAG/Working with Unstructured Data",
-          "RAG/RAG Evaluation",
-          "RAG/Reranking in Practice",
-          "RAG/Advanced RAG Patterns",
-          "RAG/Recap & Resources"
+          "rag/module-overview",
+          "rag/rag-fundamentals",
+          "rag/search-strategy-selection",
+          "rag/chunking-and-metadata-strategies",
+          "rag/working-with-unstructured-data",
+          "rag/rag-evaluation",
+          "rag/reranking-in-practice",
+          "rag/advanced-rag-patterns",
+          "rag/recap-and-resources"
         ]
       },
       {
         "group": "AI Agents",
         "pages": [
-          "AI Agents/Module Overview",
-          "AI Agents/Introduction to AI Agents",
-          "AI Agents/Tool Design & Implementation",
-          "AI Agents/Agent Memory",
-          "AI Agents/Hands-On Exercise",
-          "AI Agents/Recap & Resources"
+          "ai-agents/module-overview",
+          "ai-agents/introduction-to-ai-agents",
+          "ai-agents/tool-design-and-implementation",
+          "ai-agents/agent-memory",
+          "ai-agents/hands-on-exercise",
+          "ai-agents/recap-and-resources"
         ]
       },
       {
         "group": "Agent Reliability & Optimization",
         "pages": [
-          "Agent Reliability & Optimization/Module Overview",
-          "Agent Reliability & Optimization/Business Rules & Guardrails",
-          "Agent Reliability & Optimization/Tool Selection & Optimization",
-          "Agent Reliability & Optimization/Hands-On Exercise",
-          "Agent Reliability & Optimization/Recap & Resources"
+          "agent-reliability-and-optimization/module-overview",
+          "agent-reliability-and-optimization/business-rules-and-guardrails",
+          "agent-reliability-and-optimization/tool-selection-and-optimization",
+          "agent-reliability-and-optimization/hands-on-exercise",
+          "agent-reliability-and-optimization/recap-and-resources"
         ]
       },
       {
         "group": "Multi-Agent Systems & Coordination",
         "pages": [
-          "Multi-Agent Systems & Coordination/Module Overview",
-          "Multi-Agent Systems & Coordination/Multi-Agent with Workflow Orchestration",
-          "Multi-Agent Systems & Coordination/Multi-Agent with Agent Orchestration",
-          "Multi-Agent Systems & Coordination/Agent-to-Agent (A2A) Communication Protocols",
-          "Multi-Agent Systems & Coordination/Hands-On Exercise",
-          "Multi-Agent Systems & Coordination/Recap & Resources"
+          "multi-agent-systems-and-coordination/module-overview",
+          "multi-agent-systems-and-coordination/multi-agent-with-workflow-orchestration",
+          "multi-agent-systems-and-coordination/multi-agent-with-agent-orchestration",
+          "multi-agent-systems-and-coordination/agent-to-agent-a2a-communication-protocols",
+          "multi-agent-systems-and-coordination/hands-on-exercise",
+          "multi-agent-systems-and-coordination/recap-and-resources"
         ]
       }
     ]
