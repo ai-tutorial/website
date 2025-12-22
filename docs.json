@@ -17,7 +17,7 @@
       {
         "group": "Context Engineering & Prompt Design",
         "pages": [
-          "prompting/module-overview",
+          "prompting/overview",
           "prompting/llm-foundamentals",
           "prompting/structured-prompt-engineering",
           "prompting/advanced-techniques",
@@ -31,13 +31,13 @@
       {
         "group": "Retrieval Augmented Generation (RAG)",
         "pages": [
-          "rag/module-overview",
-          "rag/rag-fundamentals",
+          "rag/overview",
+          "rag/fundamentals",
           "rag/search-strategy-selection",
-          "rag/chunking-and-metadata-strategies",
+          "rag/chunking",
           "rag/working-with-unstructured-data",
           "rag/rag-evaluation",
-          "rag/reranking-in-practice",
+          "rag/reranking",
           "rag/advanced-rag-patterns",
           "rag/recap-and-resources"
         ]
@@ -45,7 +45,7 @@
       {
         "group": "AI Agents",
         "pages": [
-          "ai-agents/module-overview",
+          "ai-agents/overview",
           "ai-agents/introduction-to-ai-agents",
           "ai-agents/tool-design-and-implementation",
           "ai-agents/agent-memory",
@@ -56,7 +56,7 @@
       {
         "group": "Agent Reliability & Optimization",
         "pages": [
-          "agent-reliability-and-optimization/module-overview",
+          "agent-reliability-and-optimization/overview",
           "agent-reliability-and-optimization/business-rules-and-guardrails",
           "agent-reliability-and-optimization/tool-selection-and-optimization",
           "agent-reliability-and-optimization/hands-on-exercise",
@@ -66,7 +66,7 @@
       {
         "group": "Multi-Agent Systems & Coordination",
         "pages": [
-          "multi-agent-systems-and-coordination/module-overview",
+          "multi-agent-systems-and-coordination/overview",
           "multi-agent-systems-and-coordination/multi-agent-with-workflow-orchestration",
           "multi-agent-systems-and-coordination/multi-agent-with-agent-orchestration",
           "multi-agent-systems-and-coordination/agent-to-agent-a2a-communication-protocols",

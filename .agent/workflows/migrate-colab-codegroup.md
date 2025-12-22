@@ -15,7 +15,13 @@ EXECUTION STEPS:
    - Locate the Colab link and the key code logic within the `<CodeGroup>`.
    - **Crucial**: The migration scope includes the Colab link itself. You are replacing the "Colab Link + CodeGroup" pattern.
    - **Source of Truth**: "Check the example linked in the Colab". The CodeGroup usually contains a snippet, but the Colab might have the full runnable context. Use the Colab content to ensure the new TypeScript implementation is complete and correct.
-   - **Action**: You MUST use the `browser` tool to open the Colab URL. Download/Copy the python code from the notebook cells to understand the full logic before porting to TypeScript. If you cannot access the link, ASK the user.
+   - **Action**: Download the Colab notebook to analyze the full code:
+     1. Open the Colab URL in a browser
+     2. Click **File → Download → Download .ipynb**
+     3. Use `view_file` to read the downloaded `.ipynb` file
+     4. Extract all Python code from the notebook cells
+     5. Understand the full logic before porting to TypeScript
+   - If you cannot access or download the notebook, ASK the user.
    - Understand the core concept being demonstrated.
    - Identify necessary dependencies (e.g., `openai`, `chromadb`).
 

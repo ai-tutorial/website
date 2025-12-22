@@ -4,12 +4,29 @@ description: How to implement reranking in a RAG system
 sidebarTitle: Reranking in Practice
 icon: book
 mode: wide
-slug: rag/reranking-in-practice
+slug: rag/reranking
 ---
-## Why rerankers?
-- First-pass retrievers (BM25/vectors) maximize recall but include noise.
-- Cross-encoder rerankers rescore a small candidate set to maximize precision.
-- Pattern: fast recall → precise rerank. (Practitioner guidance, 2025)
+
+## What is Reranking?
+
+**Two-stage retrieval for better accuracy:**
+
+1. **Stage 1 (Fast Retrieval) - Maximize Recall:**
+   - **Goal:** Don't miss relevant documents - cast a wide net
+   - **Method:** Retrieve many candidates (e.g., top-50) using fast methods like BM25 or vector search
+   - **Trade-off:** Fast but includes some noise/irrelevant results
+
+2. **Stage 2 (Reranking) - Maximize Precision:**
+   - **Goal:** Keep only the truly relevant documents - filter out the noise
+   - **Method:** Use a more accurate cross-encoder model to deeply analyze each candidate and rerank them
+   - **Trade-off:** Slower but much more accurate at identifying relevance
+
+**Why it works:**
+- Fast retrievers are good at finding candidates but not great at ranking them
+- Cross-encoders are excellent at ranking but too slow to run on thousands of documents
+- Combining both gives you speed + accuracy
+
+**Result:** Better quality documents sent to your LLM → better answers
 
 ## Minimal rerank pipeline
 [Full runnable example of minimal rerank pipeline](https://colab.research.google.com/drive/12Kbj7Acd4rC3Ra1wW08_eBHWcohmZ8qa?usp=drive_link)
