@@ -7,6 +7,8 @@ mode: wide
 slug: agents/tool-design-and-implementation
 ---
 
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
 ## Why Tools Matter
 
 In the previous section, we saw a simple agent with one tool. Real applications need dozens or hundreds of tools. The quality of your tool design directly impacts agent reliability.
@@ -38,52 +40,12 @@ Before we dive into advanced patterns, let's understand the mechanics.
 
 **Tool Definition Format:**
 
-[Full runnable example using LLMs, openai sdk, llamaindex, langchain, and googla adk](https://colab.research.google.com/drive/1-FeAz3P7uPZaclpGS0ZLdUduGfUMJ-Sq?usp=drive_link)
-[Full runnable example using koog AI in Kotlin](https://drive.google.com/file/d/1u93zy8jkYLMpS_l80khbIvjfhHnF62-I/view?usp=drive_link)
-
-<CodeGroup>
-```python Python
-tool_definition = {
-    "name": "tool_name",  # Snake_case, descriptive
-    "description": "What the tool does and when to use it",  # Critical!
-    "input_schema": {  # JSON Schema
-        "type": "object",
-        "properties": {
-            "param1": {
-                "type": "string",
-                "description": "What this parameter is"
-            },
-            "param2": {
-                "type": "number",
-                "description": "What this parameter is"
-            }
-        },
-        "required": ["param1"]  # Which params are mandatory
-    }
-}
-```
-
-```ts TypeScript
-const toolDefinition = {
-    name: "tool_name",  // Snake_case, descriptive
-    description: "What the tool does and when to use it",  // Critical!
-    input_schema: {  // JSON Schema
-        type: "object",
-        properties: {
-            param1: {
-                type: "string",
-                description: "What this parameter is"
-            },
-            param2: {
-                type: "number",
-                description: "What this parameter is"
-            }
-        },
-        required: ["param1"]  // Which params are mandatory
-    }
-};
-```
-</CodeGroup>
+<CodeEditor 
+  file="src/agents/weather_agent.ts" 
+  lines="66-73" 
+  functionName="runWeatherAgent"
+  title="Weather Tool Definition"
+/>
 
 **The description is everything.** The LLM only sees your description - make it count.
 
@@ -91,68 +53,25 @@ const toolDefinition = {
 
 **MCP** is an open standard for connecting AI systems to data sources and tools. Think of it as "USB for AI" - a universal connector.
 
-[Full runnable example using openai Agent SDK, Langgraph, googla adk, and Claude Agent SDK](https://drive.google.com/file/d/1KQG9dWPP3AH0jCwcdxx-UfKsB5eputbo/view?usp=drive_link) - Download and run locally (it's using an MCP stdio server)
 
 **Why MCP Matters:**
 
-Without MCP:
-<CodeGroup>
-```python Python
-# Agent needs to understand each API directly
-tools = [
-    salesforce_get_account,     # Salesforce-specific
-    zendesk_get_ticket,         # Zendesk-specific  
-    shopify_get_order,          # Shopify-specific
-    # ... every integration is unique
-]
-```
 
-```ts TypeScript
-// Agent needs to understand each API directly
-const tools = [
-    salesforceGetAccount,     // Salesforce-specific
-    zendeskGetTicket,         // Zendesk-specific  
-    shopifyGetOrder,          // Shopify-specific
-    // ... every integration is unique
-];
-```
-</CodeGroup>
+**Tool Definition:**
+<CodeEditor 
+  file="src/agents/weather_mcp_server.ts" 
+  lines="27-40" 
+  functionName="main"
+  title="MCP Weather Tool Definition"
+/>
 
-With MCP:
-<CodeGroup>
-```python Python
-# Standard protocol across all tools
-mcp_server = MCPServer()
-
-@mcp_server.tool()
-async def get_customer_data(customer_id: str):
-    """Standard interface, internal complexity hidden."""
-    # Can call Salesforce, Zendesk, internal DB, whatever
-    # Agent doesn't need to know the details
-```
-
-```ts TypeScript
-// Standard protocol across all tools
-import { MCPServer } from "@modelcontextprotocol/sdk/server";
-
-const mcpServer = new MCPServer();
-
-mcpServer.tool({
-    name: "get_customer_data",
-    description: "Standard interface, internal complexity hidden.",
-    inputSchema: {
-        type: "object",
-        properties: {
-            customer_id: { type: "string" }
-        },
-        required: ["customer_id"]
-    }
-}, async (params: { customer_id: string }) => {
-    // Can call Salesforce, Zendesk, internal DB, whatever
-    // Agent doesn't need to know the details
-});
-```
-</CodeGroup>
+**Server Setup:**
+<CodeEditor 
+  file="src/agents/weather_mcp_server.ts" 
+  lines="20-25" 
+  functionName="main"
+  title="MCP Server Configuration"
+/>
 
 **MCP Benefits:**
 
@@ -161,6 +80,42 @@ mcpServer.tool({
 3. **Error Handling:** Consistent error format
 4. **Security:** Built-in authentication/authorization
 5. **Composability:** Tools can call other tools
+
+### Running the Weather MCP Server
+
+The weather MCP server we created above is a **full, runnable example** that demonstrates MCP's power. You can use it with **any** agent framework:
+
+- **OpenAI Agent SDK**
+- **LangGraph** 
+- **Google Gemini SDK**
+- **Claude Agent SDK**
+- **Any MCP-compatible client**
+
+**To run it locally:**
+
+```bash
+cd typescript-examples
+npx tsx src/agents/weather_mcp_server.ts
+```
+
+The server starts on `http://localhost:8002` and exposes the `/mcp` endpoint for JSON-RPC communication.
+
+**Key MCP Advantages Demonstrated:**
+
+1. **Tool Discovery**: Agents can query `tools/list` to discover available tools without hardcoding
+   ```bash
+   curl -X POST http://localhost:8002/mcp \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+   ```
+
+2. **Pluggability**: Add/remove tools by starting/stopping MCP servers - no code changes needed in your agent
+
+3. **Framework Independence**: The same MCP server works with OpenAI, Anthropic, Google, or any other framework
+
+4. **Separation of Concerns**: Tool implementation is separate from agent logic - teams can work independently
+
+5. **Reusability**: Write the tool once, use it across all your AI applications
 
 **We'll use MCP for our tool examples going forward.**
 
@@ -174,21 +129,13 @@ mcpServer.tool({
 - `do_thing` (what thing?)
 
 **Good names:**
-<CodeGroup>
-```python Python
+```ts Pseudocode
+// MCP tool naming examples
 get_customer_by_email
 search_products_by_category
 calculate_shipping_cost_for_order
 send_notification_to_user
 ```
-
-```ts TypeScript
-getCustomerByEmail
-searchProductsByCategory
-calculateShippingCostForOrder
-sendNotificationToUser
-```
-</CodeGroup>
 
 **Naming convention:** `[verb]_[noun]_[context]`
 
@@ -202,104 +149,58 @@ The description is the most important part of your tool. It must answer:
 
 **Bad description:**
 
-<CodeGroup>
-```python Python
-@mcp_server.tool()
-async def get_data(id: str):
-    """Get data."""
-    pass
+```ts Pseudocode
+// Bad: Vague tool definition
+mcp.registerTool(
+    'get_data',
+    {
+        title: 'Get Data',
+        description: 'Get data.',  // ❌ Too vague!
+        inputSchema: {
+            id: z.string()
+        }
+    },
+    async (args) => { /* ... */ }
+);
 ```
-
-```ts TypeScript
-mcpServer.tool({
-    name: "get_data",
-    description: "Get data.",
-    inputSchema: {
-        type: "object",
-        properties: { id: { type: "string" } },
-        required: ["id"]
-    }
-}, async (params: { id: string }) => {
-    // Implementation
-});
-```
-</CodeGroup>
 
 **Good description:**
 
-<CodeGroup>
-```python Python
-@mcp_server.tool()
-async def get_customer_by_id(customer_id: str) -> dict:
-    """Retrieve customer account information by customer ID.
-    
-    Use this when:
-    - You have a customer ID and need their details
-    - User mentions "my account" (look up by context)
-    
-    Do NOT use for:
-    - Searching by name/email (use search_customers instead)
-    - Getting order history (use get_customer_orders instead)
-    
-    Args:
-        customer_id: Customer ID in format CUST-##### (e.g., "CUST-12345")
-    
-    Returns:
-        Customer object with: name, email, phone, address, account_status
-        
-    Example:
-        Input: customer_id="CUST-12345"
-        Output: {
-            "name": "Alice Johnson",
-            "email": "alice@example.com",
-            "account_status": "active"
-        }
-    """
-    # Implementation
-    pass
-```
+```ts Pseudocode
+// Good: Comprehensive tool definition
+const customerSchema = {
+    customer_id: z.string().describe(
+        'Customer ID in format CUST-##### (e.g., "CUST-12345")'
+    )
+};
 
-```ts TypeScript
-mcpServer.tool({
-    name: "get_customer_by_id",
-    description: `Retrieve customer account information by customer ID.
-    
-    Use this when:
-    - You have a customer ID and need their details
-    - User mentions "my account" (look up by context)
-    
-    Do NOT use for:
-    - Searching by name/email (use search_customers instead)
-    - Getting order history (use get_customer_orders instead)
-    
-    Args:
-        customer_id: Customer ID in format CUST-##### (e.g., "CUST-12345")
-    
-    Returns:
-        Customer object with: name, email, phone, address, account_status
+mcp.registerTool(
+    'get_customer_by_id',
+    {
+        title: 'Get Customer By ID',
+        description: `Retrieve customer account information by customer ID.
         
-    Example:
-        Input: customer_id="CUST-12345"
-        Output: {
-            "name": "Alice Johnson",
-            "email": "alice@example.com",
-            "account_status": "active"
-        }`,
-    inputSchema: {
-        type: "object",
-        properties: {
-            customer_id: {
-                type: "string",
-                description: "Customer ID in format CUST-##### (e.g., \"CUST-12345\")"
-            }
-        },
-        required: ["customer_id"]
+        Use this when:
+        - You have a customer ID and need their details
+        - User mentions "my account" (look up by context)
+        
+        Do NOT use for:
+        - Searching by name/email (use search_customers instead)
+        - Getting order history (use get_customer_orders instead)
+        
+        Returns: Customer object with name, email, phone, address, account_status
+        
+        Example:
+          Input: customer_id="CUST-12345"
+          Output: { name: "Alice Johnson", email: "alice@example.com", account_status: "active" }`,
+        inputSchema: customerSchema
+    },
+    async (args) => {
+        const customer = await customerDb.findById(args.customer_id);
+        return { content: [{ type: "text", text: JSON.stringify(customer) }] };
     }
-}, async (params: { customer_id: string }): Promise<any> => {
-    // Implementation
-});
+);
 ```
-</CodeGroup>
 
 ### Principle 3: Simple Parameter Schemas
 
@@ -317,155 +218,89 @@ mcpServer.tool({
 
 **Anti-pattern: Complex Tool**
 
-<CodeGroup>
-```python Python
-@mcp_server.tool()
-async def create_order(
-    customer_id: str,
-    product_ids: list[str],
-    quantities: list[int],
-    shipping_address: dict,
-    billing_address: dict,
-    payment_method: str,
-    promotional_code: str,
-    gift_wrap: bool,
-    gift_message: str,
-    shipping_speed: str
-):
-    """10 parameters - agent will struggle."""
-    pass
-```
+```ts Pseudocode
+// Anti-pattern: Too many parameters (10) - agent will struggle
+const complexOrderSchema = {
+    customer_id: z.string(),
+    product_ids: z.array(z.string()),
+    quantities: z.array(z.number()),
+    shipping_address: z.object({}),
+    billing_address: z.object({}),
+    payment_method: z.string(),
+    promotional_code: z.string(),
+    gift_wrap: z.boolean(),
+    gift_message: z.string(),
+    shipping_speed: z.string()
+};
 
-```ts TypeScript
-mcpServer.tool({
-    name: "create_order",
-    description: "10 parameters - agent will struggle.",
-    inputSchema: {
-        type: "object",
-        properties: {
-            customer_id: { type: "string" },
-            product_ids: { type: "array", items: { type: "string" } },
-            quantities: { type: "array", items: { type: "number" } },
-            shipping_address: { type: "object" },
-            billing_address: { type: "object" },
-            payment_method: { type: "string" },
-            promotional_code: { type: "string" },
-            gift_wrap: { type: "boolean" },
-            gift_message: { type: "string" },
-            shipping_speed: { type: "string" }
-        },
-        required: ["customer_id", "product_ids", "quantities"]
-    }
-}, async (params: {
-    customer_id: string;
-    product_ids: string[];
-    quantities: number[];
-    shipping_address: any;
-    billing_address: any;
-    payment_method: string;
-    promotional_code: string;
-    gift_wrap: boolean;
-    gift_message: string;
-    shipping_speed: string;
-}) => {
-    // Implementation
-});
+mcp.registerTool(
+    'create_order',
+    {
+        title: 'Create Order',
+        description: '10 parameters - agent will struggle.',
+        inputSchema: complexOrderSchema
+    },
+    async (args) => { /* ... */ }
+);
 ```
-</CodeGroup>
 
 **Better: Multiple Simple Tools**
 
-<CodeGroup>
-```python Python
-@mcp_server.tool()
-async def create_order_cart(
-    customer_id: str,
-    items: list[dict]  # [{"product_id": "...", "quantity": 1}]
-) -> str:
-    """Create shopping cart. Returns cart_id.
-    
-    Use this as first step when customer wants to place an order.
-    """
-    pass
+```ts Pseudocode
+// Better: Break into 3 simple tools (2-3 parameters each)
 
-@mcp_server.tool()
-async def set_cart_shipping(
-    cart_id: str,
-    address: dict,
-    speed: Literal["standard", "express", "overnight"]
-) -> bool:
-    """Set shipping details for cart.
-    
-    Call after create_order_cart, before finalize_order.
-    """
-    pass
+// Tool 1: Create cart (2 parameters)
+mcp.registerTool(
+    'create_order_cart',
+    {
+        title: 'Create Order Cart',
+        description: 'Create shopping cart. Returns cart_id. Use this as first step when customer wants to place an order.',
+        inputSchema: {
+            customer_id: z.string(),
+            items: z.array(z.object({ product_id: z.string(), quantity: z.number() }))
+        }
+    },
+    async (args) => {
+        const cartId = await createCart(args.customer_id, args.items);
+        return { content: [{ type: "text", text: cartId }] };
+    }
+);
 
-@mcp_server.tool()
-async def finalize_order(
-    cart_id: str,
-    payment_method: str
-) -> str:
-    """Complete order and charge payment. Returns order_id.
-    
-    Final step after cart is configured.
-    """
-    pass
+// Tool 2: Set shipping (3 parameters)
+mcp.registerTool(
+    'set_cart_shipping',
+    {
+        title: 'Set Cart Shipping',
+        description: 'Set shipping details for cart. Call after create_order_cart, before finalize_order.',
+        inputSchema: {
+            cart_id: z.string(),
+            address: z.object({}),
+            speed: z.enum(['standard', 'express', 'overnight'])
+        }
+    },
+    async (args) => {
+        await setShipping(args.cart_id, args.address, args.speed);
+        return { content: [{ type: "text", text: "Shipping set" }] };
+    }
+);
+
+// Tool 3: Finalize order (2 parameters)
+mcp.registerTool(
+    'finalize_order',
+    {
+        title: 'Finalize Order',
+        description: 'Complete order and charge payment. Returns order_id. Final step after cart is configured.',
+        inputSchema: {
+            cart_id: z.string(),
+            payment_method: z.string()
+        }
+    },
+    async (args) => {
+        const orderId = await finalizeOrder(args.cart_id, args.payment_method);
+        return { content: [{ type: "text", text: orderId }] };
+    }
+);
 ```
-
-```ts TypeScript
-mcpServer.tool({
-    name: "create_order_cart",
-    description: `Create shopping cart. Returns cart_id.
-    
-    Use this as first step when customer wants to place an order.`,
-    inputSchema: {
-        type: "object",
-        properties: {
-            customer_id: { type: "string" },
-            items: { type: "array", items: { type: "object" } }  // [{"product_id": "...", "quantity": 1}]
-        },
-        required: ["customer_id", "items"]
-    }
-}, async (params: { customer_id: string; items: Array<{ product_id: string; quantity: number }> }): Promise<string> => {
-    // Implementation
-});
-
-mcpServer.tool({
-    name: "set_cart_shipping",
-    description: `Set shipping details for cart.
-    
-    Call after create_order_cart, before finalize_order.`,
-    inputSchema: {
-        type: "object",
-        properties: {
-            cart_id: { type: "string" },
-            address: { type: "object" },
-            speed: { type: "string", enum: ["standard", "express", "overnight"] }
-        },
-        required: ["cart_id", "address", "speed"]
-    }
-}, async (params: { cart_id: string; address: any; speed: "standard" | "express" | "overnight" }): Promise<boolean> => {
-    // Implementation
-});
-
-mcpServer.tool({
-    name: "finalize_order",
-    description: `Complete order and charge payment. Returns order_id.
-    
-    Final step after cart is configured.`,
-    inputSchema: {
-        type: "object",
-        properties: {
-            cart_id: { type: "string" },
-            payment_method: { type: "string" }
-        },
-        required: ["cart_id", "payment_method"]
-    }
-}, async (params: { cart_id: string; payment_method: string }): Promise<string> => {
-    // Implementation
-});
-```
-</CodeGroup>
 
 **Result:** Three simple tools have higher success rate than one complex tool, even though they require more agent steps.
 
@@ -475,75 +310,42 @@ mcpServer.tool({
 
 **Standard response envelope:**
 
-<CodeGroup>
-```python Python
-from typing import TypedDict, Optional
-
-class ToolResponse(TypedDict):
-    """Standard format for all tool responses."""
-    success: bool
-    data: Optional[dict]
-    error: Optional[str]
-    message: str
-
-@mcp_server.tool()
-async def example_tool(param: str) -> ToolResponse:
-    """Tool with consistent response format."""
-    
-    try:
-        result = await process(param)
-        return {
-            "success": True,
-            "data": result,
-            "error": None,
-            "message": "Operation completed successfully"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "data": None,
-            "error": type(e).__name__,
-            "message": f"Failed: {str(e)}"
-        }
-```
-
-```ts TypeScript
+```ts Pseudocode
+// Standard response format for all MCP tools
 interface ToolResponse {
-    /** Standard format for all tool responses. */
     success: boolean;
     data?: any;
     error?: string;
     message: string;
 }
 
-mcpServer.tool({
-    name: "example_tool",
-    description: "Tool with consistent response format.",
-    inputSchema: {
-        type: "object",
-        properties: { param: { type: "string" } },
-        required: ["param"]
+mcp.registerTool(
+    'example_tool',
+    {
+        title: 'Example Tool',
+        description: 'Tool with consistent response format.',
+        inputSchema: { param: z.string() }
+    },
+    async (args): Promise<ToolResponse> => {
+        try {
+            const result = await process(args.param);
+            return {
+                success: true,
+                data: result,
+                error: undefined,
+                message: "Operation completed successfully"
+            };
+        } catch (e: any) {
+            return {
+                success: false,
+                data: undefined,
+                error: e.constructor.name,
+                message: `Failed: ${e.message}`
+            };
+        }
     }
-}, async (params: { param: string }): Promise<ToolResponse> => {
-    try {
-        const result = await process(params.param);
-        return {
-            success: true,
-            data: result,
-            error: undefined,
-            message: "Operation completed successfully"
-        };
-    } catch (e: any) {
-        return {
-            success: false,
-            data: undefined,
-            error: e.constructor.name,
-            message: `Failed: ${e.message}`
-        };
-    }
-});
+);
 ```
-</CodeGroup>
 
 **Benefits:**
 - Agent knows what to expect
@@ -552,416 +354,47 @@ mcpServer.tool({
 
 ## Practical Example: Building a Customer Support Tool Set
 
-Let's build a realistic set of tools for customer support:
+Let's build a realistic set of tools for customer support using MCP:
 
-<CodeGroup>
-```python Python
-from mcp.server import MCPServer
+**Tool Schemas:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="27-46" 
+  functionName="main"
+  title="Customer Support Tool Schemas"
+/>
 
-server = MCPServer("customer-support")
+**Knowledge Base Search Tool:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="48-108" 
+  functionName="main"
+  title="Search Knowledge Base Tool"
+/>
 
-@server.tool()
-async def search_knowledge_base(
-    query: str,
-    category: Optional[str] = None
-) -> dict:
-    """Search support articles and documentation.
-    
-    Use when:
-    - Customer has a question about product features
-    - Need troubleshooting steps
-    - Looking for how-to information
-    
-    Do NOT use for:
-    - Customer-specific data (use get_customer_info)
-    - Order status (use get_order_status)
-    
-    Args:
-        query: Search keywords (e.g., "reset password", "shipping costs")
-        category: Optional filter ("billing", "technical", "shipping")
-    
-    Returns:
-        Top 3 relevant articles with titles, summaries, and links
-    """
-    results = await knowledge_db.search(query, category=category, limit=3)
-    
-    return {
-        "success": True,
-        "data": {
-            "articles": [{
-                "title": r.title,
-                "summary": r.summary,
-                "url": r.url,
-                "relevance_score": r.score
-            } for r in results]
-        },
-        "error": None,
-        "message": f"Found {len(results)} articles"
-    }
+**Customer Lookup Tool:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="110-174" 
+  functionName="main"
+  title="Get Customer Info Tool"
+/>
 
-@server.tool()
-async def get_customer_info(email: str) -> dict:
-    """Get customer account details and history.
-    
-    Use when:
-    - Need to look up customer account
-    - Checking customer status/tier
-    - Understanding customer context before helping
-    
-    Args:
-        email: Customer email address
-    
-    Returns:
-        Customer profile including name, account status, order history summary
-    """
-    try:
-        customer = await customer_db.find_by_email(email)
-        
-        if not customer:
-            return {
-                "success": False,
-                "data": None,
-                "error": "not_found",
-                "message": f"No account found for {email}"
-            }
-        
-        return {
-            "success": True,
-            "data": {
-                "name": customer.name,
-                "email": customer.email,
-                "account_status": customer.status,
-                "total_orders": customer.order_count,
-                "lifetime_value": customer.lifetime_value,
-                "vip_status": customer.is_vip
-            },
-            "error": None,
-            "message": "Customer found"
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "data": None,
-            "error": str(e),
-            "message": "Database error - try again"
-        }
+**Support Ticket Creation Tool:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="176-212" 
+  functionName="main"
+  title="Create Support Ticket Tool"
+/>
 
-@server.tool()
-async def create_support_ticket(
-    customer_email: str,
-    subject: str,
-    description: str,
-    priority: Literal["low", "medium", "high"] = "medium"
-) -> dict:
-    """Create a support ticket for issues requiring human follow-up.
-    
-    Use when:
-    - Issue cannot be resolved immediately
-    - Customer requests human assistance
-    - Complex problem requiring investigation
-    
-    Args:
-        customer_email: Customer's email address
-        subject: Brief ticket summary (under 100 chars)
-        description: Detailed problem description
-        priority: Ticket priority level
-    
-    Returns:
-        Ticket ID and estimated response time
-    """
-    try:
-        ticket = await ticketing_api.create({
-            "customer_email": customer_email,
-            "subject": subject,
-            "description": description,
-            "priority": priority,
-            "source": "ai_agent"
-        })
-        
-        eta_hours = {"low": 48, "medium": 24, "high": 4}
-        
-        return {
-            "success": True,
-            "data": {
-                "ticket_id": ticket.id,
-                "ticket_url": ticket.url,
-                "estimated_response_hours": eta_hours[priority]
-            },
-            "error": None,
-            "message": f"Ticket {ticket.id} created"
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "data": None,
-            "error": str(e),
-            "message": "Could not create ticket - escalating to supervisor"
-        }
-
-@server.tool()
-async def check_order_status(order_id: str) -> dict:
-    """Get current status and tracking for an order.
-    
-    Use when:
-    - Customer asks "where is my order"
-    - Checking delivery status
-    - Getting tracking information
-    
-    Args:
-        order_id: Order ID in format ORD-##### (e.g., "ORD-12345")
-    
-    Returns:
-        Order status, tracking number, estimated delivery
-    """
-    try:
-        order = await order_api.get(order_id)
-        
-        return {
-            "success": True,
-            "data": {
-                "order_id": order.id,
-                "status": order.status,
-                "tracking_number": order.tracking,
-                "carrier": order.carrier,
-                "estimated_delivery": order.estimated_delivery.isoformat(),
-                "items": [
-                    {"name": item.name, "quantity": item.quantity}
-                    for item in order.items
-                ]
-            },
-            "error": None,
-            "message": f"Order status: {order.status}"
-        }
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "data": None,
-            "error": str(e),
-                "message": "Could not retrieve order - check order ID"
-        }
-```
-
-```ts TypeScript
-import { MCPServer } from "@modelcontextprotocol/sdk/server";
-
-const server = new MCPServer("customer-support");
-
-server.tool({
-    name: "search_knowledge_base",
-    description: `Search support articles and documentation.
-    
-    Use when:
-    - Customer has a question about product features
-    - Need troubleshooting steps
-    - Looking for how-to information
-    
-    Do NOT use for:
-    - Customer-specific data (use get_customer_info)
-    - Order status (use get_order_status)
-    
-    Args:
-        query: Search keywords (e.g., "reset password", "shipping costs")
-        category: Optional filter ("billing", "technical", "shipping")
-    
-    Returns:
-        Top 3 relevant articles with titles, summaries, and links`,
-    inputSchema: {
-        type: "object",
-        properties: {
-            query: { type: "string" },
-            category: { type: "string" }
-        },
-        required: ["query"]
-    }
-}, async (params: { query: string; category?: string }): Promise<any> => {
-    const results = await knowledgeDb.search(params.query, { category: params.category, limit: 3 });
-    
-    return {
-        success: true,
-        data: {
-            articles: results.map((r: any) => ({
-                title: r.title,
-                summary: r.summary,
-                url: r.url,
-                relevance_score: r.score
-            }))
-        },
-        error: undefined,
-        message: `Found ${results.length} articles`
-    };
-});
-
-server.tool({
-    name: "get_customer_info",
-    description: `Get customer account details and history.
-    
-    Use when:
-    - Need to look up customer account
-    - Checking customer status/tier
-    - Understanding customer context before helping
-    
-    Args:
-        email: Customer email address
-    
-    Returns:
-        Customer profile including name, account status, order history summary`,
-    inputSchema: {
-        type: "object",
-        properties: {
-            email: { type: "string" }
-        },
-        required: ["email"]
-    }
-}, async (params: { email: string }): Promise<any> => {
-    try {
-        const customer = await customerDb.findByEmail(params.email);
-        
-        if (!customer) {
-            return {
-                success: false,
-                data: undefined,
-                error: "not_found",
-                message: `No account found for ${params.email}`
-            };
-        }
-        
-        return {
-            success: true,
-            data: {
-                name: customer.name,
-                email: customer.email,
-                account_status: customer.status,
-                total_orders: customer.order_count,
-                lifetime_value: customer.lifetime_value,
-                vip_status: customer.is_vip
-            },
-            error: undefined,
-            message: "Customer found"
-        };
-    } catch (e: any) {
-        return {
-            success: false,
-            data: undefined,
-            error: e.message,
-            message: "Database error - try again"
-        };
-    }
-});
-
-server.tool({
-    name: "create_support_ticket",
-    description: `Create a support ticket for issues requiring human follow-up.
-    
-    Use when:
-    - Issue cannot be resolved immediately
-    - Customer requests human assistance
-    - Complex problem requiring investigation
-    
-    Args:
-        customer_email: Customer's email address
-        subject: Brief ticket summary (under 100 chars)
-        description: Detailed problem description
-        priority: Ticket priority level
-    
-    Returns:
-        Ticket ID and estimated response time`,
-    inputSchema: {
-        type: "object",
-        properties: {
-            customer_email: { type: "string" },
-            subject: { type: "string" },
-            description: { type: "string" },
-            priority: { type: "string", enum: ["low", "medium", "high"] }
-        },
-        required: ["customer_email", "subject", "description"]
-    }
-}, async (params: { customer_email: string; subject: string; description: string; priority?: "low" | "medium" | "high" }): Promise<any> => {
-    try {
-        const ticket = await ticketingApi.create({
-            customer_email: params.customer_email,
-            subject: params.subject,
-            description: params.description,
-            priority: params.priority || "medium",
-            source: "ai_agent"
-        });
-        
-        const etaHours: Record<string, number> = { low: 48, medium: 24, high: 4 };
-        
-        return {
-            success: true,
-            data: {
-                ticket_id: ticket.id,
-                ticket_url: ticket.url,
-                estimated_response_hours: etaHours[params.priority || "medium"]
-            },
-            error: undefined,
-            message: `Ticket ${ticket.id} created`
-        };
-    } catch (e: any) {
-        return {
-            success: false,
-            data: undefined,
-            error: e.message,
-            message: "Could not create ticket - escalating to supervisor"
-        };
-    }
-});
-
-server.tool({
-    name: "check_order_status",
-    description: `Get current status and tracking for an order.
-    
-    Use when:
-    - Customer asks "where is my order"
-    - Checking delivery status
-    - Getting tracking information
-    
-    Args:
-        order_id: Order ID in format ORD-##### (e.g., "ORD-12345")
-    
-    Returns:
-        Order status, tracking number, estimated delivery`,
-    inputSchema: {
-        type: "object",
-        properties: {
-            order_id: { type: "string" }
-        },
-        required: ["order_id"]
-    }
-}, async (params: { order_id: string }): Promise<any> => {
-    try {
-        const order = await orderApi.get(params.order_id);
-        
-        return {
-            success: true,
-            data: {
-                order_id: order.id,
-                status: order.status,
-                tracking_number: order.tracking,
-                carrier: order.carrier,
-                estimated_delivery: order.estimated_delivery.toISOString(),
-                items: order.items.map((item: any) => ({
-                    name: item.name,
-                    quantity: item.quantity
-                }))
-            },
-            error: undefined,
-            message: `Order status: ${order.status}`
-        };
-    } catch (e: any) {
-        return {
-            success: false,
-            data: undefined,
-            error: e.message,
-            message: "Could not retrieve order - check order ID"
-        };
-    }
-});
-```
-</CodeGroup>
+**Order Status Tool:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="214-283" 
+  functionName="main"
+  title="Check Order Status Tool"
+/>
 
 ## Tool Implementation Patterns
 
