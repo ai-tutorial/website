@@ -269,13 +269,17 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
       if (saved) {
         setSuccess(true);
         setApiKey('');
-        setShowApiKeyDialog(false);
+
+        // Reload the page after a short delay to show success message
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
         setError('Failed to save API key. Please try again.');
+        setIsSubmitting(false);
       }
     } catch (err) {
       setError(err.message || 'Failed to save API key. Please try again.');
-    } finally {
       setIsSubmitting(false);
     }
   };
