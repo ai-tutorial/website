@@ -21,7 +21,7 @@ RAG isn't just "search + LLM." It's a carefully designed pipeline with specific 
 +------------------+
 │  Stage 1:        │
 │  Fast Retrieval  │  ← Get 10-50 candidates quickly
-│  (BM25/Vectors)  │     (prioritize recall over precision)
+│  (Lexical/Vector)│     (prioritize recall over precision)
 +------------------+
         |
         v
@@ -47,7 +47,7 @@ RAG isn't just "search + LLM." It's a carefully designed pipeline with specific 
 ### Why Two-Stage Retrieval?
 
 **The Fundamental Trade-off:**
-- Fast retrieval methods (embeddings, BM25) can process 100K+ documents in milliseconds
+- Fast retrieval methods (lexical, vector) can process 100K+ documents in milliseconds
 - Accurate ranking methods (cross-encoders) can only handle ~100 documents in reasonable time
 - Solution: Use fast method to filter, accurate method to rank
 
@@ -63,7 +63,7 @@ Let's start with the simplest working version:
 
 <CodeEditor 
   file="src/module2/basic_rag.ts" 
-  lines="57-121"
+  lines="62-110"
   functionName="SimpleRAG"
   title="Basic RAG Implementation"
 />
@@ -75,6 +75,7 @@ Not much yet! This prototype has several problems:
 - ❌ No caching (repeated queries waste $$$)
 - ❌ No retrieval quality measurement
 - ❌ Single-stage retrieval (accuracy suffers)
+- ❌ No lexical/vector hybrid search
 - ❌ No metadata or filtering
 
 We'll fix these throughout the module.
@@ -89,7 +90,7 @@ A production RAG system needs:
    - Quality filtering
 
 2. **Two-Stage Retrieval**
-   - First-pass: Fast, broad recall (BM25 or vectors)
+   - First-pass: Fast, broad recall (lexical or vector)
    - Reranking: Slow, precise scoring
 
 3. **Context Engineering**

@@ -9,9 +9,9 @@ slug: rag/search-strategy-selection
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
 
 
-## Full-Text Search (BM25)
+## Lexical Search (Keyword)
 
-**How it works:** Statistical matching on exact terms and their frequencies.
+**How it works:** Statistical matching on exact terms and their frequencies (BM25).
 
 **Strengths:**
 - Low-latency on well-indexed corpora (actual latency depends on engine, index, and hardware)
@@ -31,15 +31,15 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 - Any domain with precise terminology
 
 <CodeEditor 
-  file="src/module2/search_strategies.ts" 
-  lines="53-141"
-  functionName="BM25Retriever"
-  title="BM25 RAG Implementation"
+  file="src/module2/search_lexical.ts" 
+  lines="26-89"
+  functionName="main"
+  title="Lexical Search (BM25) Implementation"
 />
 
-## Semantic Search (Embeddings)
+## Semantic Search (Vector)
 
-**How it works:** Converts text to vectors in semantic space; similar meaning = nearby vectors.
+**How it works:** Converts text to vectors in semantic space; similar meaning = nearby vectors (Embeddings).
 
 **Strengths:**
 - Handles synonyms and paraphrasing
@@ -60,31 +60,31 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 - FAQ matching
 
 <CodeEditor 
-  file="src/module2/search_strategies.ts" 
-  lines="143-198"
-  functionName="SemanticRetriever"
+  file="src/module2/search_semantic.ts" 
+  lines="22-58"
+  functionName="main"
   title="Semantic Search Implementation"
 />
 
-## Hybrid Search: Best of Both Worlds
+## Hybrid Search (Lexical + Semantic)
 
-**The Production Standard:** Combine BM25 (precision) + embeddings (recall).
+**The Production Standard:** Combine lexical (keyword) and semantic (vector) search.
 
 **Why hybrid wins:**
-- Catches exact matches BM25 excels at
-- Catches semantic matches embeddings excel at
+- Catches exact matches lexical search excels at
+- Catches semantic matches vector search excels at
 - Often improves retrieval quality across diverse corpora (magnitude varies by dataset and metric)
 - Commonly used in production systems
 
 **Implementation approaches:**
 1. **Weighted fusion:** Combine scores with learned weights
-2. **Rank fusion:** Merge ranked lists (Reciprocal Rank Fusion)
-3. **Two-stage:** BM25 first pass → semantic reranking
+2. **Rank fusion:** Merge ranked lists (Reciprocal Rank Fusion - RRF)
+3. **Two-stage:** Lexical first pass → semantic reranking
 
 <CodeEditor 
-    file="src/module2/search_strategies.ts" 
-    lines="341-392" 
-    functionName="runHybridExample" 
+    file="src/module2/search_hybrid.ts" 
+    lines="23-61" 
+    functionName="main" 
     title="Hybrid Search (RRF) Implementation"
 />
 
@@ -92,8 +92,8 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 
 | Query Type | Best Strategy | Example |
 |------------|---------------|---------|
-| Exact terminology | BM25 | "ICD-10 code M54.5" (medical) |
-| Product codes/IDs | BM25 | "SKU-2847-B" |
+| Exact terminology | Lexical | "ICD-10 code M54.5" (medical) |
+| Product codes/IDs | Lexical | "SKU-2847-B" |
 | Conceptual question | Semantic | "How do I improve sleep?" |
 | Paraphrased intent | Semantic | "Can't sign in" → password reset |
 | Mixed (most production) | Hybrid | "Latest Python security updates" |
@@ -101,21 +101,21 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 ## In Production
 
 **Cost Impact:**
-- BM25: ~$0.0001 per query (compute only, no API calls)
+- Lexical: ~$0.0001 per query (compute only, no API calls)
 - Semantic: ~$0.001-0.01 per query (embedding API + vector DB)
 - Hybrid: ~$0.002-0.015 per query (both methods)
 
 **Performance:**
-- BM25: typically lower latency at moderate scales (engine- and hardware-dependent)
-- Semantic: generally higher latency than BM25; depends on index type and hardware  
+- Lexical: typically lower latency at moderate scales
+- Semantic: generally higher latency than lexical; depends on index type and hardware  
 - Hybrid: adds overhead; parallel execution helps
 
 **Accuracy (typical):**
-- BM25 alone: 70-75% relevant results
+- Lexical alone: 70-75% relevant results
 - Semantic alone: 72-78% relevant results
 - Hybrid: 85-92% relevant results
 
-**Recommendation:** Start with hybrid unless you have strict latency requirements (\<50ms) or very clear use case for BM25-only.
+**Recommendation:** Start with hybrid unless you have strict latency requirements (\<50ms) or very clear use case for lexical-only.
 
 ## Practical Exercise
 
@@ -137,12 +137,12 @@ async function compareSearchStrategies() {
 
   // 3. Execution & Comparison
   for (const query of queries) {
-    const bm25 = searchBM25(corpus, query);
+    const lexical = searchLexical(corpus, query);
     const semantic = searchSemantic(corpus, query);
     const hybrid = searchHybrid(corpus, query);
 
     // 4. Analysis
-    logStrategyWins({ bm25, semantic, hybrid });
+    logStrategyWins({ lexical, semantic, hybrid });
   }
 }
 ```

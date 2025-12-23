@@ -40,6 +40,10 @@ EXECUTION STEPS:
    - Install any missing dependencies if required.
 
 4. **Update the MDX File**:
+   - **Add import statement** (if not already present):
+     ```jsx
+     import { CodeEditor } from '/snippets/CodeEditor.jsx';
+     ```
    - Remove the Colab link and the entire `<CodeGroup>...</CodeGroup>` block.
    - Insert a `<CodeEditor />` component in their place.
    - **Props**:
