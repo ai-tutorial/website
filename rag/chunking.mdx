@@ -51,7 +51,7 @@ print(f"Created {len(chunks)} chunks from {len(doc)} characters")
 ```
 
 <CodeEditor 
-    file="src/module2/chunking_methods.ts" 
+    file="src/rag/chunking_methods.ts" 
     lines="9-29"
     functionName="fixedSizeChunking"
     title="Fixed-Size Chunking"
@@ -107,7 +107,7 @@ def semantic_chunking(
 ```
 
 <CodeEditor 
-    file="src/module2/chunking_methods.ts" 
+    file="src/rag/chunking_methods.ts" 
     lines="31-74"
     functionName="semanticChunking"
     title="Semantic Chunking"
@@ -139,7 +139,7 @@ for i, chunk in enumerate(chunks):
 ```
 
 <CodeEditor 
-    file="src/module2/chunking_strategies.ts" 
+    file="src/rag/chunking_strategies.ts" 
     lines="89-109"
     functionName="exampleSemantic"
     title="Semantic Chunking Usage"
@@ -227,7 +227,7 @@ for chunk in chunks:
 ```
 
 <CodeEditor 
-    file="src/module2/chunking_methods.ts" 
+    file="src/rag/chunking_methods.ts" 
     lines="76-120"
     functionName="structureAwareChunking"
     title="Structure-Aware Chunking"
@@ -338,7 +338,7 @@ chunk = DocumentChunk.from_document(
 ```
 
 <CodeEditor 
-    file="src/module2/DocumentChunk.ts" 
+    file="src/rag/DocumentChunk.ts" 
     lines="14-68"
     functionName="DocumentChunk"
     title="DocumentChunk Class"
@@ -368,7 +368,7 @@ collection.query(
 ```
 
 <CodeEditor 
-    file="src/module2/chunking_strategies.ts" 
+    file="src/rag/chunking_strategies.ts" 
     lines="55-78"
     functionName="filteredRetrievalExample"
     title="Filtered Retrieval"
@@ -483,7 +483,7 @@ for chunk_batch in pipeline.process_batch(documents):
 ```
 
 <CodeEditor 
-    file="src/module2/ProductionChunkingPipeline.ts" 
+    file="src/rag/ProductionChunkingPipeline.ts" 
     lines="4-80"
     functionName="ProductionChunkingPipeline"
     title="Production Chunking Pipeline"

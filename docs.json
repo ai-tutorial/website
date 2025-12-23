@@ -45,12 +45,12 @@
       {
         "group": "AI Agents",
         "pages": [
-          "ai-agents/overview",
-          "ai-agents/introduction-to-ai-agents",
-          "ai-agents/tool-design-and-implementation",
-          "ai-agents/agent-memory",
-          "ai-agents/hands-on-exercise",
-          "ai-agents/recap-and-resources"
+          "agents/overview",
+          "agents/intro",
+          "agents/tool-design-and-implementation",
+          "agents/memory",
+          "agents/hands-on-exercise",
+          "agents/recap-and-resources"
         ]
       },
       {

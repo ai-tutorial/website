@@ -58,7 +58,7 @@ The playground constructs the final prompt from these components, which is then 
 **Let's put all this together in code**
 
 <CodeEditor 
-  file="src/module1/structured_prompt_anatomy.ts" 
+  file="src/prompting/structured_prompt_anatomy.ts" 
   functionName="main"
   lines="31-86"
   title="Structured Prompt Anatomy"
@@ -137,7 +137,7 @@ Compare these two approaches:
 This approach includes the XML schema and example in the prompt itself, instructing the model to follow the XML structure.
 
 <CodeEditor 
-  file="src/module1/structured_outputs_xml_schema_in_prompt.ts" 
+  file="src/prompting/structured_outputs_xml_schema_in_prompt.ts" 
   functionName="main"
   lines="50-93"
   title="Structured Outputs: XML Schema in Prompt"
@@ -148,7 +148,7 @@ This approach includes the XML schema and example in the prompt itself, instruct
 This approach uses prompt instructions to request XML output combined with XML parsing and validation. Note that OpenAI's API doesn't have a native XML response format like json_object, so we rely on prompt engineering and parsing.
 
 <CodeEditor 
-  file="src/module1/structured_outputs_xml_mode.ts" 
+  file="src/prompting/structured_outputs_xml_mode.ts" 
   functionName="main"
   lines="50-96"
   title="Structured Outputs: XML Mode"
@@ -208,7 +208,7 @@ Compare these two approaches:
 This approach includes the JSON schema in the prompt itself, instructing the model to follow the schema structure.
 
 <CodeEditor 
-  file="src/module1/structured_outputs_schema_in_prompt.ts" 
+  file="src/prompting/structured_outputs_schema_in_prompt.ts" 
   functionName="main"
   lines="39-75"
   title="Structured Outputs: JSON Schema in Prompt"
@@ -219,7 +219,7 @@ This approach includes the JSON schema in the prompt itself, instructing the mod
 This approach uses OpenAI's structured outputs feature (`response_format: json_object`) combined with schema validation. This is more reliable than just including the schema in the prompt.
 
 <CodeEditor 
-  file="src/module1/structured_outputs_json_mode.ts" 
+  file="src/prompting/structured_outputs_json_mode.ts" 
   functionName="main"
   lines="39-73"
   title="Structured Outputs: JSON Mode"

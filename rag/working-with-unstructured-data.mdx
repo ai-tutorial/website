@@ -32,7 +32,7 @@ Not all PDFs are created equal.
 
 
 <CodeEditor 
-    file="src/module2/pdf_processing.ts" 
+    file="src/rag/pdf_processing.ts" 
     lines="49-67"
     functionName="extractDigitalPdf"
     title="Digital PDF Extraction"
@@ -41,7 +41,7 @@ Not all PDFs are created equal.
 ### Scanned PDFs (Image-Based)
 
 <CodeEditor 
-    file="src/module2/pdf_processing.ts" 
+    file="src/rag/pdf_processing.ts" 
     lines="69-112"
     functionName="extractScannedPdf"
     title="Scanned PDF Extraction (OCR)"
@@ -52,7 +52,7 @@ Not all PDFs are created equal.
 
 
 <CodeEditor 
-    file="src/module2/pdf_processing.ts" 
+    file="src/rag/pdf_processing.ts" 
     lines="119-183"
     functionName="PDFProcessor"
     title="Combined PDF Processing Pipeline"
@@ -74,7 +74,7 @@ Tables are notoriously difficult for OCR and even digital PDFs.
 ### 1. Specialized Table Extractors
 
 <CodeEditor 
-    file="src/module2/pdf_table_extraction.ts" 
+    file="src/rag/pdf_table_extraction.ts" 
     lines="41-75"
     functionName="extractTablesFromPdf"
     title="Specialized Table Extraction"
@@ -85,7 +85,7 @@ Tables are notoriously difficult for OCR and even digital PDFs.
 Modern approach: Use multimodal models to "see" the table.
 
 <CodeEditor 
-    file="src/module2/pdf_vision.ts" 
+    file="src/rag/pdf_vision.ts" 
     lines="44-74"
     functionName="extractTableWithVision"
     title="Vision-Based Table Extraction"
@@ -103,7 +103,7 @@ Should you include images in your RAG pipeline? Depends on the use case.
 ### When to Extract Text from Images
 
 <CodeEditor 
-    file="src/module2/pdf_image_ocr.ts" 
+    file="src/rag/pdf_image_ocr.ts" 
     lines="38-58"
     functionName="extractImageText"
     title="Image OCR Extraction"
@@ -112,7 +112,7 @@ Should you include images in your RAG pipeline? Depends on the use case.
 ### When to Caption/Describe Images
 
 <CodeEditor 
-    file="src/module2/pdf_image_captioning.ts" 
+    file="src/rag/pdf_image_captioning.ts" 
     lines="45-73"
     functionName="generateImageCaption"
     title="Image Captioning (Vision API)"
@@ -141,7 +141,7 @@ Long documents (100+ pages) present unique challenges:
 **Use case:** Finding specific information (needle in haystack)
 
 <CodeEditor 
-    file="src/module2/pdf_needle_search.ts" 
+    file="src/rag/pdf_needle_search.ts" 
     lines="40-75"
     functionName="needleInHaystackSearch"
     title="Pattern 1: Constant-Output (Needle in Haystack)"
@@ -152,7 +152,7 @@ Long documents (100+ pages) present unique challenges:
 **Use case:** Summarization, analysis (output scales with document length)
 
 <CodeEditor 
-    file="src/module2/pdf_hierarchical_summary.ts" 
+    file="src/rag/pdf_hierarchical_summary.ts" 
     lines="38-80"
     functionName="hierarchicalSummary"
     title="Pattern 2: Variable-Output (Map-Reduce Summarization)"
@@ -161,7 +161,7 @@ Long documents (100+ pages) present unique challenges:
 ## A Complete Unstructured Data Pipeline
 
 <CodeEditor 
-    file="src/module2/pdf_unstructured_pipeline.ts" 
+    file="src/rag/pdf_unstructured_pipeline.ts" 
     lines="23-119"
     functionName="UnstructuredDataPipeline"
     title="Complete Unstructured Data Pipeline"

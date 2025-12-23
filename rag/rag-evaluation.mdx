@@ -96,7 +96,7 @@ If you get a wrong answer, you run this checklist: If Context Relevance is low, 
 We'll use hit_rate (a simple form of recall), MRR, Precision, and NDCG.
 
 <CodeEditor 
-  file="src/module2/rag_evaluation.ts" 
+  file="src/rag/rag_evaluation.ts" 
   lines="39-84" 
   functionName="main" 
   title="Setup & Retrieval Evaluation"
@@ -133,7 +133,7 @@ Traditional evaluation metrics require labeled ground truth, but for generation 
 **Trade-offs:** While faster and more scalable than human evaluation, LLM-as-Judge has costs (API calls to the judge model) and can occasionally disagree with human annotators on edge cases. Use it for continuous monitoring and initial evaluation, but validate critical failures with human review.
 
 <CodeEditor 
-  file="src/module2/rag_evaluation.ts" 
+  file="src/rag/rag_evaluation.ts" 
   lines="87-123" 
   functionName="main"
   title="Generation Evaluation"
@@ -146,7 +146,7 @@ Traditional evaluation metrics require labeled ground truth, but for generation 
 ### How to Create Golden Dataset
 
 <CodeEditor 
-  file="src/module2/rag_monitoring.ts" 
+  file="src/rag/rag_monitoring.ts" 
   lines="63-116" 
   functionName="generateGoldenDataset"
   title="Golden Dataset Creation"
@@ -164,7 +164,7 @@ Traditional evaluation metrics require labeled ground truth, but for generation 
 When evaluation reveals problems, debug systematically.
 
 <CodeEditor 
-  file="src/module2/rag_monitoring.ts" 
+  file="src/rag/rag_monitoring.ts" 
   lines="168-215" 
   functionName="debugRAGFailureWithScores"
   title="Debug RAG Failures"
@@ -173,7 +173,7 @@ When evaluation reveals problems, debug systematically.
 ## Continuous Evaluation
 
 <CodeEditor 
-  file="src/module2/rag_monitoring.ts" 
+  file="src/rag/rag_monitoring.ts" 
   lines="221-275" 
   functionName="ProductionRAGMonitor"
   title="Continuous Evaluation Monitor"
