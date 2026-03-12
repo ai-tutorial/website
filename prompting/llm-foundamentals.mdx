@@ -103,7 +103,8 @@ Control the creativity of the model with the Temperature parameter.
 
 - Temperature=0 for minimal creativity tasks (classification, extraction)
 - Temperature=0.3-0.7 for creative tasks (writing, brainstorming)
-- Run multiple times and vote (self-consistency, covered in 1.5)
+- Temperature=2.0 is he maximum limit. This forces the model to take extreme risks, often resulting in highly creative but frequently nonsensical or unstable output.
+- Run multiple tixmes and vote (self-consistency, covered in 1.5)
 
 <Note>
   GPT-5 models do **not** support the temperature parameter, and using it will raise an error. This breaks backward compatibility with earlier OpenAI models.
