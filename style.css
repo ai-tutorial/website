@@ -618,20 +618,20 @@
 
 /* Settings Panel Styles */
 .llm-settings-panel {
-  width: 220px;
+  width: 200px;
   border-left: 1px solid var(--llm-bg-secondary);
   background-color: var(--llm-bg-tertiary);
-  padding: 12px;
+  padding: 8px 10px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .llm-settings-title {
-  margin: 0 0 12px 0;
+  margin: 0;
   color: var(--llm-text-primary);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -639,20 +639,39 @@
 
 .llm-settings-label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 3px;
   color: var(--llm-text-secondary);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
+}
+
+.llm-api-calls-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--llm-border-color);
+}
+
+.llm-api-calls-block .llm-json-viewer {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.llm-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .llm-settings-select {
   width: 100%;
-  padding: 8px 10px;
+  padding: 5px 8px;
   background-color: var(--llm-bg-secondary);
   color: var(--llm-text-primary);
   border: 1px solid var(--llm-border-color);
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 4px;
+  font-size: 11px;
   cursor: pointer;
   outline: none;
   transition: all 0.2s ease;
@@ -665,7 +684,7 @@
 
 .llm-settings-row-with-action {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
 }
 
@@ -673,12 +692,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
   background-color: var(--llm-bg-secondary);
   border: 1px solid var(--llm-border-color);
-  border-radius: 6px;
+  border-radius: 4px;
   color: var(--llm-text-tertiary);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -699,25 +718,25 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .llm-settings-range-value {
   color: var(--llm-text-tertiary);
-  font-size: 12px;
+  font-size: 11px;
   font-family: Menlo, "Cascadia Code", Consolas, "Liberation Mono", monospace;
   font-weight: 600;
   background-color: var(--llm-bg-secondary);
-  padding: 3px 6px;
-  border-radius: 4px;
+  padding: 2px 5px;
+  border-radius: 3px;
   border: 1px solid var(--llm-border-color);
 }
 
 .llm-settings-range {
   width: 100%;
-  height: 6px;
+  height: 4px;
   background-color: var(--llm-bg-secondary);
-  border-radius: 3px;
+  border-radius: 2px;
   outline: none;
   cursor: pointer;
   -webkit-appearance: none;
@@ -726,8 +745,8 @@
 .llm-settings-range-labels {
   display: flex;
   justify-content: space-between;
-  margin-top: 6px;
-  font-size: 11px;
+  margin-top: 4px;
+  font-size: 10px;
   color: var(--llm-text-disabled);
 }
 

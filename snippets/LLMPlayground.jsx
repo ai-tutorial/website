@@ -224,6 +224,7 @@ export const LLMPlayground = ({
     return stored !== null ? stored === 'true' : true;
   });
 
+  const [isApiCallsOpen, setIsApiCallsOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const toggleMaximize = () => setIsMaximized(!isMaximized);
 
@@ -1086,23 +1087,17 @@ export const LLMPlayground = ({
             )}
           </div>
 
-          {apiKey && isSettingsOpen && (
+          {isSettingsOpen && (
             <div
               className="llm-settings-panel"
               style={{
                 width: `${SETTINGS_PANEL_WIDTH}px`,
               }}
             >
-              <div>
-                <h4 className="llm-settings-title">
-                  Settings
-                </h4>
-              </div>
+              <h4 className="llm-settings-title">Settings</h4>
 
               <div>
-                <label className="llm-settings-label">
-                  Provider
-                </label>
+                <label className="llm-settings-label">Provider</label>
                 <div className="llm-settings-row-with-action">
                   <select
                     value={provider}
@@ -1110,11 +1105,13 @@ export const LLMPlayground = ({
                       const newProvider = e.target.value;
                       const storageKey = PROVIDERS[newProvider].storageKey;
                       const storedKey = localStorage.getItem(storageKey);
+                      setProvider(newProvider);
+                      setModel(PROVIDERS[newProvider].models[0].value);
+                      localStorage.setItem(PROVIDER_STORAGE_KEY, newProvider);
                       if (storedKey) {
-                        setProvider(newProvider);
                         setApiKey(storedKey);
-                        setModel(PROVIDERS[newProvider].models[0].value);
-                        localStorage.setItem(PROVIDER_STORAGE_KEY, newProvider);
+                      } else {
+                        setApiKey('');
                       }
                     }}
                     disabled={isLoading}
@@ -1123,7 +1120,7 @@ export const LLMPlayground = ({
                     {Object.entries(PROVIDERS).map(([key, prov]) => {
                       const hasKey = typeof window !== 'undefined' && localStorage.getItem(prov.storageKey);
                       return (
-                        <option key={key} value={key} disabled={!hasKey} className="llm-settings-option">
+                        <option key={key} value={key} className="llm-settings-option">
                           {prov.label}{!hasKey ? ' (no key)' : ''}
                         </option>
                       );
@@ -1188,9 +1185,31 @@ export const LLMPlayground = ({
                   <span>2.0</span>
                 </div>
               </div>
+
             </div>
           )}
         </div>
+
+        {isApiCallsOpen && (lastSentJson || lastResponseJson) && (
+          <div className="llm-api-calls-content">
+            {lastSentJson && (
+              <div className="llm-api-calls-block">
+                <label className="llm-section-label">API Request JSON</label>
+                <div className="llm-textarea-base llm-textarea-enabled llm-json-viewer">
+                  {JSON.stringify(lastSentJson, null, 2)}
+                </div>
+              </div>
+            )}
+            {lastResponseJson && (
+              <div className="llm-api-calls-block">
+                <label className="llm-section-label">API Response JSON</label>
+                <div className="llm-textarea-base llm-textarea-enabled llm-json-viewer">
+                  {JSON.stringify(lastResponseJson, null, 2)}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="llm-footer">
           <div className="llm-footer-status-container">
@@ -1206,7 +1225,22 @@ export const LLMPlayground = ({
               )}
             </div>
           </div>
-          {apiKey && (
+          <div className="llm-footer-actions">
+            {hasSubmitted && (lastSentJson || lastResponseJson) && (
+              <button
+                type="button"
+                onClick={() => setIsApiCallsOpen(!isApiCallsOpen)}
+                className={isApiCallsOpen ? 'llm-footer-toggle-button llm-footer-toggle-button-active' : 'llm-footer-toggle-button'}
+                aria-label="Toggle API Calls"
+              >
+                <IconChevron
+                  size={12}
+                  isOpen={isApiCallsOpen}
+                  className={isApiCallsOpen ? 'llm-footer-toggle-icon llm-footer-toggle-icon-open' : 'llm-footer-toggle-icon'}
+                />
+                <span>API Calls</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 if (!forceSettingsOpen) {
@@ -1224,7 +1258,7 @@ export const LLMPlayground = ({
               />
               <span>Settings</span>
             </button>
-          )}
+          </div>
         </div>
       </div>
     </div>
