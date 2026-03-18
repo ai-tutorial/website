@@ -528,6 +528,9 @@ export const LLMPlayground = ({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        if (response.status === 429) {
+          throw Object.assign(new Error('Rate limit exceeded. You have used all your free tier quota.'), { isRateLimit: true });
+        }
         throw new Error(errorData.error?.message || `HTTP ${response.status}: Failed to get response from ${PROVIDERS[provider].label}`);
       }
 
@@ -543,7 +546,9 @@ export const LLMPlayground = ({
         setOutput(newResponse);
       }
     } catch (err) {
-      setError(err.message || 'An error occurred while processing your request');
+      setError(err.isRateLimit
+        ? { message: err.message, isRateLimit: true }
+        : err.message || 'An error occurred while processing your request');
       // Remove the user message from history if there was an error
       if (mode === 'chat') {
         setConversationHistory(prev => prev.slice(0, -1));
@@ -556,6 +561,23 @@ export const LLMPlayground = ({
   // Removed handleKeyDown - Enter should add new line, submit only via play button
 
   // ==================== RENDER HELPERS ====================
+  const errorMessage = typeof error === 'object' ? error.message : error;
+  const isRateLimitError = typeof error === 'object' && error.isRateLimit;
+
+  const renderErrorContent = () => (
+    <>
+      {errorMessage}
+      {isRateLimitError && (
+        <>
+          {' '}
+          <a href="https://ai.google.dev/gemini-api/docs/rate-limits" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+            Check your rate limits
+          </a>
+        </>
+      )}
+    </>
+  );
+
   const renderChatMessage = (message, index, isPlaceholder = false) => {
     const isUser = message.role === 'user';
     return (
@@ -707,7 +729,7 @@ export const LLMPlayground = ({
         </div>
         {error && (
           <div className="llm-error-message llm-error-message-small">
-            {error}
+            {renderErrorContent()}
           </div>
         )}
       </form>
@@ -971,7 +993,7 @@ export const LLMPlayground = ({
                   <div className="llm-error-wrapper">
                     <div className="llm-error-message">
                       <IconError size={14} />
-                      {error}
+                      {renderErrorContent()}
                     </div>
                   </div>
                 )}
@@ -1012,7 +1034,7 @@ export const LLMPlayground = ({
                   {error && (
                     <div className="llm-error-message llm-error-message-top">
                       <IconError size={14} />
-                      {error}
+                      {renderErrorContent()}
                     </div>
                   )}
                 </div>
