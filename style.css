@@ -648,13 +648,36 @@
 .llm-api-calls-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 10px 12px;
   border-top: 1px solid var(--llm-border-color);
+  max-height: 280px;
+}
+
+.llm-api-calls-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.llm-api-calls-tab {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-family: inherit;
+  border: 1px solid var(--llm-border-color);
+  border-radius: 4px;
+  background: var(--llm-bg-secondary);
+  color: var(--llm-text-secondary);
+  cursor: pointer;
+}
+
+.llm-api-calls-tab-active {
+  background: var(--llm-accent-blue);
+  color: #fff;
+  border-color: var(--llm-accent-blue);
 }
 
 .llm-api-calls-block .llm-json-viewer {
-  max-height: 200px;
+  max-height: 210px;
   overflow-y: auto;
 }
 

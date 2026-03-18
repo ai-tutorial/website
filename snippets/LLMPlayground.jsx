@@ -234,6 +234,7 @@ export const LLMPlayground = ({
   });
 
   const [isApiCallsOpen, setIsApiCallsOpen] = useState(false);
+  const [apiCallTab, setApiCallTab] = useState('request');
   const [isMaximized, setIsMaximized] = useState(false);
   const toggleMaximize = () => setIsMaximized(!isMaximized);
 
@@ -1235,17 +1236,35 @@ export const LLMPlayground = ({
 
         {isApiCallsOpen && (lastSentJson || lastResponseJson) && (
           <div className="llm-api-calls-content">
-            {lastSentJson && (
+            <div className="llm-api-calls-tabs">
+              {lastSentJson && (
+                <button
+                  type="button"
+                  className={`llm-api-calls-tab${apiCallTab === 'request' ? ' llm-api-calls-tab-active' : ''}`}
+                  onClick={() => setApiCallTab('request')}
+                >
+                  Request
+                </button>
+              )}
+              {lastResponseJson && (
+                <button
+                  type="button"
+                  className={`llm-api-calls-tab${apiCallTab === 'response' ? ' llm-api-calls-tab-active' : ''}`}
+                  onClick={() => setApiCallTab('response')}
+                >
+                  Response
+                </button>
+              )}
+            </div>
+            {apiCallTab === 'request' && lastSentJson && (
               <div className="llm-api-calls-block">
-                <label className="llm-section-label">API Request JSON</label>
                 <div className="llm-textarea-base llm-textarea-enabled llm-json-viewer">
                   {JSON.stringify(lastSentJson, null, 2)}
                 </div>
               </div>
             )}
-            {lastResponseJson && (
+            {apiCallTab === 'response' && lastResponseJson && (
               <div className="llm-api-calls-block">
-                <label className="llm-section-label">API Response JSON</label>
                 <div className="llm-textarea-base llm-textarea-enabled llm-json-viewer">
                   {JSON.stringify(lastResponseJson, null, 2)}
                 </div>
