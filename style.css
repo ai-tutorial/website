@@ -348,6 +348,24 @@
   cursor: not-allowed;
 }
 
+.llm-api-key-cancel-button {
+  padding: 8px 16px;
+  background-color: transparent;
+  color: var(--llm-text-secondary);
+  border: 1px solid var(--llm-border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  height: 36px;
+}
+
+.llm-api-key-cancel-button:hover {
+  background-color: var(--llm-bg-secondary);
+}
+
 /* Advanced Input Styles */
 .llm-advanced-input-container {
   flex: 1;

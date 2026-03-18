@@ -206,6 +206,7 @@ export const LLMPlayground = ({
   const responseCountRef = useRef(0);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [apiKeyProvider, setApiKeyProvider] = useState('gemini');
+  const previousProviderRef = useRef(null);
   const [isSavingKey, setIsSavingKey] = useState(false);
   const textareaRef = useRef(null);
   const advancedTextareaRefs = useRef({});
@@ -411,6 +412,7 @@ export const LLMPlayground = ({
       setProvider(apiKeyProvider);
       setApiKey(trimmedKey);
       setApiKeyInput('');
+      previousProviderRef.current = null;
       // Set a default model for the selected provider
       const providerModels = PROVIDERS[apiKeyProvider].models;
       setModel(providerModels[0].value);
@@ -681,7 +683,7 @@ export const LLMPlayground = ({
             className={`llm-provider-tab ${apiKeyProvider === key ? 'llm-provider-tab-active' : ''}`}
           >
             {prov.label}
-            {key === 'gemini' && <span className="llm-provider-tab-badge">Free</span>}
+            {key === 'gemini' && <span className="llm-provider-tab-badge">Free Tier</span>}
           </button>
         ))}
       </div>
@@ -738,6 +740,25 @@ export const LLMPlayground = ({
             >
               {isSavingKey ? 'Saving...' : 'Save'}
             </button>
+            {previousProviderRef.current && (
+              <button
+                type="button"
+                className="llm-api-key-cancel-button"
+                onClick={() => {
+                  const prev = previousProviderRef.current;
+                  const prevKey = localStorage.getItem(PROVIDERS[prev].storageKey);
+                  setProvider(prev);
+                  setApiKey(prevKey || '');
+                  setModel(PROVIDERS[prev].models[0].value);
+                  localStorage.setItem(PROVIDER_STORAGE_KEY, prev);
+                  setApiKeyInput('');
+                  setError('');
+                  previousProviderRef.current = null;
+                }}
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </div>
         {error && (
@@ -1117,6 +1138,10 @@ export const LLMPlayground = ({
                       const newProvider = e.target.value;
                       const storageKey = PROVIDERS[newProvider].storageKey;
                       const storedKey = localStorage.getItem(storageKey);
+                      // Remember the current provider so we can revert if cancelled
+                      if (apiKey) {
+                        previousProviderRef.current = provider;
+                      }
                       setProvider(newProvider);
                       setModel(PROVIDERS[newProvider].models[0].value);
                       localStorage.setItem(PROVIDER_STORAGE_KEY, newProvider);
