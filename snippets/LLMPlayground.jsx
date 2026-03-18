@@ -172,6 +172,14 @@ export const LLMPlayground = ({
     </svg>
   );
 
+  const IconInfo = ({ size = 12, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="16" x2="12" y2="12"></line>
+      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+    </svg>
+  );
+
   // ==================== STYLES ====================
   // Styles are now in style.css - using CSS classes instead
 
@@ -192,6 +200,7 @@ export const LLMPlayground = ({
     return initialProvider === 'gemini' ? 'gemini-2.5-flash-lite' : defaultModel;
   });
   const [temperature, setTemperature] = useState(defaultTemperature);
+  const [topP, setTopP] = useState(1.0);
   const [apiKey, setApiKey] = useState('');
   const [responseCount, setResponseCount] = useState(0);
   const responseCountRef = useRef(0);
@@ -497,6 +506,7 @@ export const LLMPlayground = ({
       model,
       messages: requestMessages,
       temperature,
+      top_p: topP,
       max_tokens: MAX_TOKENS
     };
 
@@ -1164,6 +1174,9 @@ export const LLMPlayground = ({
                 <div className="llm-settings-range-container">
                   <label className="llm-settings-label">
                     Temperature
+                    <span className="llm-settings-info" title="Controls randomness. Lower values make output more focused and deterministic. Higher values make it more creative and varied.">
+                      <IconInfo size={11} />
+                    </span>
                   </label>
                   <span className="llm-settings-range-value">
                     {temperature.toFixed(1)}
@@ -1183,6 +1196,35 @@ export const LLMPlayground = ({
                   <span>0.0</span>
                   <span>1.0</span>
                   <span>2.0</span>
+                </div>
+              </div>
+
+              <div>
+                <div className="llm-settings-range-container">
+                  <label className="llm-settings-label">
+                    Top P
+                    <span className="llm-settings-info" title="Nucleus sampling. Controls the cumulative probability cutoff. Lower values consider fewer tokens, making output more focused. Usually adjusted as an alternative to temperature.">
+                      <IconInfo size={11} />
+                    </span>
+                  </label>
+                  <span className="llm-settings-range-value">
+                    {topP.toFixed(2)}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={topP}
+                  onChange={(e) => setTopP(parseFloat(e.target.value))}
+                  disabled={isLoading}
+                  className="llm-settings-range"
+                />
+                <div className="llm-settings-range-labels">
+                  <span>0.0</span>
+                  <span>0.5</span>
+                  <span>1.0</span>
                 </div>
               </div>
 

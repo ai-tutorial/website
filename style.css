@@ -664,6 +664,19 @@
   gap: 4px;
 }
 
+.llm-settings-info {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 3px;
+  color: var(--llm-text-disabled);
+  cursor: help;
+  vertical-align: middle;
+}
+
+.llm-settings-info:hover {
+  color: var(--llm-text-secondary);
+}
+
 .llm-settings-select {
   width: 100%;
   padding: 5px 8px;
