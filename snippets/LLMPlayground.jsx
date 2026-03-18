@@ -501,14 +501,28 @@ export const LLMPlayground = ({
 
     try {
       const apiUrl = PROVIDERS[provider].apiUrl;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(jsonPayload)
-      });
+      const maxRetries = 3;
+      let response;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(jsonPayload)
+        });
+
+        if (response.status === 429 && attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          setError(`Rate limited. Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          setError('');
+          continue;
+        }
+        break;
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
