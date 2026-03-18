@@ -58,11 +58,6 @@ export const LLMPlayground = ({
     openai: { label: 'OpenAI', models: OPENAI_MODELS, storageKey: OPENAI_STORAGE_KEY, apiUrl: OPENAI_API_URL },
   };
 
-  const TABS = {
-    RESPONSE: 'response',
-    REQUEST: 'request',
-    API_RESPONSE: 'apiResponse'
-  };
 
   // ==================== ICON HELPERS ====================
   const IconWarningSun = ({ size = 14, className = '' }) => (
@@ -225,7 +220,7 @@ export const LLMPlayground = ({
   const isInitialMount = useRef(true);
   const [lastSentJson, setLastSentJson] = useState(null);
   const [lastResponseJson, setLastResponseJson] = useState(null);
-  const [activeTab, setActiveTab] = useState(TABS.RESPONSE);
+
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
     if (forceSettingsOpen) return true;
@@ -472,7 +467,6 @@ export const LLMPlayground = ({
 
     if (mode === 'advanced') {
       setLastResponseJson(null);
-      setActiveTab(TABS.RESPONSE);
     }
 
     let requestMessages = [];
@@ -881,78 +875,6 @@ export const LLMPlayground = ({
     </div>
   );
 
-  const renderTabs = () => (
-    <>
-      <div className="llm-tabs-container">
-        {[
-          { key: TABS.RESPONSE, label: 'Response' },
-          { key: TABS.REQUEST, label: 'API Request JSON' },
-          { key: TABS.API_RESPONSE, label: 'API Response JSON' }
-        ].map(tab => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={activeTab === tab.key ? 'llm-tab-button llm-tab-button-active' : 'llm-tab-button'}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="llm-tabs-content">
-        {activeTab === TABS.RESPONSE && (
-          <>
-            {output ? (
-              <div className="llm-response-box">{output}</div>
-            ) : isLoading ? (
-              <div className="llm-tab-loading">
-                <span className="llm-tab-loading-content">
-                  <IconLoadingSpinner size={14} className="llm-chat-loading-spinner" />
-                  Generating response...
-                </span>
-              </div>
-            ) : response ? (
-              <div className="llm-response-section">
-                <label className="llm-section-label">Response (Expected response, press submit to get actual response)</label>
-                <div className="llm-response-box llm-response-box-placeholder">
-                  {response}
-                </div>
-              </div>
-            ) : (
-              <div className="llm-tab-empty">
-                Response will appear here
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === TABS.REQUEST && (
-          <div
-            className="llm-textarea-base llm-textarea-enabled llm-json-viewer"
-          >
-            {lastSentJson ? JSON.stringify(lastSentJson, null, 2) : (
-              <span className="llm-json-viewer-empty">
-                No request data. Submit a request to see the JSON.
-              </span>
-            )}
-          </div>
-        )}
-
-        {activeTab === TABS.API_RESPONSE && (
-          <div
-            className="llm-textarea-base llm-textarea-enabled llm-json-viewer"
-          >
-            {lastResponseJson ? JSON.stringify(lastResponseJson, null, 2) : (
-              <span className="llm-json-viewer-empty">
-                No response data. Submit a request to see the API response JSON.
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    </>
-  );
 
   const renderChatResponse = () => {
     // Chat interface is now integrated into the main layout
@@ -1087,7 +1009,29 @@ export const LLMPlayground = ({
                         />
                       </>
                     ) : (
-                      renderTabs()
+                      <>
+                        {output ? (
+                          <div className="llm-response-box">{output}</div>
+                        ) : isLoading ? (
+                          <div className="llm-tab-loading">
+                            <span className="llm-tab-loading-content">
+                              <IconLoadingSpinner size={14} className="llm-chat-loading-spinner" />
+                              Generating response...
+                            </span>
+                          </div>
+                        ) : response ? (
+                          <div className="llm-response-section">
+                            <label className="llm-section-label">Response (Expected response, press submit to get actual response)</label>
+                            <div className="llm-response-box llm-response-box-placeholder">
+                              {response}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="llm-tab-empty">
+                            Response will appear here
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
