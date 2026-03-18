@@ -136,21 +136,24 @@ export const CodeEditor = ({
         const lines = ['# Using the API key(s) you configured. This file will be created when the dialog is loaded.'];
 
         if (openaiKey && openaiKey.trim()) {
-          lines.push(`OPENAI_MODEL=gpt-4o-mini`);
+          lines.push(`OPENAI_MODEL=gpt-4.1-nano`);
           lines.push(`OPENAI_API_KEY=${openaiKey.trim()}`);
         }
         if (geminiKey && geminiKey.trim()) {
-          lines.push(`GEMINI_MODEL=gemini-2.0-flash`);
-          lines.push(`GEMINI_API_KEY=${geminiKey.trim()}`);
+          lines.push(`GEMINI_MODEL=gemini-2.5-flash-lite`);
+          lines.push(`GOOGLE_GENERATIVE_AI_API_KEY=${geminiKey.trim()}`);
         }
+        const activeProvider = geminiKey && geminiKey.trim() ? 'gemini' : 'openai';
+        lines.push(`AI_PROVIDER=${activeProvider}`);
 
         envContent = lines.join('\n');
       } else {
         // Use mock keys if not configured
-        envContent = `OPENAI_MODEL=gpt-4o-mini
+        envContent = `OPENAI_MODEL=gpt-4.1-nano
 OPENAI_API_KEY=sk-mock-key-1234567890abcdef
-GEMINI_MODEL=gemini-2.0-flash
-GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.5-flash-lite
+GOOGLE_GENERATIVE_AI_API_KEY=
+AI_PROVIDER=openai
 # API key not found in browser storage
 # To configure your API key:
 # 1. For Gemini (free): Go to https://aistudio.google.com/apikey
@@ -252,7 +255,7 @@ GEMINI_API_KEY=
     setIsSubmitting(true);
 
     if (!apiKey || !apiKey.trim()) {
-      setError('Please enter your OpenAI API key');
+      setError(`Please enter your ${selectedProvider === 'gemini' ? 'Gemini' : 'OpenAI'} API key`);
       setIsSubmitting(false);
       return;
     }
@@ -282,19 +285,14 @@ GEMINI_API_KEY=
       const storageKey = selectedProvider === 'gemini' ? GEMINI_STORAGE_KEY : STORAGE_KEY;
       localStorage.setItem(storageKey, trimmedKey);
       localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProvider);
-      const saved = saveApiKey(trimmedKey);
-      if (saved) {
-        setSuccess(true);
-        setApiKey('');
+      dispatchApiKeyChanged();
+      setSuccess(true);
+      setApiKey('');
 
-        // Reload the page after a short delay to show success message
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } else {
-        setError('Failed to save API key. Please try again.');
-        setIsSubmitting(false);
-      }
+      // Reload the page after a short delay to show success message
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (err) {
       setError(err.message || 'Failed to save API key. Please try again.');
       setIsSubmitting(false);
@@ -406,6 +404,33 @@ GEMINI_API_KEY=
     iframe.addEventListener('load', handleLoad);
     // Note: Event listener cleanup is handled automatically when iframe element is removed by React
   };
+
+  // Safari is not supported by StackBlitz WebContainers
+  const isSafari = typeof navigator !== 'undefined' &&
+    /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+  if (isSafari) {
+    return (
+      <div
+        className="code-editor-dialog-container"
+        style={{ height: height }}
+      >
+        <div className="code-editor-dialog-box">
+          <h2 className="code-editor-dialog-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Browser Not Supported
+          </h2>
+          <p className="code-editor-dialog-description">
+            The interactive code editor is not supported on Safari. Please use <strong>Chrome</strong>, <strong>Edge</strong>, or <strong>Firefox</strong> to run the examples.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Show API key configuration dialog if not configured
   if (showApiKeyDialog) {
