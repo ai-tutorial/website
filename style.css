@@ -663,6 +663,38 @@
   border-color: var(--llm-accent-blue);
 }
 
+.llm-settings-row-with-action {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.llm-settings-remove-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  background-color: var(--llm-bg-secondary);
+  border: 1px solid var(--llm-border-color);
+  border-radius: 6px;
+  color: var(--llm-text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.llm-settings-remove-button:hover:not(:disabled) {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--llm-accent-red);
+}
+
+.llm-settings-remove-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .llm-settings-range-container {
   display: flex;
   justify-content: space-between;

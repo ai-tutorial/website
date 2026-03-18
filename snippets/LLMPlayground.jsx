@@ -113,6 +113,15 @@ export const LLMPlayground = ({
       <line x1="12" y1="16" x2="12.01" y2="16"></line>
     </svg>
   );
+  
+  const IconTrash = ({ size = 14, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      <line x1="10" y1="11" x2="10" y2="17"></line>
+      <line x1="14" y1="11" x2="14" y2="17"></line>
+    </svg>
+  );
 
   const IconSend = ({ size = 16, fillColor = '#000', className = '' }) => (
     <svg
@@ -398,6 +407,40 @@ export const LLMPlayground = ({
       setIsSavingKey(false);
     }
   }, [apiKeyInput, apiKeyProvider]);
+
+  const handleRemoveProvider = useCallback(() => {
+    if (!provider || typeof window === 'undefined') return;
+    
+    const confirmRemove = window.confirm(`Are you sure you want to remove the ${PROVIDERS[provider].label} API key?`);
+    if (!confirmRemove) return;
+
+    try {
+      const storageKey = PROVIDERS[provider].storageKey;
+      localStorage.removeItem(storageKey);
+      
+      // Look for another provider with a key
+      const otherProviderKey = Object.keys(PROVIDERS).find(p => p !== provider && localStorage.getItem(PROVIDERS[p].storageKey));
+      
+      if (otherProviderKey) {
+        // Switch to the other provider
+        const newApiKey = localStorage.getItem(PROVIDERS[otherProviderKey].storageKey);
+        setProvider(otherProviderKey);
+        setApiKey(newApiKey);
+        setModel(PROVIDERS[otherProviderKey].models[0].value);
+        localStorage.setItem(PROVIDER_STORAGE_KEY, otherProviderKey);
+      } else {
+        // No providers left with keys
+        setApiKey('');
+        setProvider('gemini'); // Default back to gemini
+        localStorage.removeItem(PROVIDER_STORAGE_KEY);
+        if (!forceSettingsOpen) {
+          setIsSettingsOpen(false);
+        }
+      }
+    } catch (err) {
+      setError('Failed to remove provider. Please try again.');
+    }
+  }, [provider, forceSettingsOpen]);
 
   const handleSubmit = useCallback(async (e) => {
     if (e?.preventDefault) {
@@ -1022,31 +1065,42 @@ export const LLMPlayground = ({
                 <label className="llm-settings-label">
                   Provider
                 </label>
-                <select
-                  value={provider}
-                  onChange={(e) => {
-                    const newProvider = e.target.value;
-                    const storageKey = PROVIDERS[newProvider].storageKey;
-                    const storedKey = localStorage.getItem(storageKey);
-                    if (storedKey) {
-                      setProvider(newProvider);
-                      setApiKey(storedKey);
-                      setModel(PROVIDERS[newProvider].models[0].value);
-                      localStorage.setItem(PROVIDER_STORAGE_KEY, newProvider);
-                    }
-                  }}
-                  disabled={isLoading}
-                  className="llm-settings-select"
-                >
-                  {Object.entries(PROVIDERS).map(([key, prov]) => {
-                    const hasKey = typeof window !== 'undefined' && localStorage.getItem(prov.storageKey);
-                    return (
-                      <option key={key} value={key} disabled={!hasKey} className="llm-settings-option">
-                        {prov.label}{!hasKey ? ' (no key)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
+                <div className="llm-settings-row-with-action">
+                  <select
+                    value={provider}
+                    onChange={(e) => {
+                      const newProvider = e.target.value;
+                      const storageKey = PROVIDERS[newProvider].storageKey;
+                      const storedKey = localStorage.getItem(storageKey);
+                      if (storedKey) {
+                        setProvider(newProvider);
+                        setApiKey(storedKey);
+                        setModel(PROVIDERS[newProvider].models[0].value);
+                        localStorage.setItem(PROVIDER_STORAGE_KEY, newProvider);
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="llm-settings-select"
+                  >
+                    {Object.entries(PROVIDERS).map(([key, prov]) => {
+                      const hasKey = typeof window !== 'undefined' && localStorage.getItem(prov.storageKey);
+                      return (
+                        <option key={key} value={key} disabled={!hasKey} className="llm-settings-option">
+                          {prov.label}{!hasKey ? ' (no key)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleRemoveProvider}
+                    disabled={isLoading}
+                    className="llm-settings-remove-button"
+                    title="Remove Provider"
+                  >
+                    <IconTrash size={14} />
+                  </button>
+                </div>
               </div>
 
               <div>
