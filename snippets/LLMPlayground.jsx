@@ -548,8 +548,9 @@ export const LLMPlayground = ({
       const data = await response.json();
       const newResponse = data.choices[0]?.message?.content || 'No response generated';
 
+      setLastResponseJson(data);
+
       if (mode === 'advanced') {
-        setLastResponseJson(data);
         setOutput(newResponse);
       } else {
         // Chat mode: add assistant response to conversation history
