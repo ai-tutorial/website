@@ -166,28 +166,33 @@ This approach uses prompt instructions to request XML output combined with XML p
 
 <LLMPlayground 
   defaultMode="chat"
-  defaultInput={`  <task>Classify customer sentiment</task>
+  defaultInput={`<task>Classify customer sentiment</task>
 
-  <examples>
-    <example>
-      <input>Your product is amazing! Best purchase ever.</input>
-      <output>positive</output>
-    </example>
+<instruction>
+Return ONLY one word: positive, neutral, or negative.
+For each <input>, produce the corresponding <output>.
+</instruction>
 
-    <example>
-      <input>It's okay, does the job but nothing special.</input>
-      <output>neutral</output>
-    </example>
+<examples>
+  <example>
+    <input>Your product is amazing! Best purchase ever.</input>
+    <output>positive</output>
+  </example>
 
-    <example>
-      <input>Terrible quality. Broke after one week. Demanding refund!</input>
-      <output>negative</output>
-    </example>
-  </examples>
+  <example>
+    <input>It's okay, does the job but nothing special.</input>
+    <output>neutral</output>
+  </example>
 
-  <input_to_classify>
-    The shipping was fast and the product arrived in perfect condition. Would buy again!
-  </input_to_classify>`}
+  <example>
+    <input>Terrible quality. Broke after one week. Demanding refund!</input>
+    <output>negative</output>
+  </example>
+</examples>
+
+<input>
+The shipping was fast and the product arrived in perfect condition. Would buy again!
+</input>`}
   height="500px"
 />
 
