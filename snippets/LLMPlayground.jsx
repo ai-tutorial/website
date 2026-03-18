@@ -47,8 +47,9 @@ export const LLMPlayground = ({
   ];
 
   const GEMINI_MODELS = [
-    { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   ];
 
@@ -188,7 +189,7 @@ export const LLMPlayground = ({
   });
   const [model, setModel] = useState(() => {
     const initialProvider = (typeof window !== 'undefined' && localStorage.getItem(PROVIDER_STORAGE_KEY)) || 'gemini';
-    return initialProvider === 'gemini' ? 'gemini-2.0-flash-lite' : defaultModel;
+    return initialProvider === 'gemini' ? 'gemini-2.5-flash-lite' : defaultModel;
   });
   const [temperature, setTemperature] = useState(defaultTemperature);
   const [apiKey, setApiKey] = useState('');
