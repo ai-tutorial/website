@@ -42,14 +42,12 @@ export const LLMPlayground = ({
     { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
     { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
     { value: 'gpt-4.1', label: 'GPT-4.1' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'gpt-4o', label: 'GPT-4o' },
     { value: 'o4-mini', label: 'o4 Mini' },
+    { value: 'o3', label: 'o3' },
   ];
 
   const GEMINI_MODELS = [
     { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   ];
@@ -190,7 +188,7 @@ export const LLMPlayground = ({
   });
   const [model, setModel] = useState(() => {
     const initialProvider = (typeof window !== 'undefined' && localStorage.getItem(PROVIDER_STORAGE_KEY)) || 'gemini';
-    return initialProvider === 'gemini' ? 'gemini-2.0-flash' : defaultModel;
+    return initialProvider === 'gemini' ? 'gemini-2.0-flash-lite' : defaultModel;
   });
   const [temperature, setTemperature] = useState(defaultTemperature);
   const [apiKey, setApiKey] = useState('');
