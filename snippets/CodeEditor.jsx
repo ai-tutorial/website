@@ -61,14 +61,22 @@ export const CodeEditor = ({
    * Note: Communication with StackBlitz is handled directly via SDK in CodeEmbed component
    */
   const STORAGE_KEY = 'openai_api_key';
+  const GEMINI_STORAGE_KEY = 'gemini_api_key';
+  const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
+  const [selectedProvider, setSelectedProvider] = useState(() => {
+    if (typeof window === 'undefined') return 'gemini';
+    return localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
+  });
 
   /**
    * Check if API key is configured
    * @returns {boolean} True if API key exists in localStorage
    */
   const isApiKeyConfigured = () => {
-    const key = localStorage.getItem(STORAGE_KEY);
-    return key !== null && key.trim().length > 0;
+    const openaiKey = localStorage.getItem(STORAGE_KEY);
+    const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY);
+    return (openaiKey !== null && openaiKey.trim().length > 0) ||
+           (geminiKey !== null && geminiKey.trim().length > 0);
   };
 
   /**
@@ -123,22 +131,30 @@ export const CodeEditor = ({
       let envContent;
 
       if (configured) {
-        // Get the stored key and use it
-        const apiKey = getApiKey();
-        if (!apiKey) {
-          return;
+        const openaiKey = localStorage.getItem(STORAGE_KEY);
+        const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY);
+        const lines = ['# Using the API key(s) you configured. This file will be created when the dialog is loaded.'];
+
+        if (openaiKey && openaiKey.trim()) {
+          lines.push(`OPENAI_MODEL=gpt-4o-mini`);
+          lines.push(`OPENAI_API_KEY=${openaiKey.trim()}`);
         }
-        envContent = `# Using the API key you configured. This file will be created when the dialog is loaded.
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_API_KEY=${apiKey.trim()}`;
+        if (geminiKey && geminiKey.trim()) {
+          lines.push(`GEMINI_MODEL=gemini-2.0-flash`);
+          lines.push(`GEMINI_API_KEY=${geminiKey.trim()}`);
+        }
+
+        envContent = lines.join('\n');
       } else {
-        // Use mock key if not configured
+        // Use mock keys if not configured
         envContent = `OPENAI_MODEL=gpt-4o-mini
 OPENAI_API_KEY=sk-mock-key-1234567890abcdef
+GEMINI_MODEL=gemini-2.0-flash
+GEMINI_API_KEY=
 # API key not found in browser storage
 # To configure your API key:
-# 1. Go to https://platform.openai.com/api-keys
-# 2. Create a new API key
+# 1. For Gemini (free): Go to https://aistudio.google.com/apikey
+# 2. For OpenAI: Go to https://platform.openai.com/api-keys
 # 3. Enter it in the configuration form above this editor
 # 4. The .env file will be automatically updated with your key`;
       }
@@ -189,21 +205,20 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
    * @param {string} key - The API key to validate
    * @returns {Promise<{valid: boolean, error?: string}>} Validation result
    */
-  const validateApiKey = async (key) => {
+  const validateApiKey = async (key, provider) => {
     try {
-      // Make a lightweight request to validate the key
-      // Using the models endpoint as it's simple and doesn't consume credits
-      const response = await fetch('https://api.openai.com/v1/models', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${key.trim()}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const url = provider === 'gemini'
+        ? 'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key.trim())
+        : 'https://api.openai.com/v1/models';
+      const headers = provider === 'gemini'
+        ? { 'Content-Type': 'application/json' }
+        : { 'Authorization': `Bearer ${key.trim()}`, 'Content-Type': 'application/json' };
+
+      const response = await fetch(url, { method: 'GET', headers });
 
       if (response.ok) {
         return { valid: true };
-      } else if (response.status === 401) {
+      } else if (response.status === 401 || response.status === 403) {
         return { valid: false, error: 'Invalid API key. Please check your key and try again.' };
       } else if (response.status === 429) {
         return { valid: false, error: 'Rate limit exceeded. Please try again later.' };
@@ -215,7 +230,6 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
         };
       }
     } catch (err) {
-      // Network errors or other issues
       if (err.name === 'TypeError' && err.message.includes('fetch')) {
         return { valid: false, error: 'Network error. Please check your connection and try again.' };
       }
@@ -245,16 +259,16 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 
     // Basic format validation
     const trimmedKey = apiKey.trim();
-    if (!trimmedKey.startsWith('sk-')) {
+    if (selectedProvider === 'openai' && !trimmedKey.startsWith('sk-')) {
       setError('Invalid API key format. OpenAI API keys should start with "sk-"');
       setIsSubmitting(false);
       return;
     }
 
-    // Validate the API key with OpenAI
+    // Validate the API key
     setIsValidating(true);
-    setError(''); // Clear any previous errors
-    const validation = await validateApiKey(trimmedKey);
+    setError('');
+    const validation = await validateApiKey(trimmedKey, selectedProvider);
     setIsValidating(false);
 
     if (!validation.valid) {
@@ -265,6 +279,9 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 
     // Key is valid, save it
     try {
+      const storageKey = selectedProvider === 'gemini' ? GEMINI_STORAGE_KEY : STORAGE_KEY;
+      localStorage.setItem(storageKey, trimmedKey);
+      localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProvider);
       const saved = saveApiKey(trimmedKey);
       if (saved) {
         setSuccess(true);
@@ -404,7 +421,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
               <line x1="12" y1="9" x2="12" y2="13"></line>
               <line x1="12" y1="17" x2="12.01" y2="17"></line>
             </svg>
-            Configure OpenAI API Key
+            Configure API Key
           </h2>
 
           <p className="code-editor-dialog-description">
@@ -412,22 +429,55 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             Your API key is stored locally in your browser's storage and is never transmitted to external servers.
           </p>
 
-          <div className="code-editor-info-box">
-            <p className="code-editor-info-box-title">
-              Don't have an API key?.
-            </p>
-            <p className="code-editor-info-box-text">
-              Get one at{' '}
+          <div className="llm-provider-tabs" style={{ marginBottom: '16px' }}>
+            <button
+              type="button"
+              onClick={() => { setSelectedProvider('gemini'); setError(''); setApiKey(''); }}
+              className={`llm-provider-tab ${selectedProvider === 'gemini' ? 'llm-provider-tab-active' : ''}`}
+            >
+              Gemini <span className="llm-provider-tab-badge">Free</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSelectedProvider('openai'); setError(''); setApiKey(''); }}
+              className={`llm-provider-tab ${selectedProvider === 'openai' ? 'llm-provider-tab-active' : ''}`}
+            >
+              OpenAI
+            </button>
+          </div>
+
+          {selectedProvider === 'gemini' && (
+            <div className="llm-gemini-recommendation" style={{ marginBottom: '16px' }}>
+              Gemini offers a generous free tier — great for learning! Get your free API key at{' '}
               <a
-                href="https://platform.openai.com/api-keys"
+                href="https://aistudio.google.com/apikey"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="code-editor-link"
               >
-                platform.openai.com/api-keys
+                aistudio.google.com/apikey
               </a>
-            </p>
-          </div>
+            </div>
+          )}
+
+          {selectedProvider === 'openai' && (
+            <div className="code-editor-info-box">
+              <p className="code-editor-info-box-title">
+                Don't have an API key?
+              </p>
+              <p className="code-editor-info-box-text">
+                Get one at{' '}
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="code-editor-link"
+                >
+                  platform.openai.com/api-keys
+                </a>
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleApiKeySubmit}>
             <div className="code-editor-form-group">
@@ -435,7 +485,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                 htmlFor="api-key-input"
                 className="code-editor-label"
               >
-                OpenAI API Key
+                {selectedProvider === 'gemini' ? 'Gemini' : 'OpenAI'} API Key
               </label>
               <input
                 id="api-key-input"
@@ -446,7 +496,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                   setError('');
                   setSuccess(false);
                 }}
-                placeholder="sk-..."
+                placeholder={selectedProvider === 'openai' ? 'sk-...' : 'Gemini API Key'}
                 disabled={isSubmitting}
                 className={`code-editor-input ${error ? 'code-editor-input-error' : ''}`}
               />

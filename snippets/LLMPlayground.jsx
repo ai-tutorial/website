@@ -29,18 +29,32 @@ export const LLMPlayground = ({
   theme: userTheme
 }) => {
   // ==================== CONSTANTS ====================
-  const STORAGE_KEY = 'openai_api_key';
+  const OPENAI_STORAGE_KEY = 'openai_api_key';
+  const GEMINI_STORAGE_KEY = 'gemini_api_key';
+  const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
   const SETTINGS_PANEL_KEY = 'llm_playground_settings_open';
   const SETTINGS_PANEL_WIDTH = 220;
-  const API_URL = 'https://api.openai.com/v1/chat/completions';
+  const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+  const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
   const MAX_TOKENS = 2000;
 
-  const MODELS = [
+  const OPENAI_MODELS = [
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
     { value: 'gpt-4o', label: 'GPT-4o' },
     { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
     { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
   ];
+
+  const GEMINI_MODELS = [
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+  ];
+
+  const PROVIDERS = {
+    gemini: { label: 'Gemini', models: GEMINI_MODELS, storageKey: GEMINI_STORAGE_KEY, apiUrl: GEMINI_API_URL },
+    openai: { label: 'OpenAI', models: OPENAI_MODELS, storageKey: OPENAI_STORAGE_KEY, apiUrl: OPENAI_API_URL },
+  };
 
   const TABS = {
     RESPONSE: 'response',
@@ -158,12 +172,20 @@ export const LLMPlayground = ({
   const [output, setOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [model, setModel] = useState(defaultModel);
+  const [provider, setProvider] = useState(() => {
+    if (typeof window === 'undefined') return 'gemini';
+    return localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
+  });
+  const [model, setModel] = useState(() => {
+    const initialProvider = (typeof window !== 'undefined' && localStorage.getItem(PROVIDER_STORAGE_KEY)) || 'gemini';
+    return initialProvider === 'gemini' ? 'gemini-2.0-flash' : defaultModel;
+  });
   const [temperature, setTemperature] = useState(defaultTemperature);
   const [apiKey, setApiKey] = useState('');
   const [responseCount, setResponseCount] = useState(0);
   const responseCountRef = useRef(0);
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const [apiKeyProvider, setApiKeyProvider] = useState('gemini');
   const [isSavingKey, setIsSavingKey] = useState(false);
   const textareaRef = useRef(null);
   const advancedTextareaRefs = useRef({});
@@ -225,7 +247,9 @@ export const LLMPlayground = ({
   // ==================== EFFECTS ====================
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const storedKey = localStorage.getItem(STORAGE_KEY);
+    const currentProvider = localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
+    const storageKey = PROVIDERS[currentProvider].storageKey;
+    const storedKey = localStorage.getItem(storageKey);
     if (storedKey) {
       setApiKey(storedKey);
     }
@@ -346,28 +370,34 @@ export const LLMPlayground = ({
     setError('');
 
     if (!apiKeyInput.trim()) {
-      setError('Please enter your OpenAI API key');
+      setError(`Please enter your ${PROVIDERS[apiKeyProvider].label} API key`);
       setIsSavingKey(false);
       return;
     }
 
     const trimmedKey = apiKeyInput.trim();
-    if (!trimmedKey.startsWith('sk-')) {
+    if (apiKeyProvider === 'openai' && !trimmedKey.startsWith('sk-')) {
       setError('Invalid API key format. OpenAI API keys should start with "sk-"');
       setIsSavingKey(false);
       return;
     }
 
     try {
-      localStorage.setItem(STORAGE_KEY, trimmedKey);
+      const storageKey = PROVIDERS[apiKeyProvider].storageKey;
+      localStorage.setItem(storageKey, trimmedKey);
+      localStorage.setItem(PROVIDER_STORAGE_KEY, apiKeyProvider);
+      setProvider(apiKeyProvider);
       setApiKey(trimmedKey);
       setApiKeyInput('');
+      // Set a default model for the selected provider
+      const providerModels = PROVIDERS[apiKeyProvider].models;
+      setModel(providerModels[0].value);
     } catch (err) {
       setError('Failed to save API key. Please try again.');
     } finally {
       setIsSavingKey(false);
     }
-  }, [apiKeyInput]);
+  }, [apiKeyInput, apiKeyProvider]);
 
   const handleSubmit = useCallback(async (e) => {
     if (e?.preventDefault) {
@@ -427,7 +457,8 @@ export const LLMPlayground = ({
     setLastSentJson(jsonPayload);
 
     try {
-      const response = await fetch(API_URL, {
+      const apiUrl = PROVIDERS[provider].apiUrl;
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -438,7 +469,7 @@ export const LLMPlayground = ({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `HTTP ${response.status}: Failed to get response from OpenAI`);
+        throw new Error(errorData.error?.message || `HTTP ${response.status}: Failed to get response from ${PROVIDERS[provider].label}`);
       }
 
       const data = await response.json();
@@ -461,7 +492,7 @@ export const LLMPlayground = ({
     } finally {
       setIsLoading(false);
     }
-  }, [mode, input, apiKey, isLoading, keepInput, constructAdvancedMessages, filterComments, isFormValid]);
+  }, [mode, input, apiKey, provider, isLoading, keepInput, constructAdvancedMessages, filterComments, isFormValid]);
 
   // Removed handleKeyDown - Enter should add new line, submit only via play button
 
@@ -513,7 +544,7 @@ export const LLMPlayground = ({
         )}
         {allMessages.length === 0 && placeholderMessages.length === 0 && !isLoading && (
           <div className="llm-chat-empty-state">
-            Start a conversation with OpenAI LLM using the API key you provided!
+            Start a conversation using the API key you provided!
           </div>
         )}
         {placeholderMessages.map((msg, idx) => renderChatMessage(msg, `placeholder-${idx}`, true))}
@@ -536,10 +567,47 @@ export const LLMPlayground = ({
       <div className="llm-api-key-form-section">
         <h3 className="llm-api-key-form-title">
           <IconWarningTriangle size={16} strokeColor="#f59e0b" />
-          <span>Configure OpenAI API Key to make the most of the tutorial</span>
+          <span>Configure an API Key to make the most of the tutorial</span>
         </h3>
         <p className="llm-api-key-form-description">
-          Your API key is stored locally in your browser's storage and is never transmitted to external servers.{' '}
+          Your API key is stored locally in your browser's storage and is never transmitted to external servers.
+        </p>
+      </div>
+
+      <div className="llm-provider-tabs">
+        {Object.entries(PROVIDERS).map(([key, prov]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => {
+              setApiKeyProvider(key);
+              setError('');
+              setApiKeyInput('');
+            }}
+            className={`llm-provider-tab ${apiKeyProvider === key ? 'llm-provider-tab-active' : ''}`}
+          >
+            {prov.label}
+            {key === 'gemini' && <span className="llm-provider-tab-badge">Free</span>}
+          </button>
+        ))}
+      </div>
+
+      {apiKeyProvider === 'gemini' && (
+        <div className="llm-gemini-recommendation">
+          Gemini offers a generous free tier — great for learning! Get your free API key at{' '}
+          <a
+            href="https://aistudio.google.com/apikey"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="llm-api-key-form-link"
+          >
+            aistudio.google.com/apikey
+          </a>
+        </div>
+      )}
+
+      {apiKeyProvider === 'openai' && (
+        <p className="llm-api-key-form-description" style={{ marginTop: '4px' }}>
           <a
             href="https://platform.openai.com/api-keys"
             target="_blank"
@@ -549,7 +617,7 @@ export const LLMPlayground = ({
             Don't have an API key? Get one here
           </a>
         </p>
-      </div>
+      )}
 
       <form onSubmit={handleApiKeySubmit}>
         <div className="llm-form-group">
@@ -562,7 +630,7 @@ export const LLMPlayground = ({
                 setApiKeyInput(e.target.value);
                 setError('');
               }}
-              placeholder="OpenAI API Key (sk-...)"
+              placeholder={apiKeyProvider === 'openai' ? 'OpenAI API Key (sk-...)' : 'Gemini API Key'}
               disabled={isSavingKey}
               className={error ? 'llm-api-key-input llm-api-key-input-error' : 'llm-api-key-input'}
               onBlur={(e) => {
@@ -952,6 +1020,37 @@ export const LLMPlayground = ({
 
               <div>
                 <label className="llm-settings-label">
+                  Provider
+                </label>
+                <select
+                  value={provider}
+                  onChange={(e) => {
+                    const newProvider = e.target.value;
+                    const storageKey = PROVIDERS[newProvider].storageKey;
+                    const storedKey = localStorage.getItem(storageKey);
+                    if (storedKey) {
+                      setProvider(newProvider);
+                      setApiKey(storedKey);
+                      setModel(PROVIDERS[newProvider].models[0].value);
+                      localStorage.setItem(PROVIDER_STORAGE_KEY, newProvider);
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="llm-settings-select"
+                >
+                  {Object.entries(PROVIDERS).map(([key, prov]) => {
+                    const hasKey = typeof window !== 'undefined' && localStorage.getItem(prov.storageKey);
+                    return (
+                      <option key={key} value={key} disabled={!hasKey} className="llm-settings-option">
+                        {prov.label}{!hasKey ? ' (no key)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div>
+                <label className="llm-settings-label">
                   Model
                 </label>
                 <select
@@ -964,7 +1063,7 @@ export const LLMPlayground = ({
                     e.target.style.boxShadow = 'none';
                   }}
                 >
-                  {MODELS.map((m) => (
+                  {PROVIDERS[provider].models.map((m) => (
                     <option key={m.value} value={m.value} className="llm-settings-option">
                       {m.label}
                     </option>
@@ -1003,7 +1102,7 @@ export const LLMPlayground = ({
 
         <div className="llm-footer">
           <div className="llm-footer-status-container">
-            <span>OpenAI key status:</span>
+            <span>{PROVIDERS[provider].label} key:</span>
             <div
               className="llm-footer-status-icon"
               title={apiKey ? 'API Key configured' : 'API Key not configured'}
