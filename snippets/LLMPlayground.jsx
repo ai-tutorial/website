@@ -39,16 +39,19 @@ export const LLMPlayground = ({
   const MAX_TOKENS = 2000;
 
   const OPENAI_MODELS = [
+    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
+    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+    { value: 'gpt-4.1', label: 'GPT-4.1' },
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
     { value: 'gpt-4o', label: 'GPT-4o' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+    { value: 'o4-mini', label: 'o4 Mini' },
   ];
 
   const GEMINI_MODELS = [
+    { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   ];
 
   const PROVIDERS = {
