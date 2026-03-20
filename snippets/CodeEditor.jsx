@@ -376,8 +376,10 @@ AI_PROVIDER=openai
   // Styles are now in style.css - using CSS classes instead
 
   const LOAD_TIMEOUT_MS = 15000;
+  const MAX_AUTO_RETRIES = 3;
   const iframeElRef = useRef(null);
   const handleLoadRef = useRef(null);
+  const retryCountRef = useRef(0);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -456,10 +458,23 @@ AI_PROVIDER=openai
         }
 
         if (!repoReady) {
-          setIsStuck(true);
+          retryCountRef.current++;
+          if (typeof window !== 'undefined' && window.gtag) {
+            window.gtag('event', 'load_refresh_error', {
+              event_category: 'stackblitz',
+              event_label: file,
+              retry_count: retryCountRef.current,
+            });
+          }
+          if (retryCountRef.current < MAX_AUTO_RETRIES) {
+            handleRetry();
+          } else {
+            setIsStuck(true);
+          }
           return;
         }
 
+        retryCountRef.current = 0;
         vmRef.current = vm;
         setIsStuck(false);
 
@@ -469,7 +484,20 @@ AI_PROVIDER=openai
         }
       } catch (error) {
         console.error('Failed to connect to StackBlitz VM:', error);
-        setIsStuck(true);
+        retryCountRef.current++;
+        if (typeof window !== 'undefined' && window.gtag) {
+          window.gtag('event', 'load_refresh_error', {
+            event_category: 'stackblitz',
+            event_label: file,
+            retry_count: retryCountRef.current,
+            error_message: error.message,
+          });
+        }
+        if (retryCountRef.current < MAX_AUTO_RETRIES) {
+          handleRetry();
+        } else {
+          setIsStuck(true);
+        }
       }
     };
 
