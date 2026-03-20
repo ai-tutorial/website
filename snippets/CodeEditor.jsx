@@ -27,6 +27,8 @@ export const CodeEditor = ({
   const vmRef = useRef(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isStuck, setIsStuck] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -373,15 +375,42 @@ AI_PROVIDER=openai
   // ==================== STYLES ====================
   // Styles are now in style.css - using CSS classes instead
 
+  const LOAD_TIMEOUT_MS = 15000;
+  const iframeElRef = useRef(null);
+  const handleLoadRef = useRef(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (iframeElRef.current && handleLoadRef.current) {
+        iframeElRef.current.removeEventListener('load', handleLoadRef.current);
+      }
+    };
+  }, []);
+
+  const handleRetry = () => {
+    vmRef.current = null;
+    hasCreatedEnvRef.current = false;
+    setIsStuck(false);
+    setIframeKey(prev => prev + 1);
+  };
+
   // Callback ref to handle iframe mounting
   const iframeRef = (iframe) => {
+    // Cleanup previous listener if ref changes
+    if (iframeElRef.current && handleLoadRef.current) {
+      iframeElRef.current.removeEventListener('load', handleLoadRef.current);
+    }
+
+    iframeElRef.current = iframe;
+
     if (!iframe) {
       return;
     }
 
     const handleLoad = async () => {
       try {
-        // Load SDK and connect to VM
+        // Load SDK and connect to VM — use a timeout race so we don't wait forever
         const sdk = await loadSDK();
 
         // Prevent multiple connections
@@ -389,8 +418,50 @@ AI_PROVIDER=openai
           return;
         }
 
-        const vm = await sdk.connect(iframe);
+        // StackBlitz embeds can get stuck during the clone/mount phase.
+        // Known issues:
+        //   https://github.com/stackblitz/core/issues/2849 - Stuck on clone
+        //   https://github.com/stackblitz/core/issues/2847 - Stuck on boot
+        //   https://github.com/stackblitz/core/issues/2850 - Stuck on embed
+        //   https://github.com/stackblitz/core/issues/1021 - Hanging on init
+        // Our report:
+        //   https://github.com/stackblitz/webcontainer-core/issues/2075
+        // Workaround: race connect() against a timeout, then verify FS is ready.
+        const connectWithTimeout = Promise.race([
+          sdk.connect(iframe),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('connect timeout')), LOAD_TIMEOUT_MS)
+          )
+        ]);
+
+        const vm = await connectWithTimeout;
+
+        // Verify the repo actually cloned by checking for package.json.
+        // sdk.connect() can resolve even when StackBlitz is stuck mounting.
+        const MAX_FS_POLLS = 15;
+        const FS_POLL_INTERVAL = 2000;
+        let repoReady = false;
+
+        for (let i = 0; i < MAX_FS_POLLS; i++) {
+          try {
+            const files = await vm.getFsSnapshot();
+            if (files && files['package.json']) {
+              repoReady = true;
+              break;
+            }
+          } catch (_) {
+            // FS not ready yet
+          }
+          await new Promise(r => setTimeout(r, FS_POLL_INTERVAL));
+        }
+
+        if (!repoReady) {
+          setIsStuck(true);
+          return;
+        }
+
         vmRef.current = vm;
+        setIsStuck(false);
 
         // Create .env file once VM is connected
         if (!hasCreatedEnvRef.current && vm) {
@@ -398,12 +469,12 @@ AI_PROVIDER=openai
         }
       } catch (error) {
         console.error('Failed to connect to StackBlitz VM:', error);
-        // Connection failed, will retry on next iframe load or API key change
+        setIsStuck(true);
       }
     };
 
+    handleLoadRef.current = handleLoad;
     iframe.addEventListener('load', handleLoad);
-    // Note: Event listener cleanup is handled automatically when iframe element is removed by React
   };
 
   // Safari is not supported by StackBlitz WebContainers
@@ -645,15 +716,38 @@ AI_PROVIDER=openai
       )}
 
       {!isCollapsed && (
-        <iframe
-          ref={iframeRef}
-          src={stackblitzUrl}
-          className="code-editor-iframe"
-          style={{ height: isMaximized ? 'auto' : height, flex: isMaximized ? 1 : 'none' }}
-          title={title || 'Code Example'}
-          allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
-          sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
-        />
+        <div style={{ position: 'relative', height: isMaximized ? 'auto' : height, flex: isMaximized ? 1 : 'none' }}>
+          <iframe
+            key={iframeKey}
+            ref={iframeRef}
+            src={stackblitzUrl}
+            className="code-editor-iframe"
+            style={{ height: '100%', flex: isMaximized ? 1 : 'none' }}
+            title={title || 'Code Example'}
+            allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; xr-spatial-tracking"
+            sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+          />
+          {isStuck && (
+            <div className="code-editor-stuck-overlay">
+              <div className="code-editor-stuck-box">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <p>StackBlitz is taking too long to load. This can happen when the repository was recently updated.</p>
+                <button
+                  type="button"
+                  className="code-editor-button"
+                  onClick={handleRetry}
+                  style={{ marginTop: '8px' }}
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

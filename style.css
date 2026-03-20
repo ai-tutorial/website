@@ -1497,3 +1497,40 @@
   transform: scale(1.05);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
+
+.code-editor-stuck-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
+  border-radius: 0 0 8px 8px;
+  z-index: 10;
+}
+
+.code-editor-stuck-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 24px;
+  max-width: 340px;
+  color: var(--llm-text-secondary);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.code-editor-stuck-box p {
+  margin: 0;
+}
+
+[data-theme='light'] .code-editor-stuck-overlay {
+  background-color: rgba(255, 255, 255, 0.9);
+}
