@@ -178,10 +178,27 @@ AI_PROVIDER=openai
         destroy: []
       });
 
-      // Verify the files were actually written — applyFsDiff can silently fail
-      // if the WebContainer filesystem is corrupted
-      const snapshot = await vm.getFsSnapshot();
-      if (!snapshot || !snapshot['env/run.conf']) {
+      // Verify env/run.conf was actually written — applyFsDiff can silently fail
+      // if the WebContainer filesystem is corrupted. Poll multiple times because
+      // getFsSnapshot can also return stale data on a corrupted FS.
+      const VERIFY_POLLS = 5;
+      const VERIFY_INTERVAL = 1000;
+      let verified = false;
+
+      for (let i = 0; i < VERIFY_POLLS; i++) {
+        await new Promise(r => setTimeout(r, VERIFY_INTERVAL));
+        try {
+          const snapshot = await vm.getFsSnapshot();
+          if (snapshot && snapshot['env/run.conf']) {
+            verified = true;
+            break;
+          }
+        } catch (_) {
+          // snapshot failed — FS likely corrupted
+        }
+      }
+
+      if (!verified) {
         throw new Error('env/run.conf was not created — filesystem may be corrupted');
       }
 
