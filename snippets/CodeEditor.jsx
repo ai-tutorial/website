@@ -489,6 +489,26 @@ AI_PROVIDER=openai
         await updateEnvFile(vm);
       }
 
+      // If env files failed to write, the FS is corrupted — retry
+      if (!hasCreatedEnvRef.current) {
+        retryCountRef.current++;
+        if (typeof window !== 'undefined' && window.gtag) {
+          window.gtag('event', 'load_refresh_error', {
+            event_category: 'stackblitz',
+            event_label: file,
+            retry_count: retryCountRef.current,
+            error_message: 'env files not written — FS corrupted',
+          });
+        }
+        if (retryCountRef.current < MAX_AUTO_RETRIES) {
+          handleRetry();
+        } else {
+          setLoadingStep(0);
+          setIsStuck(true);
+        }
+        return;
+      }
+
       setLoadingStep(4); // Installing dependencies
 
       // Brief delay to let StackBlitz start processing the env files
