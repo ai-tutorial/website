@@ -26,6 +26,7 @@ export const CodeEditor = ({
   const hasCreatedEnvRef = useRef(false);
   const vmRef = useRef(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -586,10 +587,11 @@ AI_PROVIDER=openai
   }
 
   const toggleMaximize = () => setIsMaximized(!isMaximized);
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
   return (
     <div
-      className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''}`}
+      className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''} ${isCollapsed ? 'collapsed' : ''}`}
       data-theme={theme}
     >
       {!isMaximized && (
@@ -602,6 +604,19 @@ AI_PROVIDER=openai
             {title}
           </div>
           <div className="code-editor-controls">
+            <button
+              className="code-editor-collapse-button"
+              onClick={toggleCollapse}
+              title={isCollapsed ? "Expand" : "Collapse"}
+              type="button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isCollapsed
+                  ? <polyline points="6 9 12 15 18 9" />
+                  : <polyline points="6 15 12 9 18 15" />
+                }
+              </svg>
+            </button>
             <button
               className="code-editor-maximize-button"
               onClick={toggleMaximize}
@@ -629,15 +644,17 @@ AI_PROVIDER=openai
         </button>
       )}
 
-      <iframe
-        ref={iframeRef}
-        src={stackblitzUrl}
-        className="code-editor-iframe"
-        style={{ height: isMaximized ? 'auto' : height, flex: isMaximized ? 1 : 'none' }}
-        title={title || 'Code Example'}
-        allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
-        sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
-      />
+      {!isCollapsed && (
+        <iframe
+          ref={iframeRef}
+          src={stackblitzUrl}
+          className="code-editor-iframe"
+          style={{ height: isMaximized ? 'auto' : height, flex: isMaximized ? 1 : 'none' }}
+          title={title || 'Code Example'}
+          allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+          sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+        />
+      )}
     </div>
   );
 };

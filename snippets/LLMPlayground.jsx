@@ -232,7 +232,9 @@ export const LLMPlayground = ({
   const [isApiCallsOpen, setIsApiCallsOpen] = useState(false);
   const [apiCallTab, setApiCallTab] = useState('request');
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const toggleMaximize = () => setIsMaximized(!isMaximized);
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
   const headerTitle = title || (defaultMode === 'advanced' ? 'Advanced Playground' : 'LLM Playground');
 
@@ -883,7 +885,7 @@ export const LLMPlayground = ({
 
   // ==================== MAIN RENDER ====================
   return (
-    <div className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''}`} data-theme={theme}>
+    <div className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''} ${isCollapsed ? 'collapsed' : ''}`} data-theme={theme}>
       {!isMaximized && (
         <div className="code-editor-header">
           <div className="code-editor-title">
@@ -893,6 +895,19 @@ export const LLMPlayground = ({
             {headerTitle}
           </div>
           <div className="code-editor-controls">
+            <button
+              className="code-editor-collapse-button"
+              onClick={toggleCollapse}
+              title={isCollapsed ? "Expand" : "Collapse"}
+              type="button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isCollapsed
+                  ? <polyline points="6 9 12 15 18 9" />
+                  : <polyline points="6 15 12 9 18 15" />
+                }
+              </svg>
+            </button>
             <button
               className="code-editor-maximize-button"
               onClick={toggleMaximize}
@@ -920,7 +935,7 @@ export const LLMPlayground = ({
         </button>
       )}
 
-      <div
+      {!isCollapsed && <div
         className={mode === 'chat' ? 'llm-playground-container llm-playground-container-chat llm-playground-container-base' : 'llm-playground-container llm-playground-container-base'}
         style={{
           height: isMaximized ? 'auto' : height,
@@ -1291,7 +1306,7 @@ export const LLMPlayground = ({
             </button>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 };

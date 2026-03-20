@@ -1398,6 +1398,36 @@
   border: none;
 }
 
+.code-editor-collapse-button {
+  background-color: transparent;
+  border: none;
+  color: var(--llm-text-secondary);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 1;
+}
+
+.code-editor-collapse-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+.code-editor-collapse-button:hover {
+  background-color: var(--llm-bg-hover);
+  color: var(--llm-text-primary);
+}
+
+.code-editor-wrapper.collapsed .code-editor-header {
+  border-bottom: none;
+  border-radius: 8px;
+}
+
 .code-editor-maximize-button {
   background-color: transparent;
   border: none;
