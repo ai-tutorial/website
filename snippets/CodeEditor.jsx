@@ -29,7 +29,7 @@ export const CodeEditor = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isStuck, setIsStuck] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
-  const [loadingStep, setLoadingStep] = useState(0); // 0=idle, 1=cloning, 2=mounting, 3=configuring
+  const [loadingStep, setLoadingStep] = useState(0); // 0=idle, 1=cloning, 2=mounting, 3=configuring, 4=installing
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -385,7 +385,7 @@ AI_PROVIDER=openai
   // ==================== STYLES ====================
   // Styles are now in style.css - using CSS classes instead
 
-  const LOAD_TIMEOUT_MS = 15000;
+  const LOAD_TIMEOUT_MS = 10000;
   const MAX_AUTO_RETRIES = 3;
   const iframeElRef = useRef(null);
   const retryCountRef = useRef(0);
@@ -488,6 +488,11 @@ AI_PROVIDER=openai
       if (!hasCreatedEnvRef.current && vm) {
         await updateEnvFile(vm);
       }
+
+      setLoadingStep(4); // Installing dependencies
+
+      // Brief delay to let StackBlitz start processing the env files
+      await new Promise(r => setTimeout(r, 2000));
 
       setLoadingStep(0); // Done — reveal the iframe
     } catch (error) {
@@ -778,11 +783,17 @@ AI_PROVIDER=openai
                     </span>
                     <span>Mounting environment in StackBlitz</span>
                   </div>
-                  <div className={`code-editor-loading-step ${loadingStep >= 3 ? 'active' : ''}`}>
+                  <div className={`code-editor-loading-step ${loadingStep >= 3 ? 'active' : ''} ${loadingStep > 3 ? 'done' : ''}`}>
                     <span className="code-editor-loading-step-icon">
-                      {loadingStep === 3 ? <span className="code-editor-loading-spinner" /> : '○'}
+                      {loadingStep > 3 ? '✓' : loadingStep === 3 ? <span className="code-editor-loading-spinner" /> : '○'}
                     </span>
                     <span>Configuring environment</span>
+                  </div>
+                  <div className={`code-editor-loading-step ${loadingStep >= 4 ? 'active' : ''}`}>
+                    <span className="code-editor-loading-step-icon">
+                      {loadingStep === 4 ? <span className="code-editor-loading-spinner" /> : '○'}
+                    </span>
+                    <span>Installing dependencies</span>
                   </div>
                 </div>
                 {retryCountRef.current > 0 && (
