@@ -1534,3 +1534,100 @@
 [data-theme='light'] .code-editor-stuck-overlay {
   background-color: rgba(255, 255, 255, 0.9);
 }
+
+.code-editor-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1a1a2e;
+  border-radius: 0 0 8px 8px;
+  z-index: 10;
+}
+
+[data-theme='light'] .code-editor-loading-overlay {
+  background-color: #f8f9fa;
+}
+
+.code-editor-loading-box {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 32px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.code-editor-loading-title {
+  color: var(--llm-text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.code-editor-loading-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.code-editor-loading-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--llm-text-secondary);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.code-editor-loading-step.active {
+  opacity: 1;
+}
+
+.code-editor-loading-step.done {
+  opacity: 0.7;
+}
+
+.code-editor-loading-step-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.code-editor-loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--llm-text-primary);
+  border-radius: 50%;
+  animation: code-editor-spin 0.8s linear infinite;
+}
+
+[data-theme='light'] .code-editor-loading-spinner {
+  border-color: rgba(0, 0, 0, 0.1);
+  border-top-color: var(--llm-text-primary);
+}
+
+@keyframes code-editor-spin {
+  to { transform: rotate(360deg); }
+}
+
+.code-editor-loading-retry-info {
+  color: var(--llm-text-secondary);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 11px;
+  opacity: 0.6;
+}

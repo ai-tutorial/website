@@ -29,6 +29,7 @@ export const CodeEditor = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isStuck, setIsStuck] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [loadingStep, setLoadingStep] = useState(0); // 0=idle, 1=cloning, 2=mounting, 3=configuring
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -176,8 +177,17 @@ AI_PROVIDER=openai
         },
         destroy: []
       });
+
+      // Verify the files were actually written — applyFsDiff can silently fail
+      // if the WebContainer filesystem is corrupted
+      const snapshot = await vm.getFsSnapshot();
+      if (!snapshot || !snapshot['env/run.conf']) {
+        throw new Error('env/run.conf was not created — filesystem may be corrupted');
+      }
+
       hasCreatedEnvRef.current = true;
     } catch (error) {
+      console.error('Failed to write env files:', error);
       hasCreatedEnvRef.current = false; // Allow retry on error
     }
   };
@@ -394,6 +404,7 @@ AI_PROVIDER=openai
     vmRef.current = null;
     hasCreatedEnvRef.current = false;
     setIsStuck(false);
+    setLoadingStep(1);
     setIframeKey(prev => prev + 1);
   };
 
@@ -410,6 +421,8 @@ AI_PROVIDER=openai
       return;
     }
 
+    setLoadingStep(1); // Cloning repo
+
     const handleLoad = async () => {
       try {
         // Load SDK and connect to VM — use a timeout race so we don't wait forever
@@ -417,6 +430,7 @@ AI_PROVIDER=openai
 
         // Prevent multiple connections
         if (vmRef.current) {
+          setLoadingStep(0);
           return;
         }
 
@@ -437,6 +451,8 @@ AI_PROVIDER=openai
         ]);
 
         const vm = await connectWithTimeout;
+
+        setLoadingStep(2); // Mounting environment
 
         // Verify the repo actually cloned by checking for package.json.
         // sdk.connect() can resolve even when StackBlitz is stuck mounting.
@@ -469,10 +485,13 @@ AI_PROVIDER=openai
           if (retryCountRef.current < MAX_AUTO_RETRIES) {
             handleRetry();
           } else {
+            setLoadingStep(0);
             setIsStuck(true);
           }
           return;
         }
+
+        setLoadingStep(3); // Configuring environment
 
         retryCountRef.current = 0;
         vmRef.current = vm;
@@ -482,6 +501,8 @@ AI_PROVIDER=openai
         if (!hasCreatedEnvRef.current && vm) {
           await updateEnvFile(vm);
         }
+
+        setLoadingStep(0); // Done — reveal the iframe
       } catch (error) {
         console.error('Failed to connect to StackBlitz VM:', error);
         retryCountRef.current++;
@@ -496,6 +517,7 @@ AI_PROVIDER=openai
         if (retryCountRef.current < MAX_AUTO_RETRIES) {
           handleRetry();
         } else {
+          setLoadingStep(0);
           setIsStuck(true);
         }
       }
@@ -755,6 +777,38 @@ AI_PROVIDER=openai
             allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; xr-spatial-tracking"
             sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
           />
+          {loadingStep > 0 && !isStuck && (
+            <div className="code-editor-loading-overlay">
+              <div className="code-editor-loading-box">
+                <div className="code-editor-loading-title">Setting up environment</div>
+                <div className="code-editor-loading-steps">
+                  <div className={`code-editor-loading-step ${loadingStep >= 1 ? 'active' : ''} ${loadingStep > 1 ? 'done' : ''}`}>
+                    <span className="code-editor-loading-step-icon">
+                      {loadingStep > 1 ? '✓' : <span className="code-editor-loading-spinner" />}
+                    </span>
+                    <span>Cloning repo from GitHub</span>
+                  </div>
+                  <div className={`code-editor-loading-step ${loadingStep >= 2 ? 'active' : ''} ${loadingStep > 2 ? 'done' : ''}`}>
+                    <span className="code-editor-loading-step-icon">
+                      {loadingStep > 2 ? '✓' : loadingStep === 2 ? <span className="code-editor-loading-spinner" /> : '○'}
+                    </span>
+                    <span>Mounting environment in StackBlitz</span>
+                  </div>
+                  <div className={`code-editor-loading-step ${loadingStep >= 3 ? 'active' : ''}`}>
+                    <span className="code-editor-loading-step-icon">
+                      {loadingStep === 3 ? <span className="code-editor-loading-spinner" /> : '○'}
+                    </span>
+                    <span>Configuring environment</span>
+                  </div>
+                </div>
+                {retryCountRef.current > 0 && (
+                  <div className="code-editor-loading-retry-info">
+                    Retrying... (attempt {retryCountRef.current + 1}/{MAX_AUTO_RETRIES + 1})
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           {isStuck && (
             <div className="code-editor-stuck-overlay">
               <div className="code-editor-stuck-box">
@@ -767,7 +821,7 @@ AI_PROVIDER=openai
                 <button
                   type="button"
                   className="code-editor-button"
-                  onClick={handleRetry}
+                  onClick={() => { retryCountRef.current = 0; handleRetry(); }}
                   style={{ marginTop: '8px' }}
                 >
                   Retry
