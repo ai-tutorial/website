@@ -388,17 +388,8 @@ AI_PROVIDER=openai
   const LOAD_TIMEOUT_MS = 15000;
   const MAX_AUTO_RETRIES = 3;
   const iframeElRef = useRef(null);
-  const handleLoadRef = useRef(null);
   const retryCountRef = useRef(0);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (iframeElRef.current && handleLoadRef.current) {
-        iframeElRef.current.removeEventListener('load', handleLoadRef.current);
-      }
-    };
-  }, []);
 
   const handleRetry = () => {
     vmRef.current = null;
@@ -408,110 +399,74 @@ AI_PROVIDER=openai
     setIframeKey(prev => prev + 1);
   };
 
-  // Callback ref to handle iframe mounting
+  // Callback ref to track the iframe element for SDK connect
   const iframeRef = (iframe) => {
-    // Cleanup previous listener if ref changes
-    if (iframeElRef.current && handleLoadRef.current) {
-      iframeElRef.current.removeEventListener('load', handleLoadRef.current);
-    }
-
     iframeElRef.current = iframe;
+  };
 
-    if (!iframe) {
-      return;
-    }
+  // Handle iframe load event — called via onLoad prop to avoid race conditions
+  const handleIframeLoad = async () => {
+    const iframe = iframeElRef.current;
+    if (!iframe) return;
 
-    setLoadingStep(1); // Cloning repo
+    try {
+      setLoadingStep(1); // Cloning repo
 
-    const handleLoad = async () => {
-      try {
-        // Load SDK and connect to VM — use a timeout race so we don't wait forever
-        const sdk = await loadSDK();
+      // Load SDK and connect to VM — use a timeout race so we don't wait forever
+      const sdk = await loadSDK();
 
-        // Prevent multiple connections
-        if (vmRef.current) {
-          setLoadingStep(0);
-          return;
-        }
+      // Prevent multiple connections
+      if (vmRef.current) {
+        setLoadingStep(0);
+        return;
+      }
 
-        // StackBlitz embeds can get stuck during the clone/mount phase.
-        // Known issues:
-        //   https://github.com/stackblitz/core/issues/2849 - Stuck on clone
-        //   https://github.com/stackblitz/core/issues/2847 - Stuck on boot
-        //   https://github.com/stackblitz/core/issues/2850 - Stuck on embed
-        //   https://github.com/stackblitz/core/issues/1021 - Hanging on init
-        // Our report:
-        //   https://github.com/stackblitz/webcontainer-core/issues/2075
-        // Workaround: race connect() against a timeout, then verify FS is ready.
-        const connectWithTimeout = Promise.race([
-          sdk.connect(iframe),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('connect timeout')), LOAD_TIMEOUT_MS)
-          )
-        ]);
+      // StackBlitz embeds can get stuck during the clone/mount phase.
+      // Known issues:
+      //   https://github.com/stackblitz/core/issues/2849 - Stuck on clone
+      //   https://github.com/stackblitz/core/issues/2847 - Stuck on boot
+      //   https://github.com/stackblitz/core/issues/2850 - Stuck on embed
+      //   https://github.com/stackblitz/core/issues/1021 - Hanging on init
+      // Our report:
+      //   https://github.com/stackblitz/webcontainer-core/issues/2075
+      // Workaround: race connect() against a timeout, then verify FS is ready.
+      const connectWithTimeout = Promise.race([
+        sdk.connect(iframe),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('connect timeout')), LOAD_TIMEOUT_MS)
+        )
+      ]);
 
-        const vm = await connectWithTimeout;
+      const vm = await connectWithTimeout;
 
-        setLoadingStep(2); // Mounting environment
+      setLoadingStep(2); // Mounting environment
 
-        // Verify the repo actually cloned by checking for package.json.
-        // sdk.connect() can resolve even when StackBlitz is stuck mounting.
-        const MAX_FS_POLLS = 15;
-        const FS_POLL_INTERVAL = 2000;
-        let repoReady = false;
+      // Verify the repo actually cloned by checking for package.json.
+      // sdk.connect() can resolve even when StackBlitz is stuck mounting.
+      const MAX_FS_POLLS = 15;
+      const FS_POLL_INTERVAL = 2000;
+      let repoReady = false;
 
-        for (let i = 0; i < MAX_FS_POLLS; i++) {
-          try {
-            const files = await vm.getFsSnapshot();
-            if (files && files['package.json']) {
-              repoReady = true;
-              break;
-            }
-          } catch (_) {
-            // FS not ready yet
+      for (let i = 0; i < MAX_FS_POLLS; i++) {
+        try {
+          const files = await vm.getFsSnapshot();
+          if (files && files['package.json']) {
+            repoReady = true;
+            break;
           }
-          await new Promise(r => setTimeout(r, FS_POLL_INTERVAL));
+        } catch (_) {
+          // FS not ready yet
         }
+        await new Promise(r => setTimeout(r, FS_POLL_INTERVAL));
+      }
 
-        if (!repoReady) {
-          retryCountRef.current++;
-          if (typeof window !== 'undefined' && window.gtag) {
-            window.gtag('event', 'load_refresh_error', {
-              event_category: 'stackblitz',
-              event_label: file,
-              retry_count: retryCountRef.current,
-            });
-          }
-          if (retryCountRef.current < MAX_AUTO_RETRIES) {
-            handleRetry();
-          } else {
-            setLoadingStep(0);
-            setIsStuck(true);
-          }
-          return;
-        }
-
-        setLoadingStep(3); // Configuring environment
-
-        retryCountRef.current = 0;
-        vmRef.current = vm;
-        setIsStuck(false);
-
-        // Create .env file once VM is connected
-        if (!hasCreatedEnvRef.current && vm) {
-          await updateEnvFile(vm);
-        }
-
-        setLoadingStep(0); // Done — reveal the iframe
-      } catch (error) {
-        console.error('Failed to connect to StackBlitz VM:', error);
+      if (!repoReady) {
         retryCountRef.current++;
         if (typeof window !== 'undefined' && window.gtag) {
           window.gtag('event', 'load_refresh_error', {
             event_category: 'stackblitz',
             event_label: file,
             retry_count: retryCountRef.current,
-            error_message: error.message,
           });
         }
         if (retryCountRef.current < MAX_AUTO_RETRIES) {
@@ -520,11 +475,39 @@ AI_PROVIDER=openai
           setLoadingStep(0);
           setIsStuck(true);
         }
+        return;
       }
-    };
 
-    handleLoadRef.current = handleLoad;
-    iframe.addEventListener('load', handleLoad);
+      setLoadingStep(3); // Configuring environment
+
+      retryCountRef.current = 0;
+      vmRef.current = vm;
+      setIsStuck(false);
+
+      // Create .env file once VM is connected
+      if (!hasCreatedEnvRef.current && vm) {
+        await updateEnvFile(vm);
+      }
+
+      setLoadingStep(0); // Done — reveal the iframe
+    } catch (error) {
+      console.error('Failed to connect to StackBlitz VM:', error);
+      retryCountRef.current++;
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'load_refresh_error', {
+          event_category: 'stackblitz',
+          event_label: file,
+          retry_count: retryCountRef.current,
+          error_message: error.message,
+        });
+      }
+      if (retryCountRef.current < MAX_AUTO_RETRIES) {
+        handleRetry();
+      } else {
+        setLoadingStep(0);
+        setIsStuck(true);
+      }
+    }
   };
 
   // Safari is not supported by StackBlitz WebContainers
@@ -770,6 +753,7 @@ AI_PROVIDER=openai
           <iframe
             key={iframeKey}
             ref={iframeRef}
+            onLoad={handleIframeLoad}
             src={stackblitzUrl}
             className="code-editor-iframe"
             style={{ height: '100%', flex: isMaximized ? 1 : 'none' }}
