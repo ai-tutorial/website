@@ -95,13 +95,7 @@ export const CodeEditor = ({
     }
   };
 
-  /**
-   * Get the OpenAI API key from localStorage
-   * @returns {string|null} The stored API key or null if not found
-   */
-  const getApiKey = () => {
-    return localStorage.getItem(STORAGE_KEY);
-  };
+
 
   /**
    * Save the OpenAI API key to localStorage

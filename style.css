@@ -1385,7 +1385,7 @@
   width: 100vw !important;
   height: 100vh !important;
   z-index: 9999;
-  padding: 10px;
+  padding: 60px 10px 10px 10px;
   background-color: rgba(10, 10, 10, 0.98);
   box-sizing: border-box;
   display: flex;
@@ -1639,11 +1639,4 @@
 
 @keyframes code-editor-spin {
   to { transform: rotate(360deg); }
-}
-
-.code-editor-loading-retry-info {
-  color: var(--llm-text-secondary);
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 11px;
-  opacity: 0.6;
 }
