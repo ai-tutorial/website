@@ -29,7 +29,7 @@ export const CodeEditor = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isStuck, setIsStuck] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
-  const [loadingStep, setLoadingStep] = useState(0); // 0=idle, 1=cloning, 2=mounting, 3=configuring, 4=installing
+  const [loadingStep, setLoadingStep] = useState(0); // 0=idle, 1=cloning, 2=mounting, 3=configuring
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -178,34 +178,10 @@ AI_PROVIDER=openai
         destroy: []
       });
 
-      // Verify env/run.conf was actually written — applyFsDiff can silently fail
-      // if the WebContainer filesystem is corrupted. Poll multiple times because
-      // getFsSnapshot can also return stale data on a corrupted FS.
-      const VERIFY_POLLS = 5;
-      const VERIFY_INTERVAL = 1000;
-      let verified = false;
-
-      for (let i = 0; i < VERIFY_POLLS; i++) {
-        await new Promise(r => setTimeout(r, VERIFY_INTERVAL));
-        try {
-          const snapshot = await vm.getFsSnapshot();
-          if (snapshot && snapshot['env/run.conf']) {
-            verified = true;
-            break;
-          }
-        } catch (_) {
-          // snapshot failed — FS likely corrupted
-        }
-      }
-
-      if (!verified) {
-        throw new Error('env/run.conf was not created — filesystem may be corrupted');
-      }
-
       hasCreatedEnvRef.current = true;
     } catch (error) {
       console.error('Failed to write env files:', error);
-      hasCreatedEnvRef.current = false; // Allow retry on error
+      hasCreatedEnvRef.current = false;
     }
   };
 
@@ -403,16 +379,13 @@ AI_PROVIDER=openai
   // Styles are now in style.css - using CSS classes instead
 
   const LOAD_TIMEOUT_MS = 10000;
-  const MAX_AUTO_RETRIES = 3;
   const iframeElRef = useRef(null);
-  const retryCountRef = useRef(0);
-
+  const hasReloadedRef = useRef(false);
 
   const handleRetry = () => {
     vmRef.current = null;
     hasCreatedEnvRef.current = false;
     setIsStuck(false);
-    setLoadingStep(1);
     setIframeKey(prev => prev + 1);
   };
 
@@ -421,130 +394,76 @@ AI_PROVIDER=openai
     iframeElRef.current = iframe;
   };
 
-  // Handle iframe load event — called via onLoad prop to avoid race conditions
+  // Handle iframe load event — called via onLoad prop to avoid race conditions.
+  // StackBlitz embeds can get stuck or have a corrupted FS on first load.
+  // A second load (reload) fixes it. So we: connect, write env files, then
+  // always reload once. The user sees a loading overlay the whole time.
+  // Known issues:
+  //   https://github.com/stackblitz/core/issues/2849
+  //   https://github.com/stackblitz/core/issues/2847
+  //   https://github.com/stackblitz/webcontainer-core/issues/2075
   const handleIframeLoad = async () => {
     const iframe = iframeElRef.current;
     if (!iframe) return;
 
+    // After reload, we're done — reveal the iframe
+    if (hasReloadedRef.current) {
+      try {
+        const sdk = await loadSDK();
+        const vm = await sdk.connect(iframe);
+        vmRef.current = vm;
+        if (!hasCreatedEnvRef.current) {
+          await updateEnvFile(vm);
+        }
+      } catch (_) {
+        // Best effort on second load
+      }
+      setLoadingStep(0);
+      return;
+    }
+
     try {
       setLoadingStep(1); // Cloning repo
 
-      // Load SDK and connect to VM — use a timeout race so we don't wait forever
       const sdk = await loadSDK();
 
-      // Prevent multiple connections
       if (vmRef.current) {
         setLoadingStep(0);
         return;
       }
 
-      // StackBlitz embeds can get stuck during the clone/mount phase.
-      // Known issues:
-      //   https://github.com/stackblitz/core/issues/2849 - Stuck on clone
-      //   https://github.com/stackblitz/core/issues/2847 - Stuck on boot
-      //   https://github.com/stackblitz/core/issues/2850 - Stuck on embed
-      //   https://github.com/stackblitz/core/issues/1021 - Hanging on init
-      // Our report:
-      //   https://github.com/stackblitz/webcontainer-core/issues/2075
-      // Workaround: race connect() against a timeout, then verify FS is ready.
-      const connectWithTimeout = Promise.race([
+      const vm = await Promise.race([
         sdk.connect(iframe),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('connect timeout')), LOAD_TIMEOUT_MS)
         )
       ]);
 
-      const vm = await connectWithTimeout;
-
       setLoadingStep(2); // Mounting environment
 
-      // Verify the repo actually cloned by checking for package.json.
-      // sdk.connect() can resolve even when StackBlitz is stuck mounting.
-      const MAX_FS_POLLS = 15;
-      const FS_POLL_INTERVAL = 2000;
-      let repoReady = false;
-
-      for (let i = 0; i < MAX_FS_POLLS; i++) {
-        try {
-          const files = await vm.getFsSnapshot();
-          if (files && files['package.json']) {
-            repoReady = true;
-            break;
-          }
-        } catch (_) {
-          // FS not ready yet
-        }
-        await new Promise(r => setTimeout(r, FS_POLL_INTERVAL));
-      }
-
-      if (!repoReady) {
-        retryCountRef.current++;
-        if (typeof window !== 'undefined' && window.gtag) {
-          window.gtag('event', 'load_refresh_error', {
-            event_category: 'stackblitz',
-            event_label: file,
-            retry_count: retryCountRef.current,
-          });
-        }
-        if (retryCountRef.current < MAX_AUTO_RETRIES) {
-          handleRetry();
-        } else {
-          setLoadingStep(0);
-          setIsStuck(true);
-        }
-        return;
-      }
+      // Write env files on first load
+      await updateEnvFile(vm);
 
       setLoadingStep(3); // Configuring environment
 
-      retryCountRef.current = 0;
-      vmRef.current = vm;
-      setIsStuck(false);
-
-      // Create .env file once VM is connected
-      if (!hasCreatedEnvRef.current && vm) {
-        await updateEnvFile(vm);
-      }
-
-      // If env files failed to write, the FS is corrupted — retry
-      if (!hasCreatedEnvRef.current) {
-        retryCountRef.current++;
-        if (typeof window !== 'undefined' && window.gtag) {
-          window.gtag('event', 'load_refresh_error', {
-            event_category: 'stackblitz',
-            event_label: file,
-            retry_count: retryCountRef.current,
-            error_message: 'env files not written — FS corrupted',
-          });
-        }
-        if (retryCountRef.current < MAX_AUTO_RETRIES) {
-          handleRetry();
-        } else {
-          setLoadingStep(0);
-          setIsStuck(true);
-        }
-        return;
-      }
-
-      setLoadingStep(4); // Installing dependencies
-
-      // Brief delay to let StackBlitz start processing the env files
-      await new Promise(r => setTimeout(r, 2000));
-
-      setLoadingStep(0); // Done — reveal the iframe
+      // Always reload once — first load can have corrupted FS
+      hasReloadedRef.current = true;
+      vmRef.current = null;
+      hasCreatedEnvRef.current = false;
+      setIframeKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to connect to StackBlitz VM:', error);
-      retryCountRef.current++;
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'load_refresh_error', {
           event_category: 'stackblitz',
           event_label: file,
-          retry_count: retryCountRef.current,
           error_message: error.message,
         });
       }
-      if (retryCountRef.current < MAX_AUTO_RETRIES) {
-        handleRetry();
+      // Timeout or connection failure — try reload
+      if (!hasReloadedRef.current) {
+        hasReloadedRef.current = true;
+        setIframeKey(prev => prev + 1);
       } else {
         setLoadingStep(0);
         setIsStuck(true);
@@ -820,24 +739,13 @@ AI_PROVIDER=openai
                     </span>
                     <span>Mounting environment in StackBlitz</span>
                   </div>
-                  <div className={`code-editor-loading-step ${loadingStep >= 3 ? 'active' : ''} ${loadingStep > 3 ? 'done' : ''}`}>
+                  <div className={`code-editor-loading-step ${loadingStep >= 3 ? 'active' : ''}`}>
                     <span className="code-editor-loading-step-icon">
-                      {loadingStep > 3 ? '✓' : loadingStep === 3 ? <span className="code-editor-loading-spinner" /> : '○'}
+                      {loadingStep === 3 ? <span className="code-editor-loading-spinner" /> : '○'}
                     </span>
                     <span>Configuring environment</span>
                   </div>
-                  <div className={`code-editor-loading-step ${loadingStep >= 4 ? 'active' : ''}`}>
-                    <span className="code-editor-loading-step-icon">
-                      {loadingStep === 4 ? <span className="code-editor-loading-spinner" /> : '○'}
-                    </span>
-                    <span>Installing dependencies</span>
-                  </div>
                 </div>
-                {retryCountRef.current > 0 && (
-                  <div className="code-editor-loading-retry-info">
-                    Retrying... (attempt {retryCountRef.current + 1}/{MAX_AUTO_RETRIES + 1})
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -853,7 +761,7 @@ AI_PROVIDER=openai
                 <button
                   type="button"
                   className="code-editor-button"
-                  onClick={() => { retryCountRef.current = 0; handleRetry(); }}
+                  onClick={() => { hasReloadedRef.current = false; setLoadingStep(1); handleRetry(); }}
                   style={{ marginTop: '8px' }}
                 >
                   Retry
