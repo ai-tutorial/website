@@ -273,6 +273,20 @@ export const LLMPlayground = ({
     if (storedKey) {
       setApiKey(storedKey);
     }
+
+    // Listen for API key changes from other widgets on the same page
+    const handleApiKeyChanged = () => {
+      const activeProvider = localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
+      const key = localStorage.getItem(PROVIDERS[activeProvider].storageKey);
+      if (key) {
+        setApiKey(key);
+        setProvider(activeProvider);
+        setModel(PROVIDERS[activeProvider].models[0].value);
+      }
+    };
+
+    window.addEventListener('apiKeyChanged', handleApiKeyChanged);
+    return () => window.removeEventListener('apiKeyChanged', handleApiKeyChanged);
   }, []);
 
   useEffect(() => {
@@ -413,6 +427,10 @@ export const LLMPlayground = ({
       // Set a default model for the selected provider
       const providerModels = PROVIDERS[apiKeyProvider].models;
       setModel(providerModels[0].value);
+      // Notify other widgets on the page
+      window.dispatchEvent(new CustomEvent('apiKeyChanged', {
+        detail: { configured: true }
+      }));
     } catch (err) {
       setError('Failed to save API key. Please try again.');
     } finally {
@@ -449,6 +467,9 @@ export const LLMPlayground = ({
           setIsSettingsOpen(false);
         }
       }
+      window.dispatchEvent(new CustomEvent('apiKeyChanged', {
+        detail: { configured: !!otherProviderKey }
+      }));
     } catch (err) {
       setError('Failed to remove provider. Please try again.');
     }

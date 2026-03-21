@@ -191,12 +191,17 @@ AI_PROVIDER=openai
       setShowApiKeyDialog(true);
     }
 
-    // Listen for API key changes to update .env file
+    // Listen for API key changes from other widgets on the same page
     const handleApiKeyChanged = () => {
-      // If API key was just configured and VM is available, update .env file
-      if (isApiKeyConfigured() && vmRef.current) {
-        hasCreatedEnvRef.current = false; // Reset flag to allow update
-        updateEnvFile(vmRef.current);
+      if (isApiKeyConfigured()) {
+        // Dismiss the API key dialog if it's showing
+        setShowApiKeyDialog(false);
+
+        // Update .env file in the VM if connected
+        if (vmRef.current) {
+          hasCreatedEnvRef.current = false;
+          updateEnvFile(vmRef.current);
+        }
       }
     };
 
