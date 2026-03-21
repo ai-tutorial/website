@@ -423,14 +423,9 @@ AI_PROVIDER=openai
     }
 
     try {
-      setLoadingStep(1); // Cloning repo
-
       const sdk = await loadSDK();
 
-      if (vmRef.current) {
-        setLoadingStep(0);
-        return;
-      }
+      if (vmRef.current) return;
 
       const vm = await Promise.race([
         sdk.connect(iframe),
@@ -439,18 +434,32 @@ AI_PROVIDER=openai
         )
       ]);
 
-      setLoadingStep(2); // Mounting environment
-
-      // Write env files on first load
+      // Write env files
       await updateEnvFile(vm);
 
-      setLoadingStep(3); // Configuring environment
+      // Check if env/run.conf exists — if it does, FS is healthy, no reload needed
+      let needsReload = true;
+      try {
+        const snapshot = await vm.getFsSnapshot();
+        if (snapshot && snapshot['env/run.conf']) {
+          needsReload = false;
+        }
+      } catch (_) {
+        // Can't verify — assume reload needed
+      }
 
-      // Always reload once — first load can have corrupted FS
-      hasReloadedRef.current = true;
-      vmRef.current = null;
-      hasCreatedEnvRef.current = false;
-      setIframeKey(prev => prev + 1);
+      if (needsReload) {
+        // Show overlay and reload — first load had corrupted FS
+        setLoadingStep(1);
+        hasReloadedRef.current = true;
+        vmRef.current = null;
+        hasCreatedEnvRef.current = false;
+        setIframeKey(prev => prev + 1);
+      } else {
+        // FS is healthy — no reload needed
+        vmRef.current = vm;
+        hasReloadedRef.current = true;
+      }
     } catch (error) {
       console.error('Failed to connect to StackBlitz VM:', error);
       if (typeof window !== 'undefined' && window.gtag) {
@@ -460,8 +469,9 @@ AI_PROVIDER=openai
           error_message: error.message,
         });
       }
-      // Timeout or connection failure — try reload
+      // Timeout or connection failure — show overlay and try reload
       if (!hasReloadedRef.current) {
+        setLoadingStep(1);
         hasReloadedRef.current = true;
         setIframeKey(prev => prev + 1);
       } else {
