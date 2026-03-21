@@ -1111,9 +1111,10 @@
 }
 
 .code-editor-wrapper.maximized .llm-playground-container-base {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
   overflow: auto;
+  height: 0;
 }
 
 /* CodeEditor Styles */
@@ -1398,10 +1399,11 @@
 
 .code-editor-wrapper.maximized .code-editor-header {
   flex-shrink: 0;
-  z-index: 1;
+  z-index: 10;
   border-radius: 8px 8px 0 0;
   background-color: var(--llm-code-editor-header);
   border-bottom: 1px solid var(--llm-code-editor-border);
+  position: relative;
 }
 
 .code-editor-wrapper.maximized .code-editor-iframe {
