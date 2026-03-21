@@ -951,9 +951,6 @@ export const LLMPlayground = ({
         style={{
           height: isMaximized ? 'auto' : height,
           flex: isMaximized ? 1 : 'none',
-          borderTopLeftRadius: isMaximized ? '12px' : '0',
-          borderTopRightRadius: isMaximized ? '12px' : '0',
-          borderTop: isMaximized ? '1px solid var(--llm-border-color)' : 'none'
         }}
       >
         <div className="llm-playground-main">
