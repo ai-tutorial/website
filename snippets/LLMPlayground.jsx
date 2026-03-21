@@ -907,8 +907,7 @@ export const LLMPlayground = ({
   // ==================== MAIN RENDER ====================
   return (
     <div className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''} ${isCollapsed ? 'collapsed' : ''}`} data-theme={theme}>
-      {!isMaximized && (
-        <div className="code-editor-header">
+      <div className="code-editor-header">
           <div className="code-editor-title">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -916,6 +915,7 @@ export const LLMPlayground = ({
             {headerTitle}
           </div>
           <div className="code-editor-controls">
+            {!isMaximized && (
             <button
               className="code-editor-collapse-button"
               onClick={toggleCollapse}
@@ -929,32 +929,22 @@ export const LLMPlayground = ({
                 }
               </svg>
             </button>
+            )}
             <button
               className="code-editor-maximize-button"
               onClick={toggleMaximize}
-              title="Maximize (Focus Mode)"
+              title={isMaximized ? "Minimize" : "Maximize (Focus Mode)"}
               type="button"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" />
+                {isMaximized
+                  ? <><path d="M4 14h6v6" /><path d="M20 10h-6V4" /><path d="M14 10l7-7" /><path d="M3 21l7-7" /></>
+                  : <><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></>
+                }
               </svg>
             </button>
           </div>
         </div>
-      )}
-
-      {isMaximized && (
-        <button
-          className="code-editor-maximize-button floating-minimize"
-          onClick={toggleMaximize}
-          title="Minimize"
-          type="button"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 14h6v6" /><path d="M20 10h-6V4" /><path d="M14 10l7-7" /><path d="M3 21l7-7" />
-          </svg>
-        </button>
-      )}
 
       {!isCollapsed && <div
         className={mode === 'chat' ? 'llm-playground-container llm-playground-container-chat llm-playground-container-base' : 'llm-playground-container llm-playground-container-base'}

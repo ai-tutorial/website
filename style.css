@@ -1110,6 +1110,12 @@
   width: 100%;
 }
 
+.code-editor-wrapper.maximized .llm-playground-container-base {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
 /* CodeEditor Styles */
 .code-editor-dialog-container {
   width: 100%;
@@ -1388,6 +1394,12 @@
 
 [data-theme='light'] .code-editor-wrapper.maximized {
   background-color: rgba(255, 255, 255, 0.95);
+}
+
+.code-editor-wrapper.maximized .code-editor-header {
+  flex-shrink: 0;
+  z-index: 1;
+  border-radius: 8px 8px 0 0;
 }
 
 .code-editor-wrapper.maximized .code-editor-iframe {
