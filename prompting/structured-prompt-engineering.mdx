@@ -1,0 +1,286 @@
+---
+title: Structured Prompt Engineering
+description: Design structured prompts that often reduce hallucinations
+sidebarTitle: Structured Prompt Engineering
+icon: book
+mode: wide
+slug: prompting/structured-prompt-engineering
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx'; 
+
+## The Anatomy of a Production Prompt
+
+**The Core Components:**
+
+1. **Role/Persona** - Sets behavior and expertise level ( values: user, assistant, system)
+2. **Context** - Background information needed 
+3. **Instructions** - What to do, step by step
+4. **Constraints** - What NOT to do, output format
+5. **Examples** - Few-shot demonstrations (optional)
+6. **Input** - The actual data to process
+
+
+If we put all these components together, we get the following prompt. This promt looks more complex than the previous one, but this reflects the complexity of the task and the context needed to complete it when you use the API. 
+
+<LLMPlayground 
+  defaultMode="advanced"
+  defaultMessages={[
+    {
+      role: "system",
+      content: "You are an experienced customer support specialist for AcmeCo."
+    },
+    {
+      role: "user",
+      content: `[CONTEXT]
+AcmeCo sells software subscriptions. Our refund policy: 30-day money-back guarantee, no questions asked. After 30 days, refunds require manager approval.
+
+[INSTRUCTIONS]
+Analyze the customer message below and:
+- Identify the customer's primary issue
+- Determine if this qualifies for automatic refund
+- Suggest next steps for the support team
+
+[CONSTRAINTS]
+- Be empathetic but concise
+- Never promise refunds outside policy
+- If uncertain, recommend manager review
+
+[INPUT]
+Customer message: I purchased a subscription 25 days ago and the software keeps crashing. I want my money back immediately.`
+    }
+  ]}
+  height="400px"
+/>
+
+The playground constructs the final prompt from these components, which is then sent to the OpenAI API as part of the JSON message payload. You can see the exact JSON payload that will be sent in the "OpenAI JSON Message" section after submitting.
+
+**Let's put all this together in code**
+
+<CodeEditor 
+  file="src/prompting/structured_prompt_anatomy.ts" 
+  functionName="main"
+  lines="22-76"
+  title="Structured Prompt Anatomy"
+/> 
+
+**Practice Check:**
+
+- Write a prompt that includes role, context, instructions, constraints, examples, and input.
+- Expected: All 6 components present with explicit constraints and a clear output schema.
+- **Try this too:** Compare the outputs if you remove the structure and use less powerful models
+
+**In Production:**
+
+- Cost impact: Clear output schemas reduce parsing errors and retries (fewer re-runs).
+- Reliability: Structured prompts are easier to validate and monitor.
+- Performance: Slight token overhead; mitigate with caching (see Model Selection & Cost Optimization)
+
+## XML Tags: Your Secret Weapon
+
+**Why XML Tags Work:**
+
+- LLMs were trained on HTML/XML (web data)
+- Tags create clear boundaries in the context
+- Reduced hallucinations in controlled studies
+
+### Practical Implication
+
+Compare these two approaches to structuring prompts:
+
+#### ❌ Antipattern
+
+<LLMPlayground 
+  defaultMode="chat"
+  defaultInput={`System: You are a helpful assistant.
+User question: What is the return policy?
+Background context: Our store offers a 30-day return window for all purchases. Items must be in original packaging. Electronics require a receipt.
+Previous conversation: Customer asked about shipping times. We responded that standard shipping takes 5-7 business days.`}
+  height="400px"
+/>
+
+#### ✅ Best Practice
+
+<LLMPlayground 
+  defaultMode="chat"
+  defaultInput={`<role>You are a helpful assistant</role>
+
+<context>
+  <knowledge_base>
+    Our store offers a 30-day return window for all purchases. Items must be in original packaging. Electronics require a receipt.
+  </knowledge_base>
+
+  <conversation_history>
+    Customer asked about shipping times. We responded that standard shipping takes 5-7 business days.
+  </conversation_history>
+</context>
+
+<user_question>
+  What is the return policy?
+</user_question>`}
+  height="400px"
+/>
+
+**In Production:**
+
+- **Cost Impact:** Tagging adds tokens; mitigate with caching .
+- **Reliability:** Clear boundaries reduce off-context responses; improves evaluability.
+- **Performance:** Slight overhead; offset by fewer retries and clearer parsing.
+- **Real Example:** Teams report 40–60% fewer hallucinations when tags + validation are combined.
+
+**Pattern:**
+
+Compare these two approaches:
+
+### Example 1: Schema in Prompt
+
+This approach includes the XML schema and example in the prompt itself, instructing the model to follow the XML structure.
+
+<CodeEditor 
+  file="src/prompting/structured_outputs_xml_schema_in_prompt.ts" 
+  functionName="main"
+  lines="45-86"
+  title="Structured Outputs: XML Schema in Prompt"
+/> 
+
+### Example 2: Structured Outputs (XML Mode)
+
+This approach uses prompt instructions to request XML output combined with XML parsing and validation. Note that OpenAI's API doesn't have a native XML response format like json_object, so we rely on prompt engineering and parsing.
+
+<CodeEditor 
+  file="src/prompting/structured_outputs_xml_mode.ts" 
+  functionName="main"
+  lines="45-88"
+  title="Structured Outputs: XML Mode"
+/> 
+
+
+## Few-Shot Examples: Teaching by Showing
+
+**When to Use Few-Shot:**
+
+- Complex or subjective tasks
+- Specific output format required
+- Edge cases need clarification
+
+
+<LLMPlayground 
+  defaultMode="chat"
+  defaultInput={`<task>Classify customer sentiment</task>
+
+<instruction>
+Return ONLY one word: positive, neutral, or negative.
+For each <input>, produce the corresponding <output>.
+</instruction>
+
+<examples>
+  <example>
+    <input>Your product is amazing! Best purchase ever.</input>
+    <output>positive</output>
+  </example>
+
+  <example>
+    <input>It's okay, does the job but nothing special.</input>
+    <output>neutral</output>
+  </example>
+
+  <example>
+    <input>Terrible quality. Broke after one week. Demanding refund!</input>
+    <output>negative</output>
+  </example>
+</examples>
+
+<input>
+The shipping was fast and the product arrived in perfect condition. Would buy again!
+</input>`}
+  height="500px"
+/>
+
+**Quality Over Quantity:**
+
+- 3-5 examples usually enough
+- More examples = more tokens = higher cost
+- Examples should cover edge cases, not just obvious ones
+
+## Structured Outputs with JSON Schemas
+
+**Why:** Schema enforcement reduces parsing errors and retries; makes outputs machine-checkable.
+
+Compare these two approaches:
+
+### Example 1: Schema in Prompt
+
+This approach includes the JSON schema in the prompt itself, instructing the model to follow the schema structure.
+
+<CodeEditor 
+  file="src/prompting/structured_outputs_schema_in_prompt.ts" 
+  functionName="main"
+  lines="34-67"
+  title="Structured Outputs: JSON Schema in Prompt"
+/> 
+
+### Example 2: Structured Outputs (JSON Mode)
+
+This approach uses OpenAI's structured outputs feature (`response_format: json_object`) combined with schema validation. This is more reliable than just including the schema in the prompt.
+
+<CodeEditor 
+  file="src/prompting/structured_outputs_json_mode.ts" 
+  functionName="main"
+  lines="34-65"
+  title="Structured Outputs: JSON Mode"
+/> 
+
+See: [OpenAI Structured Outputs](https://openai.com/index/introducing-structured-outputs-in-the-api/) (2025), [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview) (2025), [Gemini Prompting Strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies) (2025) in Additional Resources.
+
+## Model-Specific Prompt Optimization
+
+Different models have different "personalities." Here's what works best for each:
+
+### GPT-4 / GPT-4 Turbo
+
+```python Prompt
+# Strengths: Structured output, following complex instructions
+# Best practices:
+{
+  "role": "senior_analyst",
+  "task": "financial_analysis",
+  "output_format": {
+    "summary": "string",
+    "key_metrics": ["string"],
+    "recommendation": "buy|hold|sell"
+  }
+}
+
+Input: Company revenue: $50M, growth: 15% YoY, market share: 8%
+# GPT-4 excels at JSON, clear role definitions
+```
+
+### Claude (Sonnet/Opus)
+
+```python Prompt
+# Strengths: Natural language, complex reasoning, long context
+# Best practices:
+<thinking>
+Let me work through this step by step...
+</thinking>
+
+Analyze the quarterly financial report and identify key trends and risks.
+# Claude benefits from explicit thinking blocks
+# Excellent with XML tags and markdown
+```
+
+### Gemini 1.5 Pro
+
+```python Prompt
+# Strengths: Massive context (2M tokens), multimodal
+# Best practices:
+[Upload entire 500-page PDF]
+[Upload 10 images]
+[Provide conversation history]
+
+Based on ALL of the above context, answer: What are the main findings from the research study?
+# Many teams place the query at the end; validate per task (see Gemini prompting strategies)
+# Can handle entire codebases or document sets
+```
+
+---

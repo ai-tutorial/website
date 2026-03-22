@@ -1,0 +1,204 @@
+---
+title: Working with PDF and Images
+description: How to work with PDF and images in RAG
+sidebarTitle: Working with PDF and Images
+icon: book
+mode: wide
+slug: rag/working-with-unstructured-data
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
+
+# Working with PDF and Images
+
+## The PDF and Images Challenge
+
+**What makes PDF and images "unstructured":**
+- No consistent schema
+- Mixed content types (text, images, tables)
+- Varied formats (PDFs, Word docs, slides)
+- Quality issues (scans, OCR errors, formatting)
+
+**Why it matters:**
+- 80% of enterprise data is unstructured
+- Most business value is locked in documents
+- Poor processing = poor retrieval = poor answers
+
+## PDF Processing: Digital vs. Scanned
+
+Not all PDFs are created equal.
+
+### Digital PDFs (Text-Based)
+
+
+<CodeEditor 
+    file="src/rag/pdf_processing.ts" 
+    lines="49-67"
+    functionName="extractDigitalPdf"
+    title="Digital PDF Extraction"
+/>
+
+### Scanned PDFs (Image-Based)
+
+<CodeEditor 
+    file="src/rag/pdf_processing.ts" 
+    lines="69-112"
+    functionName="extractScannedPdf"
+    title="Scanned PDF Extraction (OCR)"
+/>
+
+### Combined PDF Processing Pipeline
+
+
+
+<CodeEditor 
+    file="src/rag/pdf_processing.ts" 
+    lines="119-183"
+    functionName="PDFProcessor"
+    title="Combined PDF Processing Pipeline"
+/>
+
+
+## Table Extraction: The Hard Problem
+
+Tables are notoriously difficult for OCR and even digital PDFs.
+
+**Why tables are hard:**
+- OCR sees tables as disconnected text blocks
+- Column alignment information is lost
+- Multi-line cells get fragmented
+- Headers vs. data distinction unclear
+
+**Solutions:**
+
+### 1. Specialized Table Extractors
+
+<CodeEditor 
+    file="src/rag/pdf_table_extraction.ts" 
+    lines="41-75"
+    functionName="extractTablesFromPdf"
+    title="Specialized Table Extraction"
+/>
+
+### 2. Vision-Language Models for Tables
+
+Modern approach: Use multimodal models to "see" the table.
+
+<CodeEditor 
+    file="src/rag/pdf_vision.ts" 
+    lines="44-74"
+    functionName="extractTableWithVision"
+    title="Vision-Based Table Extraction"
+/>
+
+**Production recommendation:**
+1. Try specialized extractor (camelot) first - fast and accurate for clean tables
+2. Fall back to vision model for complex/messy tables - slower but more robust
+3. Store both raw table and structured version in metadata
+
+## Image Integration in RAG
+
+Should you include images in your RAG pipeline? Depends on the use case.
+
+### When to Extract Text from Images
+
+<CodeEditor 
+    file="src/rag/pdf_image_ocr.ts" 
+    lines="38-58"
+    functionName="extractImageText"
+    title="Image OCR Extraction"
+/>
+
+### When to Caption/Describe Images
+
+<CodeEditor 
+    file="src/rag/pdf_image_captioning.ts" 
+    lines="45-73"
+    functionName="generateImageCaption"
+    title="Image Captioning (Vision API)"
+/>
+
+### Decision Framework: Text vs. Caption
+
+| Image Type | Approach | Reason |
+|------------|----------|--------|
+| Screenshots of code/logs | OCR text extraction | Text is primary content |
+| Charts/graphs | Caption with data | Visual info + specific values |
+| Diagrams with labels | Both (OCR + caption) | Labels + structural understanding |
+| Photos of products | Caption | Visual features matter |
+| Scanned text documents | OCR | Text is the content |
+| Infographics | Caption | Mix of visual + text |
+
+## Handling Long Documents
+
+Long documents (100+ pages) present unique challenges:
+- Can't fit entire document in LLM context window
+- Need to aggregate information across sections
+- Must maintain document-level context
+
+### Pattern 1: Constant-Output Tasks
+
+**Use case:** Finding specific information (needle in haystack)
+
+<CodeEditor 
+    file="src/rag/pdf_needle_search.ts" 
+    lines="40-75"
+    functionName="needleInHaystackSearch"
+    title="Pattern 1: Constant-Output (Needle in Haystack)"
+/>
+
+### Pattern 2: Variable-Output Tasks
+
+**Use case:** Summarization, analysis (output scales with document length)
+
+<CodeEditor 
+    file="src/rag/pdf_hierarchical_summary.ts" 
+    lines="38-80"
+    functionName="hierarchicalSummary"
+    title="Pattern 2: Variable-Output (Map-Reduce Summarization)"
+/>
+
+## A Complete Unstructured Data Pipeline
+
+<CodeEditor 
+    file="src/rag/pdf_unstructured_pipeline.ts" 
+    lines="23-119"
+    functionName="UnstructuredDataPipeline"
+    title="Complete Unstructured Data Pipeline"
+/>
+
+## Practical Exercise (20 min)
+
+Process a mixed document corpus:
+
+```ts Pseudocode
+/**
+ * Practical Exercise: Unstructured Data Pipeline
+ */
+async function processMixedCorpus(documents: File[]) {
+  // 1. Process text document
+  const textDoc = documents.find(d => d.name === "paul_graham_essay.txt");
+  const textResult = await processText(textDoc);
+  
+  // 2. Apply chunking strategy (see Lesson 2.3)
+  const chunks = chunkDocument(textResult.content, { strategy: "semantic" });
+  storeMetadata(chunks);
+
+  // 3. (Optional) Compare with PDF/Image processing
+  if (hasMultimedia(documents)) {
+    const visionResult = await processVision(documents.image);
+    const pdfResult = await processPDF(documents.pdf);
+    
+    compareLatencyAndQuality(textResult, visionResult, pdfResult);
+  }
+
+  // 4. Analyze results
+  // - Measure processing time
+  // - Check for quality risks (short chunks, OCR noise)
+  // - Validate confidence scores
+}
+
+// Expected Insights:
+// - Text path is high-confidence & fast
+// - Vision/OCR adds latency & uncertainty
+```

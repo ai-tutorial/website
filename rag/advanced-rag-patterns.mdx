@@ -1,0 +1,106 @@
+---
+title: Advanced RAG Patterns
+description: Different advanced RAG patterns and how to use them
+sidebarTitle: Advanced RAG Patterns
+icon: book
+mode: wide
+slug: rag/advanced-rag-patterns
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
+
+## Pattern 1: GraphRAG (Knowledge Graphs + RAG)
+
+**Problem:** Simple RAG struggles with multi-hop reasoning.
+
+**Example query:** "Which employees who worked on Project X are now working on Project Y?"
+- Requires connecting: Employee → Project X → Employee → Project Y
+- Basic RAG might find docs about each project separately but miss the connection
+
+**Solution:** Use knowledge graph to find connected entities, then retrieve documents.
+
+<CodeEditor 
+  file="src/rag/rag_graph.ts" 
+  lines="55-95"
+  functionName="main"
+  title="GraphRAG Implementation"
+/>
+
+**When to use:**
+- Multi-hop reasoning required
+- Entity-centric queries (people, companies, products)
+- Relationship-heavy domains (org charts, supply chains)
+
+**Cost:** 2-3x more complex than basic RAG
+**Benefit:** Often improves multi-hop queries when relationships are explicit in a knowledge graph (magnitude varies)
+
+## Pattern 2: Iterative RAG (Query Refinement)
+
+**Problem:** User queries are often vague or poorly formed.
+
+**Example:** User asks "Tell me about the outage"
+- Which outage? (Multiple incidents in database)
+- What aspect? (Cause, impact, resolution, timeline)
+
+**Solution:** Use LLM to refine query based on initial results.
+
+[Full runnable example of Iterative RAG](https://colab.research.google.com/drive/1qHfVmIYni7Um7FPYVDUOxUh1tntPpZVH?usp=drive_link)
+
+<CodeEditor 
+  file="src/rag/rag_iterative.ts" 
+  lines="22-52"
+  functionName="main"
+  title="Iterative RAG Implementation"
+/>
+
+**When to use:**
+- Vague user queries common
+- Large document corpus (many potential matches)
+- Quality > speed (each iteration adds 200-500ms)
+
+**Cost:** 2-4x basic RAG (multiple retrieval rounds + refinement calls)
+**Benefit:** Can improve performance on ambiguous queries by refining intent and terms (magnitude varies)
+
+## Pattern 3: Agentic RAG (LLM-Driven Retrieval)
+
+**Problem:** Users don't know the right keywords or structure.
+
+**Solution:** Let the LLM decide HOW to search based on the question.
+
+<CodeEditor 
+  file="src/agents/rag_agentic.ts" 
+  lines="22-47"
+  functionName="main"
+  title="Agentic RAG Implementation"
+/>
+
+**When to use:**
+- Complex, varied query types
+- Large metadata taxonomy (many filter options)
+- Power users who ask sophisticated questions
+
+**Cost:** 30-50% more than basic RAG (analysis call adds overhead)
+**Benefit:** 30-50% improvement on complex queries, better metadata utilization
+
+## Pattern 4: Hybrid RAG (Structured + Unstructured)
+
+**Problem:** Some questions need data from both databases AND documents.
+
+**Example:** "What's our Q4 revenue compared to industry analysis reports?"
+- Revenue: Structured data (database query)
+- Industry analysis: Unstructured data (document retrieval)
+
+<CodeEditor 
+  file="src/rag/rag_hybrid_data.ts" 
+  lines="45-67"
+  functionName="main"
+  title="Hybrid Data RAG Implementation"
+/>
+
+**When to use:**
+- Mixed data sources (databases + documents)
+- Business intelligence + qualitative analysis
+- Compliance (regulations + internal policies)
+
+**Cost:** Variable (depends on SQL complexity + retrieval)
+**Benefit:** Answers questions that pure document RAG can't handle

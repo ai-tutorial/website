@@ -1,0 +1,181 @@
+---
+title: LLM Fundamentals
+description: Understand what's actually happening when you call a model
+sidebarTitle: LLM Fundamentals
+icon: book
+mode: wide
+slug: prompting/llm-foundamentals
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx'; 
+
+
+## Hello World
+
+This isn't your typical "Hello World" — we're diving straight into what makes LLMs powerful. After configuring your OpenAI API key, press Enter to see the magic happen. The code is self-explanatory, so go ahead and modify it to experiment.
+
+<CodeEditor 
+  file="src/prompting/hello_world.ts" 
+  functionName="main"
+  lines="20-29"
+  title="Hello World"
+/> 
+
+<Note>
+  **Prefer to follow along locally?** You can checkout the examples repository and run the code on your machine:
+  
+  ```bash
+  git clone https://github.com/ai-tutorial/typescript-examples
+  ```
+  
+  Then navigate to the specific example file and run it with your configured OpenAI API key.
+</Note>
+
+## How LLMs Process Your Input
+
+Before we write our first prompt, let's understand what's actually happening under the hood.
+
+**The Context Window: Your Working Memory**
+
+Think of an LLM's context window like RAM on your computer. Everything you send - your instructions, conversation history, documents - gets loaded into this window. The model can only "see" what fits inside.
+
+**Current Context Windows** (as of January 2025; verify latest on vendor pages below):
+
+- GPT-4: 128K tokens (~96K words)
+- Claude Sonnet 4.5: 200K tokens (~150K words)
+- Gemini 1.5 Pro: 2M tokens (~1.5M words)
+
+See vendor references: [OpenAI models](https://platform.openai.com/docs/models), [Anthropic pricing/models](https://www.anthropic.com/pricing), [Google Gemini models](https://ai.google.dev/gemini-api/docs/models).
+
+**Why This Matters:** A customer support agent handling a complex case might need:
+
+- 2K tokens: System instructions
+- 5K tokens: Company knowledge base excerpts
+- 10K tokens: Conversation history
+- 3K tokens: Customer account details
+
+That's 20K tokens before the LLM generates a single word. Multiply by thousands of requests, and you see why context management matters.
+
+**Token Economics:**
+
+$$
+input\,cost = 150K\,tokens * (\$10\,/\,1M\,tokens) = \$1.50 \newline output\,cost = 3K\,tokens * (\$30\,/\,1M\,tokens) = \$0.09 \newline total\,per\,request = \$1.59
+$$
+
+## LLM Limitations You Must Know
+
+**1. Hallucinations: Making Stuff Up**
+
+LLMs are trained to predict the next plausible token. They're not fact-checking databases.
+
+**Famous Failure:** Air Canada's chatbot hallucinated a bereavement discount policy that didn't exist. The airline had to honor it in court. Cost: Unknown, but significant legal precedent. ([BBC, 2024](https://www.bbc.com/travel/article/20240222-air-canada-chatbot-misinformation-what-travellers-should-know))
+
+**Why It Happens:**
+
+- Missing information → fills gaps with plausible-sounding text
+- Conflicting instructions → makes judgment calls
+- Outdated training data → invents current information
+
+**What Works in Production:**
+
+- Constrain to provided context: "Only use information from these documents"
+- Validate outputs: Check facts against source data
+- Ground the answer in knowledge (throughout the tutorial).
+- Add human review: For high-stakes decisions
+
+**2. Non-Determinism: Different Answers Every Time**
+
+Run the same prompt twice, get different answers. That's by design (temperature \> 0). Try running the same prompt multiple times with different temperature settings to see how the model generates different responses:
+
+<LLMPlayground 
+  defaultInput="Summarize this customer complaint in 10 words:
+
+
+I ordered a premium wireless headset last week with express shipping. The package arrived three days late, and the headset was damaged with scratches. The left speaker produces only static noise. I demand a full refund."
+  defaultTemperature={2.0}
+  height="500px"
+  keepInput={true}
+/>
+
+**Production Strategy:**
+
+Control the creativity of the model with the Temperature parameter.
+
+- Temperature=0 for minimal creativity tasks (classification, extraction)
+- Temperature=0.3-0.7 for creative tasks (writing, brainstorming)
+- Temperature=2.0 is he maximum limit. This forces the model to take extreme risks, often resulting in highly creative but frequently nonsensical or unstable output.
+- Run multiple tixmes and vote (self-consistency, covered in 1.5)
+
+<Note>
+  GPT-5 models do **not** support the temperature parameter, and using it will raise an error. This breaks backward compatibility with earlier OpenAI models.
+
+  Instead, GPT-5 introduces a new way to control output variability: reasoning depth, via:To achieve similar results with reasoning effort set higher, or with another GPT-5 family model, try these alternative parameters:
+
+  ```python
+  Reasoning depth: reasoning: { effort: "none" | "low" | "medium" | "high" }
+  ```
+</Note>
+
+**3. Recency Bias: Recent Context Matters More**
+
+LLMs pay more attention to text at the beginning and end of the prompt. Middle content gets "lost."
+
+**Heuristic:** Prompt structure and placement can affect results. Many teams place the specific query toward the end; validate with your use case.
+
+**Best Practice for Gemini:** See [Gemini prompting strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies).
+
+```
+Critical instructions at START
+[Large document content in MIDDLE]
+Specific query at END
+```
+
+## Mental Model: LLMs as Completion Engines
+
+**Wrong Mental Model:** "The AI understands my intent"\
+**Right Mental Model:** "The AI completes patterns it's seen in training"
+
+**Example:**
+
+```python
+prompt = "The capital of France is"
+result = "Paris"
+# Not because it "knows" geography, but because it's seen this pattern millions of times
+
+prompt = "The capital of Atlantis is"
+result = "unknown" or makes something up
+# It hasn't seen this pattern → hallucination risk
+```
+
+### Practical Implication
+
+When you want structured output, give the LLM a pattern to complete. Compare these two approaches:
+
+#### ❌ Antipattern
+
+First, try the vague prompt and see how the LLM responds in prose. Then try the pattern-based approach to get structured output:
+
+<LLMPlayground
+  defaultInput={`//  Vague: "Extract the customer's name and email"
+// LLM might respond in prose: "The customer's name is John and his email is..."
+
+Extract the customer's name and email from: "Hi, I'm John Smith and you can reach me at john.smith@email.com for the order inquiry."`}
+  defaultTemperature={0.7}
+  height="500px"
+/>
+
+#### ✅ Best Practice
+
+<LLMPlayground
+  defaultInput={`// Pattern to complete:
+// LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
+
+Extract customer information:
+
+Name: [the customer's name]
+Email: [the customer's email address]
+
+From: "Hi, I'm John Smith and you can reach me at john.smith@email.com for the order inquiry."`}
+  defaultTemperature={0.7}
+  height="500px"
+/>

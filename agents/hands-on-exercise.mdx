@@ -1,0 +1,109 @@
+---
+title: Hands-On Exercise
+description: Build an intelligent customer support agent
+sidebarTitle: Hands-On Exercise
+icon: dumbbell
+mode: wide
+slug: agents/hands-on-exercise
+---
+## Project Goal
+
+Build a customer support agent that demonstrates the three core concepts from this module:
+- ✅ **Agent basics** - Tool use with proper agent loop
+- ✅ **Well-designed tools** - Following MCP best practices
+- ✅ **Memory management** - Working memory for conversation + long-term for preferences
+
+## Architecture
+
+```
+User Query
+    |
+    V
++-------------------------------------+
+│ Customer Support Agent              │
+│ - Maintains conversation context    │
+│ - Remembers user preferences        │
+│ - Uses tools intelligently          │
++-------------------------------------+
+          |
+          |--> [search_knowledge_base]
+          |--> [get_customer_info]
+          |--> [check_order_status]
+          |--> [create_support_ticket]
+          |
+          V
+    Working Memory (session)
+          +
+  Long-Term Memory (preferences)
+```
+
+## Project Requirements
+
+**1. Agent Foundation**
+
+Must implement:
+- [ ] Basic agent loop with tool use
+- [ ] At least 3 tools from customer support domain
+- [ ] Proper error handling for tool failures
+- [ ] Graceful responses when no tool is needed
+
+**2. Tool Design (MCP Best Practices)**
+
+Each tool must have:
+- [ ] Clear, descriptive name (verb_noun_context format)
+- [ ] Comprehensive description (what, when to use, when NOT to use)
+- [ ] Simple parameter schema (3 or fewer parameters preferred)
+- [ ] Consistent response format (success/error envelope)
+- [ ] Graceful error handling with actionable messages
+
+Recommended tools:
+- `search_knowledge_base(query, category)` - Find help articles
+- `get_customer_info(email)` - Look up customer account
+- `check_order_status(order_id)` - Track order/delivery
+- `create_support_ticket(email, subject, description)` - Escalate to human
+
+**3. Memory Implementation**
+
+Must implement:
+- [ ] Working memory for conversation continuity
+- [ ] Tool result caching (avoid redundant calls within session)
+- [ ] Long-term memory for user preferences
+- [ ] Choose one integration pattern (code-driven or background extraction)
+
+Example preferences to track:
+- Communication style (formal/casual)
+- Preferred contact method (email/phone)
+- Product interests
+- Past issues and resolutions
+
+**4. Testing Requirements**
+
+Must demonstrate:
+- [ ] Multi-turn conversation with context retention
+- [ ] Tool selection accuracy (right tool for each query)
+- [ ] Memory retrieval (reference previous conversation)
+- [ ] Error handling (tool failure gracefully handled)
+- [ ] Preference learning and application
+
+Test scenarios:
+1. **Order tracking:** "I ordered a laptop last week" → "When will it arrive?" (should remember order)
+2. **Knowledge base:** "How do I reset my password?" (search articles)
+3. **Escalation:** "This doesn't work, I need help" (create ticket)
+4. **Preference:** "I prefer email communication" → later: "Contact me about this" (should use email)
+
+## Bonus Challenges
+
+Choose one or more:
+- [ ] **Tool consolidation:** Combine related data fetches into single efficient tool
+- [ ] **Semantic enrichment:** Add contextual insights to tool responses
+- [ ] **Custom memory strategy:** Implement domain-specific extraction
+- [ ] **Multiple patterns:** Use both code-driven and LLM-driven memory
+- [ ] **Advanced caching:** Implement intelligent cache invalidation
+
+### Resources
+
+- [MCP Specification](https://modelcontextprotocol.io/)
+- [Anthropic Tool Use Guide](https://docs.anthropic.com/claude/docs/tool-use)
+- [Redis Agent Memory Server](https://redis.github.io/agent-memory-server/)
+
+---

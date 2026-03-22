@@ -29,24 +29,35 @@ export const LLMPlayground = ({
   theme: userTheme
 }) => {
   // ==================== CONSTANTS ====================
-  const STORAGE_KEY = 'openai_api_key';
+  const OPENAI_STORAGE_KEY = 'openai_api_key';
+  const GEMINI_STORAGE_KEY = 'gemini_api_key';
+  const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
   const SETTINGS_PANEL_KEY = 'llm_playground_settings_open';
   const SETTINGS_PANEL_WIDTH = 220;
-  const API_URL = 'https://api.openai.com/v1/chat/completions';
+  const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+  const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
   const MAX_TOKENS = 2000;
 
-  const MODELS = [
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'gpt-4o', label: 'GPT-4o' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+  const OPENAI_MODELS = [
+    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
+    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+    { value: 'gpt-4.1', label: 'GPT-4.1' },
+    { value: 'o4-mini', label: 'o4 Mini' },
+    { value: 'o3', label: 'o3' },
   ];
 
-  const TABS = {
-    RESPONSE: 'response',
-    REQUEST: 'request',
-    API_RESPONSE: 'apiResponse'
+  const GEMINI_MODELS = [
+    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  ];
+
+  const PROVIDERS = {
+    gemini: { label: 'Gemini', models: GEMINI_MODELS, storageKey: GEMINI_STORAGE_KEY, apiUrl: GEMINI_API_URL },
+    openai: { label: 'OpenAI', models: OPENAI_MODELS, storageKey: OPENAI_STORAGE_KEY, apiUrl: OPENAI_API_URL },
   };
+
 
   // ==================== ICON HELPERS ====================
   const IconWarningSun = ({ size = 14, className = '' }) => (
@@ -99,6 +110,15 @@ export const LLMPlayground = ({
       <line x1="12" y1="16" x2="12.01" y2="16"></line>
     </svg>
   );
+  
+  const IconTrash = ({ size = 14, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      <line x1="10" y1="11" x2="10" y2="17"></line>
+      <line x1="14" y1="11" x2="14" y2="17"></line>
+    </svg>
+  );
 
   const IconSend = ({ size = 16, fillColor = '#000', className = '' }) => (
     <svg
@@ -147,6 +167,14 @@ export const LLMPlayground = ({
     </svg>
   );
 
+  const IconInfo = ({ size = 12, className = '' }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="16" x2="12" y2="12"></line>
+      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+    </svg>
+  );
+
   // ==================== STYLES ====================
   // Styles are now in style.css - using CSS classes instead
 
@@ -158,12 +186,22 @@ export const LLMPlayground = ({
   const [output, setOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [model, setModel] = useState(defaultModel);
+  const [provider, setProvider] = useState(() => {
+    if (typeof window === 'undefined') return 'gemini';
+    return localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
+  });
+  const [model, setModel] = useState(() => {
+    const initialProvider = (typeof window !== 'undefined' && localStorage.getItem(PROVIDER_STORAGE_KEY)) || 'gemini';
+    return initialProvider === 'gemini' ? 'gemini-2.5-flash-lite' : defaultModel;
+  });
   const [temperature, setTemperature] = useState(defaultTemperature);
+  const [topP, setTopP] = useState(1.0);
   const [apiKey, setApiKey] = useState('');
   const [responseCount, setResponseCount] = useState(0);
   const responseCountRef = useRef(0);
   const [apiKeyInput, setApiKeyInput] = useState('');
+  const [apiKeyProvider, setApiKeyProvider] = useState('gemini');
+  const previousProviderRef = useRef(null);
   const [isSavingKey, setIsSavingKey] = useState(false);
   const textareaRef = useRef(null);
   const advancedTextareaRefs = useRef({});
@@ -182,7 +220,7 @@ export const LLMPlayground = ({
   const isInitialMount = useRef(true);
   const [lastSentJson, setLastSentJson] = useState(null);
   const [lastResponseJson, setLastResponseJson] = useState(null);
-  const [activeTab, setActiveTab] = useState(TABS.RESPONSE);
+
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(() => {
     if (forceSettingsOpen) return true;
@@ -191,8 +229,12 @@ export const LLMPlayground = ({
     return stored !== null ? stored === 'true' : true;
   });
 
+  const [isApiCallsOpen, setIsApiCallsOpen] = useState(false);
+  const [apiCallTab, setApiCallTab] = useState('request');
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const toggleMaximize = () => setIsMaximized(!isMaximized);
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
   const headerTitle = title || (defaultMode === 'advanced' ? 'Advanced Playground' : 'LLM Playground');
 
@@ -225,10 +267,26 @@ export const LLMPlayground = ({
   // ==================== EFFECTS ====================
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const storedKey = localStorage.getItem(STORAGE_KEY);
+    const currentProvider = localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
+    const storageKey = PROVIDERS[currentProvider].storageKey;
+    const storedKey = localStorage.getItem(storageKey);
     if (storedKey) {
       setApiKey(storedKey);
     }
+
+    // Listen for API key changes from other widgets on the same page
+    const handleApiKeyChanged = () => {
+      const activeProvider = localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
+      const key = localStorage.getItem(PROVIDERS[activeProvider].storageKey);
+      if (key) {
+        setApiKey(key);
+        setProvider(activeProvider);
+        setModel(PROVIDERS[activeProvider].models[0].value);
+      }
+    };
+
+    window.addEventListener('apiKeyChanged', handleApiKeyChanged);
+    return () => window.removeEventListener('apiKeyChanged', handleApiKeyChanged);
   }, []);
 
   useEffect(() => {
@@ -346,28 +404,76 @@ export const LLMPlayground = ({
     setError('');
 
     if (!apiKeyInput.trim()) {
-      setError('Please enter your OpenAI API key');
+      setError(`Please enter your ${PROVIDERS[apiKeyProvider].label} API key`);
       setIsSavingKey(false);
       return;
     }
 
     const trimmedKey = apiKeyInput.trim();
-    if (!trimmedKey.startsWith('sk-')) {
+    if (apiKeyProvider === 'openai' && !trimmedKey.startsWith('sk-')) {
       setError('Invalid API key format. OpenAI API keys should start with "sk-"');
       setIsSavingKey(false);
       return;
     }
 
     try {
-      localStorage.setItem(STORAGE_KEY, trimmedKey);
+      const storageKey = PROVIDERS[apiKeyProvider].storageKey;
+      localStorage.setItem(storageKey, trimmedKey);
+      localStorage.setItem(PROVIDER_STORAGE_KEY, apiKeyProvider);
+      setProvider(apiKeyProvider);
       setApiKey(trimmedKey);
       setApiKeyInput('');
+      previousProviderRef.current = null;
+      // Set a default model for the selected provider
+      const providerModels = PROVIDERS[apiKeyProvider].models;
+      setModel(providerModels[0].value);
+      // Notify other widgets on the page
+      window.dispatchEvent(new CustomEvent('apiKeyChanged', {
+        detail: { configured: true }
+      }));
     } catch (err) {
       setError('Failed to save API key. Please try again.');
     } finally {
       setIsSavingKey(false);
     }
-  }, [apiKeyInput]);
+  }, [apiKeyInput, apiKeyProvider]);
+
+  const handleRemoveProvider = useCallback(() => {
+    if (!provider || typeof window === 'undefined') return;
+    
+    const confirmRemove = window.confirm(`Are you sure you want to remove the ${PROVIDERS[provider].label} API key?`);
+    if (!confirmRemove) return;
+
+    try {
+      const storageKey = PROVIDERS[provider].storageKey;
+      localStorage.removeItem(storageKey);
+      
+      // Look for another provider with a key
+      const otherProviderKey = Object.keys(PROVIDERS).find(p => p !== provider && localStorage.getItem(PROVIDERS[p].storageKey));
+      
+      if (otherProviderKey) {
+        // Switch to the other provider
+        const newApiKey = localStorage.getItem(PROVIDERS[otherProviderKey].storageKey);
+        setProvider(otherProviderKey);
+        setApiKey(newApiKey);
+        setModel(PROVIDERS[otherProviderKey].models[0].value);
+        localStorage.setItem(PROVIDER_STORAGE_KEY, otherProviderKey);
+      } else {
+        // No providers left with keys
+        setApiKey('');
+        setProvider('gemini'); // Default back to gemini
+        localStorage.removeItem(PROVIDER_STORAGE_KEY);
+        if (!forceSettingsOpen) {
+          setIsSettingsOpen(false);
+        }
+      }
+      window.dispatchEvent(new CustomEvent('apiKeyChanged', {
+        detail: { configured: !!otherProviderKey }
+      }));
+    } catch (err) {
+      setError('Failed to remove provider. Please try again.');
+    }
+  }, [provider, forceSettingsOpen]);
 
   const handleSubmit = useCallback(async (e) => {
     if (e?.preventDefault) {
@@ -384,7 +490,6 @@ export const LLMPlayground = ({
 
     if (mode === 'advanced') {
       setLastResponseJson(null);
-      setActiveTab(TABS.RESPONSE);
     }
 
     let requestMessages = [];
@@ -421,31 +526,51 @@ export const LLMPlayground = ({
       model,
       messages: requestMessages,
       temperature,
+      top_p: topP,
       max_tokens: MAX_TOKENS
     };
 
     setLastSentJson(jsonPayload);
 
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(jsonPayload)
-      });
+      const apiUrl = PROVIDERS[provider].apiUrl;
+      const maxRetries = 3;
+      let response;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(jsonPayload)
+        });
+
+        if (response.status === 429 && attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000;
+          setError(`Rate limited. Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          setError('');
+          continue;
+        }
+        break;
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `HTTP ${response.status}: Failed to get response from OpenAI`);
+        if (response.status === 429) {
+          throw Object.assign(new Error('Rate limit exceeded. You have used all your free tier quota.'), { isRateLimit: true });
+        }
+        throw new Error(errorData.error?.message || `HTTP ${response.status}: Failed to get response from ${PROVIDERS[provider].label}`);
       }
 
       const data = await response.json();
       const newResponse = data.choices[0]?.message?.content || 'No response generated';
 
+      setLastResponseJson(data);
+
       if (mode === 'advanced') {
-        setLastResponseJson(data);
         setOutput(newResponse);
       } else {
         // Chat mode: add assistant response to conversation history
@@ -453,7 +578,9 @@ export const LLMPlayground = ({
         setOutput(newResponse);
       }
     } catch (err) {
-      setError(err.message || 'An error occurred while processing your request');
+      setError(err.isRateLimit
+        ? { message: err.message, isRateLimit: true }
+        : err.message || 'An error occurred while processing your request');
       // Remove the user message from history if there was an error
       if (mode === 'chat') {
         setConversationHistory(prev => prev.slice(0, -1));
@@ -461,11 +588,28 @@ export const LLMPlayground = ({
     } finally {
       setIsLoading(false);
     }
-  }, [mode, input, apiKey, isLoading, keepInput, constructAdvancedMessages, filterComments, isFormValid]);
+  }, [mode, input, apiKey, provider, isLoading, keepInput, constructAdvancedMessages, filterComments, isFormValid]);
 
   // Removed handleKeyDown - Enter should add new line, submit only via play button
 
   // ==================== RENDER HELPERS ====================
+  const errorMessage = typeof error === 'object' ? error.message : error;
+  const isRateLimitError = typeof error === 'object' && error.isRateLimit;
+
+  const renderErrorContent = () => (
+    <>
+      {errorMessage}
+      {isRateLimitError && (
+        <>
+          {' '}
+          <a href="https://ai.google.dev/gemini-api/docs/rate-limits" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
+            Check your rate limits
+          </a>
+        </>
+      )}
+    </>
+  );
+
   const renderChatMessage = (message, index, isPlaceholder = false) => {
     const isUser = message.role === 'user';
     return (
@@ -513,7 +657,7 @@ export const LLMPlayground = ({
         )}
         {allMessages.length === 0 && placeholderMessages.length === 0 && !isLoading && (
           <div className="llm-chat-empty-state">
-            Start a conversation with OpenAI LLM using the API key you provided!
+            Start a conversation using the API key you provided!
           </div>
         )}
         {placeholderMessages.map((msg, idx) => renderChatMessage(msg, `placeholder-${idx}`, true))}
@@ -536,10 +680,47 @@ export const LLMPlayground = ({
       <div className="llm-api-key-form-section">
         <h3 className="llm-api-key-form-title">
           <IconWarningTriangle size={16} strokeColor="#f59e0b" />
-          <span>Configure OpenAI API Key to make the most of the tutorial</span>
+          <span>Configure an API Key to make the most of the tutorial</span>
         </h3>
         <p className="llm-api-key-form-description">
-          Your API key is stored locally in your browser's storage and is never transmitted to external servers.{' '}
+          Your API key is stored locally in your browser's storage and is never transmitted to external servers.
+        </p>
+      </div>
+
+      <div className="llm-provider-tabs">
+        {Object.entries(PROVIDERS).map(([key, prov]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => {
+              setApiKeyProvider(key);
+              setError('');
+              setApiKeyInput('');
+            }}
+            className={`llm-provider-tab ${apiKeyProvider === key ? 'llm-provider-tab-active' : ''}`}
+          >
+            {prov.label}
+            {key === 'gemini' && <span className="llm-provider-tab-badge">Free Tier</span>}
+          </button>
+        ))}
+      </div>
+
+      {apiKeyProvider === 'gemini' && (
+        <div className="llm-gemini-recommendation">
+          Gemini offers a generous free tier — great for learning! Get your free API key at{' '}
+          <a
+            href="https://aistudio.google.com/apikey"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="llm-api-key-form-link"
+          >
+            aistudio.google.com/apikey
+          </a>
+        </div>
+      )}
+
+      {apiKeyProvider === 'openai' && (
+        <p className="llm-api-key-form-description" style={{ marginTop: '4px' }}>
           <a
             href="https://platform.openai.com/api-keys"
             target="_blank"
@@ -549,7 +730,7 @@ export const LLMPlayground = ({
             Don't have an API key? Get one here
           </a>
         </p>
-      </div>
+      )}
 
       <form onSubmit={handleApiKeySubmit}>
         <div className="llm-form-group">
@@ -562,7 +743,7 @@ export const LLMPlayground = ({
                 setApiKeyInput(e.target.value);
                 setError('');
               }}
-              placeholder="OpenAI API Key (sk-...)"
+              placeholder={apiKeyProvider === 'openai' ? 'OpenAI API Key (sk-...)' : 'Gemini API Key'}
               disabled={isSavingKey}
               className={error ? 'llm-api-key-input llm-api-key-input-error' : 'llm-api-key-input'}
               onBlur={(e) => {
@@ -576,11 +757,30 @@ export const LLMPlayground = ({
             >
               {isSavingKey ? 'Saving...' : 'Save'}
             </button>
+            {previousProviderRef.current && (
+              <button
+                type="button"
+                className="llm-api-key-cancel-button"
+                onClick={() => {
+                  const prev = previousProviderRef.current;
+                  const prevKey = localStorage.getItem(PROVIDERS[prev].storageKey);
+                  setProvider(prev);
+                  setApiKey(prevKey || '');
+                  setModel(PROVIDERS[prev].models[0].value);
+                  localStorage.setItem(PROVIDER_STORAGE_KEY, prev);
+                  setApiKeyInput('');
+                  setError('');
+                  previousProviderRef.current = null;
+                }}
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </div>
         {error && (
           <div className="llm-error-message llm-error-message-small">
-            {error}
+            {renderErrorContent()}
           </div>
         )}
       </form>
@@ -698,78 +898,6 @@ export const LLMPlayground = ({
     </div>
   );
 
-  const renderTabs = () => (
-    <>
-      <div className="llm-tabs-container">
-        {[
-          { key: TABS.RESPONSE, label: 'Response' },
-          { key: TABS.REQUEST, label: 'API Request JSON' },
-          { key: TABS.API_RESPONSE, label: 'API Response JSON' }
-        ].map(tab => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setActiveTab(tab.key)}
-            className={activeTab === tab.key ? 'llm-tab-button llm-tab-button-active' : 'llm-tab-button'}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="llm-tabs-content">
-        {activeTab === TABS.RESPONSE && (
-          <>
-            {output ? (
-              <div className="llm-response-box">{output}</div>
-            ) : isLoading ? (
-              <div className="llm-tab-loading">
-                <span className="llm-tab-loading-content">
-                  <IconLoadingSpinner size={14} className="llm-chat-loading-spinner" />
-                  Generating response...
-                </span>
-              </div>
-            ) : response ? (
-              <div className="llm-response-section">
-                <label className="llm-section-label">Response (Expected response, press submit to get actual response)</label>
-                <div className="llm-response-box llm-response-box-placeholder">
-                  {response}
-                </div>
-              </div>
-            ) : (
-              <div className="llm-tab-empty">
-                Response will appear here
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === TABS.REQUEST && (
-          <div
-            className="llm-textarea-base llm-textarea-enabled llm-json-viewer"
-          >
-            {lastSentJson ? JSON.stringify(lastSentJson, null, 2) : (
-              <span className="llm-json-viewer-empty">
-                No request data. Submit a request to see the JSON.
-              </span>
-            )}
-          </div>
-        )}
-
-        {activeTab === TABS.API_RESPONSE && (
-          <div
-            className="llm-textarea-base llm-textarea-enabled llm-json-viewer"
-          >
-            {lastResponseJson ? JSON.stringify(lastResponseJson, null, 2) : (
-              <span className="llm-json-viewer-empty">
-                No response data. Submit a request to see the API response JSON.
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    </>
-  );
 
   const renderChatResponse = () => {
     // Chat interface is now integrated into the main layout
@@ -778,9 +906,8 @@ export const LLMPlayground = ({
 
   // ==================== MAIN RENDER ====================
   return (
-    <div className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''}`} data-theme={theme}>
-      {!isMaximized && (
-        <div className="code-editor-header">
+    <div className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''} ${isCollapsed ? 'collapsed' : ''}`} data-theme={theme}>
+      <div className="code-editor-header">
           <div className="code-editor-title">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -788,41 +915,42 @@ export const LLMPlayground = ({
             {headerTitle}
           </div>
           <div className="code-editor-controls">
+            {!isMaximized && (
             <button
-              className="code-editor-maximize-button"
-              onClick={toggleMaximize}
-              title="Maximize (Focus Mode)"
+              className="code-editor-collapse-button"
+              onClick={toggleCollapse}
+              title={isCollapsed ? "Expand" : "Collapse"}
               type="button"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" />
+                {isCollapsed
+                  ? <polyline points="6 9 12 15 18 9" />
+                  : <polyline points="6 15 12 9 18 15" />
+                }
+              </svg>
+            </button>
+            )}
+            <button
+              className="code-editor-maximize-button"
+              onClick={toggleMaximize}
+              title={isMaximized ? "Minimize" : "Maximize (Focus Mode)"}
+              type="button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isMaximized
+                  ? <><path d="M4 14h6v6" /><path d="M20 10h-6V4" /><path d="M14 10l7-7" /><path d="M3 21l7-7" /></>
+                  : <><path d="M15 3h6v6" /><path d="M9 21H3v-6" /><path d="M21 3l-7 7" /><path d="M3 21l7-7" /></>
+                }
               </svg>
             </button>
           </div>
         </div>
-      )}
 
-      {isMaximized && (
-        <button
-          className="code-editor-maximize-button floating-minimize"
-          onClick={toggleMaximize}
-          title="Minimize"
-          type="button"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 14h6v6" /><path d="M20 10h-6V4" /><path d="M14 10l7-7" /><path d="M3 21l7-7" />
-          </svg>
-        </button>
-      )}
-
-      <div
+      {!isCollapsed && <div
         className={mode === 'chat' ? 'llm-playground-container llm-playground-container-chat llm-playground-container-base' : 'llm-playground-container llm-playground-container-base'}
         style={{
           height: isMaximized ? 'auto' : height,
           flex: isMaximized ? 1 : 'none',
-          borderTopLeftRadius: isMaximized ? '12px' : '0',
-          borderTopRightRadius: isMaximized ? '12px' : '0',
-          borderTop: isMaximized ? '1px solid var(--llm-border-color)' : 'none'
         }}
       >
         <div className="llm-playground-main">
@@ -844,7 +972,7 @@ export const LLMPlayground = ({
                   <div className="llm-error-wrapper">
                     <div className="llm-error-message">
                       <IconError size={14} />
-                      {error}
+                      {renderErrorContent()}
                     </div>
                   </div>
                 )}
@@ -885,7 +1013,7 @@ export const LLMPlayground = ({
                   {error && (
                     <div className="llm-error-message llm-error-message-top">
                       <IconError size={14} />
-                      {error}
+                      {renderErrorContent()}
                     </div>
                   )}
                 </div>
@@ -904,7 +1032,29 @@ export const LLMPlayground = ({
                         />
                       </>
                     ) : (
-                      renderTabs()
+                      <>
+                        {output ? (
+                          <div className="llm-response-box">{output}</div>
+                        ) : isLoading ? (
+                          <div className="llm-tab-loading">
+                            <span className="llm-tab-loading-content">
+                              <IconLoadingSpinner size={14} className="llm-chat-loading-spinner" />
+                              Generating response...
+                            </span>
+                          </div>
+                        ) : response ? (
+                          <div className="llm-response-section">
+                            <label className="llm-section-label">Response (Expected response, press submit to get actual response)</label>
+                            <div className="llm-response-box llm-response-box-placeholder">
+                              {response}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="llm-tab-empty">
+                            Response will appear here
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -937,17 +1087,59 @@ export const LLMPlayground = ({
             )}
           </div>
 
-          {apiKey && isSettingsOpen && (
+          {isSettingsOpen && (
             <div
               className="llm-settings-panel"
               style={{
                 width: `${SETTINGS_PANEL_WIDTH}px`,
               }}
             >
+              <h4 className="llm-settings-title">Settings</h4>
+
               <div>
-                <h4 className="llm-settings-title">
-                  Settings
-                </h4>
+                <label className="llm-settings-label">Provider</label>
+                <div className="llm-settings-row-with-action">
+                  <select
+                    value={provider}
+                    onChange={(e) => {
+                      const newProvider = e.target.value;
+                      const storageKey = PROVIDERS[newProvider].storageKey;
+                      const storedKey = localStorage.getItem(storageKey);
+                      // Remember the current provider so we can revert if cancelled
+                      if (apiKey) {
+                        previousProviderRef.current = provider;
+                      }
+                      setProvider(newProvider);
+                      setModel(PROVIDERS[newProvider].models[0].value);
+                      localStorage.setItem(PROVIDER_STORAGE_KEY, newProvider);
+                      if (storedKey) {
+                        setApiKey(storedKey);
+                      } else {
+                        setApiKey('');
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="llm-settings-select"
+                  >
+                    {Object.entries(PROVIDERS).map(([key, prov]) => {
+                      const hasKey = typeof window !== 'undefined' && localStorage.getItem(prov.storageKey);
+                      return (
+                        <option key={key} value={key} className="llm-settings-option">
+                          {prov.label}{!hasKey ? ' (no key)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleRemoveProvider}
+                    disabled={isLoading}
+                    className="llm-settings-remove-button"
+                    title="Remove Provider"
+                  >
+                    <IconTrash size={14} />
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -964,7 +1156,7 @@ export const LLMPlayground = ({
                     e.target.style.boxShadow = 'none';
                   }}
                 >
-                  {MODELS.map((m) => (
+                  {PROVIDERS[provider].models.map((m) => (
                     <option key={m.value} value={m.value} className="llm-settings-option">
                       {m.label}
                     </option>
@@ -976,6 +1168,9 @@ export const LLMPlayground = ({
                 <div className="llm-settings-range-container">
                   <label className="llm-settings-label">
                     Temperature
+                    <span className="llm-settings-info" title="Controls randomness. Lower values make output more focused and deterministic. Higher values make it more creative and varied.">
+                      <IconInfo size={11} />
+                    </span>
                   </label>
                   <span className="llm-settings-range-value">
                     {temperature.toFixed(1)}
@@ -997,13 +1192,82 @@ export const LLMPlayground = ({
                   <span>2.0</span>
                 </div>
               </div>
+
+              <div>
+                <div className="llm-settings-range-container">
+                  <label className="llm-settings-label">
+                    Top P
+                    <span className="llm-settings-info" title="Nucleus sampling. Controls the cumulative probability cutoff. Lower values consider fewer tokens, making output more focused. Usually adjusted as an alternative to temperature.">
+                      <IconInfo size={11} />
+                    </span>
+                  </label>
+                  <span className="llm-settings-range-value">
+                    {topP.toFixed(2)}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={topP}
+                  onChange={(e) => setTopP(parseFloat(e.target.value))}
+                  disabled={isLoading}
+                  className="llm-settings-range"
+                />
+                <div className="llm-settings-range-labels">
+                  <span>0.0</span>
+                  <span>0.5</span>
+                  <span>1.0</span>
+                </div>
+              </div>
+
             </div>
           )}
         </div>
 
+        {isApiCallsOpen && (lastSentJson || lastResponseJson) && (
+          <div className="llm-api-calls-content">
+            <div className="llm-api-calls-tabs">
+              {lastSentJson && (
+                <button
+                  type="button"
+                  className={`llm-api-calls-tab${apiCallTab === 'request' ? ' llm-api-calls-tab-active' : ''}`}
+                  onClick={() => setApiCallTab('request')}
+                >
+                  Request
+                </button>
+              )}
+              {lastResponseJson && (
+                <button
+                  type="button"
+                  className={`llm-api-calls-tab${apiCallTab === 'response' ? ' llm-api-calls-tab-active' : ''}`}
+                  onClick={() => setApiCallTab('response')}
+                >
+                  Response
+                </button>
+              )}
+            </div>
+            {apiCallTab === 'request' && lastSentJson && (
+              <div className="llm-api-calls-block">
+                <div className="llm-textarea-base llm-textarea-enabled llm-json-viewer">
+                  {JSON.stringify(lastSentJson, null, 2)}
+                </div>
+              </div>
+            )}
+            {apiCallTab === 'response' && lastResponseJson && (
+              <div className="llm-api-calls-block">
+                <div className="llm-textarea-base llm-textarea-enabled llm-json-viewer">
+                  {JSON.stringify(lastResponseJson, null, 2)}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="llm-footer">
           <div className="llm-footer-status-container">
-            <span>OpenAI key status:</span>
+            <span>{PROVIDERS[provider].label} key:</span>
             <div
               className="llm-footer-status-icon"
               title={apiKey ? 'API Key configured' : 'API Key not configured'}
@@ -1015,7 +1279,22 @@ export const LLMPlayground = ({
               )}
             </div>
           </div>
-          {apiKey && (
+          <div className="llm-footer-actions">
+            {hasSubmitted && (lastSentJson || lastResponseJson) && (
+              <button
+                type="button"
+                onClick={() => setIsApiCallsOpen(!isApiCallsOpen)}
+                className={isApiCallsOpen ? 'llm-footer-toggle-button llm-footer-toggle-button-active' : 'llm-footer-toggle-button'}
+                aria-label="Toggle API Calls"
+              >
+                <IconChevron
+                  size={12}
+                  isOpen={isApiCallsOpen}
+                  className={isApiCallsOpen ? 'llm-footer-toggle-icon llm-footer-toggle-icon-open' : 'llm-footer-toggle-icon'}
+                />
+                <span>API Calls</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 if (!forceSettingsOpen) {
@@ -1033,9 +1312,9 @@ export const LLMPlayground = ({
               />
               <span>Settings</span>
             </button>
-          )}
+          </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 };

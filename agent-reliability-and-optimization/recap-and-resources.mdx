@@ -1,0 +1,104 @@
+---
+title: "Recap & Resources"
+description: "Recap and resources for the Agent Reliability & Optimization module"
+sidebarTitle: "Recap & Resources"
+icon: cauldron
+mode: wide
+slug: agent-reliability-and-optimization/recap-and-resources
+---
+## Key Takeaways
+
+1. **Rules belong in code, not prompts:** LLMs are probabilistic—they can't guarantee 100% rule compliance. Extract business logic into deterministic validation functions for reliable, auditable decisions.
+
+2. **Security is multi-layered:** Input guardrails (PII, jailbreak detection) + business logic validation + output filtering create defense in depth. One layer isn't enough for production.
+
+3. **Tool selection accuracy degrades with scale:** 5 tools = 92% accuracy, 20+ tools = 58% accuracy. Use hierarchical organization, retrieval, or consolidation to maintain high accuracy at scale.
+
+4. **Measure everything:** Track tool selection accuracy, business rule compliance, security detection rates. You can't optimize what you don't measure.
+
+5. **Cost vs. accuracy trade-offs:** More guardrails = higher cost/latency but better reliability. Production systems balance these based on risk tolerance and budget constraints.
+
+## Production Checklist
+
+Before deploying agents with business rules to production:
+
+- [ ] All critical business rules extracted into deterministic code
+- [ ] Validation tools return consistent results (same input = same output)
+- [ ] Pre-execution guardrails prevent unauthorized actions
+- [ ] Post-execution validation catches invalid results
+- [ ] PII detection implemented for both input and output
+- [ ] Jailbreak detection catches common attack patterns
+- [ ] Tool selection accuracy measured and optimized (target: >90%)
+- [ ] Tool usage analytics track selection accuracy and performance
+- [ ] Error responses are structured and actionable (never throw to agent)
+- [ ] All validation logic is unit tested and auditable
+- [ ] Logging covers security events and policy violations
+- [ ] Cost per query measured and optimized
+
+## Common Pitfalls Recap
+
+❌ **Rules in prompts:** LLMs interpret rules probabilistically, leading to inconsistent enforcement  
+❌ **No input sanitization:** PII leakage and jailbreak vulnerabilities  
+❌ **Flat tool lists:** 20+ tools = 58% accuracy, agents get confused  
+❌ **No measurement:** Can't improve tool selection without metrics  
+❌ **Over-optimizing early:** Start with working system, then optimize based on data  
+❌ **Security theater:** Guardrails that only check happy paths aren't effective
+
+## Real-World Impact
+
+**Case Study: Insurance Claims Processing**
+- Before: 78% accuracy with prompt-based rules
+- After: 99.7% accuracy with deterministic validation
+- Result: 93% processing time reduction, 98% compliance improvement
+
+**Case Study: SaaS Tool Consolidation**
+- Before: 15 tool calls per query, $2.20 cost
+- After: 3 tool calls per query, $0.15 cost
+- Result: 80% latency reduction, 93% cost reduction
+
+**Case Study: Financial Services PII Protection**
+- Before: No systematic PII detection
+- After: 97% PII detection rate, 3% false positives
+- Result: Zero compliance violations, successful audit
+
+## Learn More
+
+### Official Documentation
+
+- [Microsoft Presidio](https://microsoft.github.io/presidio/) - PII detection and anonymization
+- [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) - Conversation control and safety
+- [Guardrails AI](https://www.guardrailsai.com/) - Validation framework
+- [AWS Bedrock Guardrails](https://aws.amazon.com/bedrock/guardrails/) - Managed guardrails service
+
+### Research Papers
+
+- [Tool Space Interference](https://www.microsoft.com/en-us/research/blog/tool-space-interference-in-the-mcp-era-designing-for-agent-compatibility-at-scale/) - Microsoft Research on tool design at scale
+- [ToolRAG](https://arxiv.org/pdf/2509.20386v1) - Retrieval-augmented tool selection
+- [Iterative Tool Selection](https://arxiv.org/pdf/2505.03275) - Hierarchical organization patterns
+- [Code Execution with MCP](https://www.anthropic.com/engineering/code-execution-with-mcp) - Universal code tools
+
+### Security & Compliance
+
+- [OWASP LLM Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/) - LLM security risks
+- [LlamaGuard](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/) - Content safety classification
+- [Microsoft Prompt Shields](https://learn.microsoft.com/en-us/azure/ai-services/content-safety/concepts/jailbreak-detection) - Jailbreak detection
+
+### Tools & Frameworks
+
+- [Pydantic](https://docs.pydantic.dev/) - Data validation library
+- [Guardrails AI Validators](https://docs.guardrailsai.com/validators/) - Pre-built validation rules
+- [LangChain Expression Language](https://python.langchain.com/docs/expression_language/) - Workflow composition
+
+### Case Studies
+
+- [Tyson Foods AI Agents](https://www.anthropic.com/customers/tyson-foods) - Production multi-agent system
+- [Salesforce Agentforce](https://www.salesforce.com/agentforce/) - Enterprise agent platform
+
+
+### Community
+
+- [Agents.md](https://agents.md/) - Comprehensive agent guide
+- [GenAI Agents](https://github.com/NirDiamant/GenAI_Agents) - Open-source examples
+- [LangChain Discord](https://discord.gg/langchain) - Community discussions
+
+---

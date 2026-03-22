@@ -26,6 +26,10 @@ export const CodeEditor = ({
   const hasCreatedEnvRef = useRef(false);
   const vmRef = useRef(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isStuck, setIsStuck] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
+  const [loadingStep, setLoadingStep] = useState(0); // 0=idle, 1=cloning, 2=mounting, 3=configuring
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -61,14 +65,22 @@ export const CodeEditor = ({
    * Note: Communication with StackBlitz is handled directly via SDK in CodeEmbed component
    */
   const STORAGE_KEY = 'openai_api_key';
+  const GEMINI_STORAGE_KEY = 'gemini_api_key';
+  const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
+  const [selectedProvider, setSelectedProvider] = useState(() => {
+    if (typeof window === 'undefined') return 'gemini';
+    return localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
+  });
 
   /**
    * Check if API key is configured
    * @returns {boolean} True if API key exists in localStorage
    */
   const isApiKeyConfigured = () => {
-    const key = localStorage.getItem(STORAGE_KEY);
-    return key !== null && key.trim().length > 0;
+    const openaiKey = localStorage.getItem(STORAGE_KEY);
+    const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY);
+    return (openaiKey !== null && openaiKey.trim().length > 0) ||
+           (geminiKey !== null && geminiKey.trim().length > 0);
   };
 
   /**
@@ -83,13 +95,7 @@ export const CodeEditor = ({
     }
   };
 
-  /**
-   * Get the OpenAI API key from localStorage
-   * @returns {string|null} The stored API key or null if not found
-   */
-  const getApiKey = () => {
-    return localStorage.getItem(STORAGE_KEY);
-  };
+
 
   /**
    * Save the OpenAI API key to localStorage
@@ -123,22 +129,33 @@ export const CodeEditor = ({
       let envContent;
 
       if (configured) {
-        // Get the stored key and use it
-        const apiKey = getApiKey();
-        if (!apiKey) {
-          return;
+        const openaiKey = localStorage.getItem(STORAGE_KEY);
+        const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY);
+        const lines = ['# Using the API key(s) you configured. This file will be created when the dialog is loaded.'];
+
+        if (openaiKey && openaiKey.trim()) {
+          lines.push(`OPENAI_MODEL=gpt-4.1-nano`);
+          lines.push(`OPENAI_API_KEY=${openaiKey.trim()}`);
         }
-        envContent = `# Using the API key you configured. This file will be created when the dialog is loaded.
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_API_KEY=${apiKey.trim()}`;
+        if (geminiKey && geminiKey.trim()) {
+          lines.push(`GEMINI_MODEL=gemini-2.5-flash-lite`);
+          lines.push(`GOOGLE_GENERATIVE_AI_API_KEY=${geminiKey.trim()}`);
+        }
+        const activeProvider = geminiKey && geminiKey.trim() ? 'gemini' : 'openai';
+        lines.push(`AI_PROVIDER=${activeProvider}`);
+
+        envContent = lines.join('\n');
       } else {
-        // Use mock key if not configured
-        envContent = `OPENAI_MODEL=gpt-4o-mini
+        // Use mock keys if not configured
+        envContent = `OPENAI_MODEL=gpt-4.1-nano
 OPENAI_API_KEY=sk-mock-key-1234567890abcdef
+GEMINI_MODEL=gemini-2.5-flash-lite
+GOOGLE_GENERATIVE_AI_API_KEY=
+AI_PROVIDER=openai
 # API key not found in browser storage
 # To configure your API key:
-# 1. Go to https://platform.openai.com/api-keys
-# 2. Create a new API key
+# 1. For Gemini (free): Go to https://aistudio.google.com/apikey
+# 2. For OpenAI: Go to https://platform.openai.com/api-keys
 # 3. Enter it in the configuration form above this editor
 # 4. The .env file will be automatically updated with your key`;
       }
@@ -154,9 +171,11 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
         },
         destroy: []
       });
+
       hasCreatedEnvRef.current = true;
     } catch (error) {
-      hasCreatedEnvRef.current = false; // Allow retry on error
+      console.error('Failed to write env files:', error);
+      hasCreatedEnvRef.current = false;
     }
   };
 
@@ -166,12 +185,17 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
       setShowApiKeyDialog(true);
     }
 
-    // Listen for API key changes to update .env file
+    // Listen for API key changes from other widgets on the same page
     const handleApiKeyChanged = () => {
-      // If API key was just configured and VM is available, update .env file
-      if (isApiKeyConfigured() && vmRef.current) {
-        hasCreatedEnvRef.current = false; // Reset flag to allow update
-        updateEnvFile(vmRef.current);
+      if (isApiKeyConfigured()) {
+        // Dismiss the API key dialog if it's showing
+        setShowApiKeyDialog(false);
+
+        // Update .env file in the VM if connected
+        if (vmRef.current) {
+          hasCreatedEnvRef.current = false;
+          updateEnvFile(vmRef.current);
+        }
       }
     };
 
@@ -189,21 +213,20 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
    * @param {string} key - The API key to validate
    * @returns {Promise<{valid: boolean, error?: string}>} Validation result
    */
-  const validateApiKey = async (key) => {
+  const validateApiKey = async (key, provider) => {
     try {
-      // Make a lightweight request to validate the key
-      // Using the models endpoint as it's simple and doesn't consume credits
-      const response = await fetch('https://api.openai.com/v1/models', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${key.trim()}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const url = provider === 'gemini'
+        ? 'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key.trim())
+        : 'https://api.openai.com/v1/models';
+      const headers = provider === 'gemini'
+        ? { 'Content-Type': 'application/json' }
+        : { 'Authorization': `Bearer ${key.trim()}`, 'Content-Type': 'application/json' };
+
+      const response = await fetch(url, { method: 'GET', headers });
 
       if (response.ok) {
         return { valid: true };
-      } else if (response.status === 401) {
+      } else if (response.status === 401 || response.status === 403) {
         return { valid: false, error: 'Invalid API key. Please check your key and try again.' };
       } else if (response.status === 429) {
         return { valid: false, error: 'Rate limit exceeded. Please try again later.' };
@@ -215,7 +238,6 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
         };
       }
     } catch (err) {
-      // Network errors or other issues
       if (err.name === 'TypeError' && err.message.includes('fetch')) {
         return { valid: false, error: 'Network error. Please check your connection and try again.' };
       }
@@ -238,23 +260,23 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
     setIsSubmitting(true);
 
     if (!apiKey || !apiKey.trim()) {
-      setError('Please enter your OpenAI API key');
+      setError(`Please enter your ${selectedProvider === 'gemini' ? 'Gemini' : 'OpenAI'} API key`);
       setIsSubmitting(false);
       return;
     }
 
     // Basic format validation
     const trimmedKey = apiKey.trim();
-    if (!trimmedKey.startsWith('sk-')) {
+    if (selectedProvider === 'openai' && !trimmedKey.startsWith('sk-')) {
       setError('Invalid API key format. OpenAI API keys should start with "sk-"');
       setIsSubmitting(false);
       return;
     }
 
-    // Validate the API key with OpenAI
+    // Validate the API key
     setIsValidating(true);
-    setError(''); // Clear any previous errors
-    const validation = await validateApiKey(trimmedKey);
+    setError('');
+    const validation = await validateApiKey(trimmedKey, selectedProvider);
     setIsValidating(false);
 
     if (!validation.valid) {
@@ -265,17 +287,19 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 
     // Key is valid, save it
     try {
-      const saved = saveApiKey(trimmedKey);
-      if (saved) {
-        setSuccess(true);
-        setApiKey('');
-        setShowApiKeyDialog(false);
-      } else {
-        setError('Failed to save API key. Please try again.');
-      }
+      const storageKey = selectedProvider === 'gemini' ? GEMINI_STORAGE_KEY : STORAGE_KEY;
+      localStorage.setItem(storageKey, trimmedKey);
+      localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProvider);
+      dispatchApiKeyChanged();
+      setSuccess(true);
+      setApiKey('');
+
+      // Reload the page after a short delay to show success message
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (err) {
       setError(err.message || 'Failed to save API key. Please try again.');
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -353,38 +377,135 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
   // ==================== STYLES ====================
   // Styles are now in style.css - using CSS classes instead
 
-  // Callback ref to handle iframe mounting
+  const LOAD_TIMEOUT_MS = 10000;
+  const iframeElRef = useRef(null);
+  const hasReloadedRef = useRef(false);
+
+  const handleRetry = () => {
+    vmRef.current = null;
+    hasCreatedEnvRef.current = false;
+    setIsStuck(false);
+    setIframeKey(prev => prev + 1);
+  };
+
+  // Callback ref to track the iframe element for SDK connect
   const iframeRef = (iframe) => {
-    if (!iframe) {
+    iframeElRef.current = iframe;
+  };
+
+  // Handle iframe load event — called via onLoad prop to avoid race conditions.
+  // StackBlitz embeds can get stuck or have a corrupted FS on first load.
+  // A second load (reload) fixes it. So we: connect, write env files, then
+  // always reload once. The user sees a loading overlay the whole time.
+  // Known issues:
+  //   https://github.com/stackblitz/core/issues/2849
+  //   https://github.com/stackblitz/core/issues/2847
+  //   https://github.com/stackblitz/webcontainer-core/issues/2075
+  const handleIframeLoad = async () => {
+    const iframe = iframeElRef.current;
+    if (!iframe) return;
+
+    // After reload, we're done — reveal the iframe
+    if (hasReloadedRef.current) {
+      try {
+        const sdk = await loadSDK();
+        const vm = await sdk.connect(iframe);
+        vmRef.current = vm;
+        if (!hasCreatedEnvRef.current) {
+          await updateEnvFile(vm);
+        }
+      } catch (_) {
+        // Best effort on second load
+      }
+      setLoadingStep(0);
       return;
     }
 
-    const handleLoad = async () => {
+    try {
+      const sdk = await loadSDK();
+
+      if (vmRef.current) return;
+
+      const vm = await Promise.race([
+        sdk.connect(iframe),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('connect timeout')), LOAD_TIMEOUT_MS)
+        )
+      ]);
+
+      // Write env files
+      await updateEnvFile(vm);
+
+      // Check if env/run.conf exists — if it does, FS is healthy, no reload needed
+      let needsReload = true;
       try {
-        // Load SDK and connect to VM
-        const sdk = await loadSDK();
-
-        // Prevent multiple connections
-        if (vmRef.current) {
-          return;
+        const snapshot = await vm.getFsSnapshot();
+        if (snapshot && snapshot['env/run.conf']) {
+          needsReload = false;
         }
-
-        const vm = await sdk.connect(iframe);
-        vmRef.current = vm;
-
-        // Create .env file once VM is connected
-        if (!hasCreatedEnvRef.current && vm) {
-          await updateEnvFile(vm);
-        }
-      } catch (error) {
-        console.error('Failed to connect to StackBlitz VM:', error);
-        // Connection failed, will retry on next iframe load or API key change
+      } catch (_) {
+        // Can't verify — assume reload needed
       }
-    };
 
-    iframe.addEventListener('load', handleLoad);
-    // Note: Event listener cleanup is handled automatically when iframe element is removed by React
+      if (needsReload) {
+        // Show overlay and reload — first load had corrupted FS
+        setLoadingStep(1);
+        hasReloadedRef.current = true;
+        vmRef.current = null;
+        hasCreatedEnvRef.current = false;
+        setIframeKey(prev => prev + 1);
+      } else {
+        // FS is healthy — no reload needed
+        vmRef.current = vm;
+        hasReloadedRef.current = true;
+      }
+    } catch (error) {
+      console.error('Failed to connect to StackBlitz VM:', error);
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'load_refresh_error', {
+          event_category: 'stackblitz',
+          event_label: file,
+          error_message: error.message,
+        });
+      }
+      // Timeout or connection failure — show overlay and try reload
+      if (!hasReloadedRef.current) {
+        setLoadingStep(1);
+        hasReloadedRef.current = true;
+        setIframeKey(prev => prev + 1);
+      } else {
+        setLoadingStep(0);
+        setIsStuck(true);
+      }
+    }
   };
+
+  // Safari is not supported by StackBlitz WebContainers
+  const isSafari = typeof navigator !== 'undefined' &&
+    /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+  if (isSafari) {
+    return (
+      <div
+        className="code-editor-dialog-container"
+        style={{ height: height }}
+      >
+        <div className="code-editor-dialog-box">
+          <h2 className="code-editor-dialog-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            Browser Not Supported
+          </h2>
+          <p className="code-editor-dialog-description">
+            The interactive code editor is not supported on Safari. Please use <strong>Chrome</strong>, <strong>Edge</strong>, or <strong>Firefox</strong> to run the examples.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Show API key configuration dialog if not configured
   if (showApiKeyDialog) {
@@ -400,7 +521,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
               <line x1="12" y1="9" x2="12" y2="13"></line>
               <line x1="12" y1="17" x2="12.01" y2="17"></line>
             </svg>
-            Configure OpenAI API Key
+            Configure API Key
           </h2>
 
           <p className="code-editor-dialog-description">
@@ -408,22 +529,55 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             Your API key is stored locally in your browser's storage and is never transmitted to external servers.
           </p>
 
-          <div className="code-editor-info-box">
-            <p className="code-editor-info-box-title">
-              Don't have an API key?.
-            </p>
-            <p className="code-editor-info-box-text">
-              Get one at{' '}
+          <div className="llm-provider-tabs" style={{ marginBottom: '16px' }}>
+            <button
+              type="button"
+              onClick={() => { setSelectedProvider('gemini'); setError(''); setApiKey(''); }}
+              className={`llm-provider-tab ${selectedProvider === 'gemini' ? 'llm-provider-tab-active' : ''}`}
+            >
+              Gemini <span className="llm-provider-tab-badge">Free</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSelectedProvider('openai'); setError(''); setApiKey(''); }}
+              className={`llm-provider-tab ${selectedProvider === 'openai' ? 'llm-provider-tab-active' : ''}`}
+            >
+              OpenAI
+            </button>
+          </div>
+
+          {selectedProvider === 'gemini' && (
+            <div className="llm-gemini-recommendation" style={{ marginBottom: '16px' }}>
+              Gemini offers a generous free tier — great for learning! Get your free API key at{' '}
               <a
-                href="https://platform.openai.com/api-keys"
+                href="https://aistudio.google.com/apikey"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="code-editor-link"
               >
-                platform.openai.com/api-keys
+                aistudio.google.com/apikey
               </a>
-            </p>
-          </div>
+            </div>
+          )}
+
+          {selectedProvider === 'openai' && (
+            <div className="code-editor-info-box">
+              <p className="code-editor-info-box-title">
+                Don't have an API key?
+              </p>
+              <p className="code-editor-info-box-text">
+                Get one at{' '}
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="code-editor-link"
+                >
+                  platform.openai.com/api-keys
+                </a>
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleApiKeySubmit}>
             <div className="code-editor-form-group">
@@ -431,7 +585,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                 htmlFor="api-key-input"
                 className="code-editor-label"
               >
-                OpenAI API Key
+                {selectedProvider === 'gemini' ? 'Gemini' : 'OpenAI'} API Key
               </label>
               <input
                 id="api-key-input"
@@ -442,7 +596,7 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
                   setError('');
                   setSuccess(false);
                 }}
-                placeholder="sk-..."
+                placeholder={selectedProvider === 'openai' ? 'sk-...' : 'Gemini API Key'}
                 disabled={isSubmitting}
                 className={`code-editor-input ${error ? 'code-editor-input-error' : ''}`}
               />
@@ -507,10 +661,11 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
   }
 
   const toggleMaximize = () => setIsMaximized(!isMaximized);
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
   return (
     <div
-      className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''}`}
+      className={`code-editor-wrapper ${isMaximized ? 'maximized' : ''} ${isCollapsed ? 'collapsed' : ''}`}
       data-theme={theme}
     >
       {!isMaximized && (
@@ -523,6 +678,19 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
             {title}
           </div>
           <div className="code-editor-controls">
+            <button
+              className="code-editor-collapse-button"
+              onClick={toggleCollapse}
+              title={isCollapsed ? "Expand" : "Collapse"}
+              type="button"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {isCollapsed
+                  ? <polyline points="6 9 12 15 18 9" />
+                  : <polyline points="6 15 12 9 18 15" />
+                }
+              </svg>
+            </button>
             <button
               className="code-editor-maximize-button"
               onClick={toggleMaximize}
@@ -550,15 +718,68 @@ OPENAI_API_KEY=sk-mock-key-1234567890abcdef
         </button>
       )}
 
-      <iframe
-        ref={iframeRef}
-        src={stackblitzUrl}
-        className="code-editor-iframe"
-        style={{ height: isMaximized ? 'auto' : height, flex: isMaximized ? 1 : 'none' }}
-        title={title || 'Code Example'}
-        allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
-        sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
-      />
+      {!isCollapsed && (
+        <div style={{ position: 'relative', height: isMaximized ? 'auto' : height, flex: isMaximized ? 1 : 'none' }}>
+          <iframe
+            key={iframeKey}
+            ref={iframeRef}
+            onLoad={handleIframeLoad}
+            src={stackblitzUrl}
+            className="code-editor-iframe"
+            style={{ height: '100%', flex: isMaximized ? 1 : 'none' }}
+            title={title || 'Code Example'}
+            allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; xr-spatial-tracking"
+            sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+          />
+          {loadingStep > 0 && !isStuck && (
+            <div className="code-editor-loading-overlay">
+              <div className="code-editor-loading-box">
+                <div className="code-editor-loading-title">Setting up environment</div>
+                <div className="code-editor-loading-steps">
+                  <div className={`code-editor-loading-step ${loadingStep >= 1 ? 'active' : ''} ${loadingStep > 1 ? 'done' : ''}`}>
+                    <span className="code-editor-loading-step-icon">
+                      {loadingStep > 1 ? '✓' : <span className="code-editor-loading-spinner" />}
+                    </span>
+                    <span>Cloning repo from GitHub</span>
+                  </div>
+                  <div className={`code-editor-loading-step ${loadingStep >= 2 ? 'active' : ''} ${loadingStep > 2 ? 'done' : ''}`}>
+                    <span className="code-editor-loading-step-icon">
+                      {loadingStep > 2 ? '✓' : loadingStep === 2 ? <span className="code-editor-loading-spinner" /> : '○'}
+                    </span>
+                    <span>Mounting environment in StackBlitz</span>
+                  </div>
+                  <div className={`code-editor-loading-step ${loadingStep >= 3 ? 'active' : ''}`}>
+                    <span className="code-editor-loading-step-icon">
+                      {loadingStep === 3 ? <span className="code-editor-loading-spinner" /> : '○'}
+                    </span>
+                    <span>Configuring environment</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {isStuck && (
+            <div className="code-editor-stuck-overlay">
+              <div className="code-editor-stuck-box">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                <p>StackBlitz is taking too long to load. This can happen when the repository was recently updated.</p>
+                <button
+                  type="button"
+                  className="code-editor-button"
+                  onClick={() => { hasReloadedRef.current = false; setLoadingStep(1); handleRetry(); }}
+                  style={{ marginTop: '8px' }}
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

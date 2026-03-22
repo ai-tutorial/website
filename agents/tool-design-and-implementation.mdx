@@ -1,0 +1,838 @@
+---
+title: "Tool Design & Implementation"
+description: "Tool Design & Implementation"
+sidebarTitle: "Tool Design & Implementation"
+icon: book
+mode: wide
+slug: agents/tool-design-and-implementation
+---
+
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
+## Why Tools Matter
+
+In the previous section, we saw a simple agent with one tool. Real applications need dozens or hundreds of tools. The quality of your tool design directly impacts agent reliability.
+
+**Poor tool design leads to:**
+- Agents selecting wrong tools
+- Excessive API calls (cost, latency)
+- Confusing error messages
+- Unpredictable behavior
+
+**Good tool design leads to:**
+- Accurate tool selection (>90%)
+- Minimal agent steps
+- Clear error handling
+- Predictable, testable behavior
+
+## Function Calling Basics
+
+Before we dive into advanced patterns, let's understand the mechanics.
+
+**How LLMs Use Tools:**
+
+1. **LLM receives tool descriptions** (names, descriptions, parameters)
+2. **LLM analyzes user query** and available tools
+3. **LLM decides** which tool(s) to use and with what parameters
+4. **LLM returns structured data** indicating tool choice
+5. **You execute the tool** and return results
+6. **LLM uses results** to continue or respond
+
+**Tool Definition Format:**
+
+<CodeEditor 
+  file="src/agents/weather_agent.ts" 
+  lines="66-73" 
+  functionName="runWeatherAgent"
+  title="Weather Tool Definition"
+/>
+
+**The description is everything.** The LLM only sees your description - make it count.
+
+## Model Context Protocol (MCP) Introduction
+
+**MCP** is an open standard for connecting AI systems to data sources and tools. Think of it as "USB for AI" - a universal connector.
+
+
+**Why MCP Matters:**
+
+
+**Tool Definition:**
+<CodeEditor 
+  file="src/agents/weather_mcp_server.ts" 
+  lines="27-40" 
+  functionName="main"
+  title="MCP Weather Tool Definition"
+/>
+
+**Server Setup:**
+<CodeEditor 
+  file="src/agents/weather_mcp_server.ts" 
+  lines="20-25" 
+  functionName="main"
+  title="MCP Server Configuration"
+/>
+
+**MCP Benefits:**
+
+1. **Standardization:** Same protocol for all tools
+2. **Tool Discovery:** Agents can list available tools dynamically
+3. **Error Handling:** Consistent error format
+4. **Security:** Built-in authentication/authorization
+5. **Composability:** Tools can call other tools
+
+### Running the Weather MCP Server
+
+The weather MCP server we created above is a **full, runnable example** that demonstrates MCP's power. You can use it with **any** agent framework:
+
+- **OpenAI Agent SDK**
+- **LangGraph** 
+- **Google Gemini SDK**
+- **Claude Agent SDK**
+- **Any MCP-compatible client**
+
+**To run it locally:**
+
+```bash
+cd typescript-examples
+npx tsx src/agents/weather_mcp_server.ts
+```
+
+The server starts on `http://localhost:8002` and exposes the `/mcp` endpoint for JSON-RPC communication.
+
+**Key MCP Advantages Demonstrated:**
+
+1. **Tool Discovery**: Agents can query `tools/list` to discover available tools without hardcoding
+   ```bash
+   curl -X POST http://localhost:8002/mcp \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+   ```
+
+2. **Pluggability**: Add/remove tools by starting/stopping MCP servers - no code changes needed in your agent
+
+3. **Framework Independence**: The same MCP server works with OpenAI, Anthropic, Google, or any other framework
+
+4. **Separation of Concerns**: Tool implementation is separate from agent logic - teams can work independently
+
+5. **Reusability**: Write the tool once, use it across all your AI applications
+
+**We'll use MCP for our tool examples going forward.**
+
+## Tool Design Principles
+
+### Principle 1: Clear, Descriptive Names
+
+**Bad names:**
+- `process` (process what?)
+- `fetch` (fetch what?)
+- `do_thing` (what thing?)
+
+**Good names:**
+```ts Pseudocode
+// MCP tool naming examples
+get_customer_by_email
+search_products_by_category
+calculate_shipping_cost_for_order
+send_notification_to_user
+```
+
+**Naming convention:** `[verb]_[noun]_[context]`
+
+### Principle 2: Comprehensive Descriptions
+
+The description is the most important part of your tool. It must answer:
+- **What** does this tool do?
+- **When** should the agent use it?
+- **When NOT** to use it (distinguish from similar tools)
+- **What format** are inputs/outputs?
+
+**Bad description:**
+
+```ts Pseudocode
+// Bad: Vague tool definition
+mcp.registerTool(
+    'get_data',
+    {
+        title: 'Get Data',
+        description: 'Get data.',  // ❌ Too vague!
+        inputSchema: {
+            id: z.string()
+        }
+    },
+    async (args) => { /* ... */ }
+);
+```
+
+**Good description:**
+
+```ts Pseudocode
+// Good: Comprehensive tool definition
+const customerSchema = {
+    customer_id: z.string().describe(
+        'Customer ID in format CUST-##### (e.g., "CUST-12345")'
+    )
+};
+
+mcp.registerTool(
+    'get_customer_by_id',
+    {
+        title: 'Get Customer By ID',
+        description: `Retrieve customer account information by customer ID.
+        
+        Use this when:
+        - You have a customer ID and need their details
+        - User mentions "my account" (look up by context)
+        
+        Do NOT use for:
+        - Searching by name/email (use search_customers instead)
+        - Getting order history (use get_customer_orders instead)
+        
+        Returns: Customer object with name, email, phone, address, account_status
+        
+        Example:
+          Input: customer_id="CUST-12345"
+          Output: { name: "Alice Johnson", email: "alice@example.com", account_status: "active" }`,
+        inputSchema: customerSchema
+    },
+    async (args) => {
+        const customer = await customerDb.findById(args.customer_id);
+        return { content: [{ type: "text", text: JSON.stringify(customer) }] };
+    }
+);
+```
+
+### Principle 3: Simple Parameter Schemas
+
+**Research shows:** Tool parameter complexity significantly affects agent accuracy.
+
+| Parameter Count | Agent Accuracy |
+|----------------|----------------|
+| 1-3 parameters | 90%+ correct usage |
+| 4-6 parameters | 75-85% correct usage |
+| 7+ parameters | 60-70% correct usage |
+
+**Why:** More parameters = more cognitive load = more confusion.
+
+**Design principle:** Prefer multiple simple tools over one complex tool.
+
+**Anti-pattern: Complex Tool**
+
+```ts Pseudocode
+// Anti-pattern: Too many parameters (10) - agent will struggle
+const complexOrderSchema = {
+    customer_id: z.string(),
+    product_ids: z.array(z.string()),
+    quantities: z.array(z.number()),
+    shipping_address: z.object({}),
+    billing_address: z.object({}),
+    payment_method: z.string(),
+    promotional_code: z.string(),
+    gift_wrap: z.boolean(),
+    gift_message: z.string(),
+    shipping_speed: z.string()
+};
+
+mcp.registerTool(
+    'create_order',
+    {
+        title: 'Create Order',
+        description: '10 parameters - agent will struggle.',
+        inputSchema: complexOrderSchema
+    },
+    async (args) => { /* ... */ }
+);
+```
+
+**Better: Multiple Simple Tools**
+
+```ts Pseudocode
+// Better: Break into 3 simple tools (2-3 parameters each)
+
+// Tool 1: Create cart (2 parameters)
+mcp.registerTool(
+    'create_order_cart',
+    {
+        title: 'Create Order Cart',
+        description: 'Create shopping cart. Returns cart_id. Use this as first step when customer wants to place an order.',
+        inputSchema: {
+            customer_id: z.string(),
+            items: z.array(z.object({ product_id: z.string(), quantity: z.number() }))
+        }
+    },
+    async (args) => {
+        const cartId = await createCart(args.customer_id, args.items);
+        return { content: [{ type: "text", text: cartId }] };
+    }
+);
+
+// Tool 2: Set shipping (3 parameters)
+mcp.registerTool(
+    'set_cart_shipping',
+    {
+        title: 'Set Cart Shipping',
+        description: 'Set shipping details for cart. Call after create_order_cart, before finalize_order.',
+        inputSchema: {
+            cart_id: z.string(),
+            address: z.object({}),
+            speed: z.enum(['standard', 'express', 'overnight'])
+        }
+    },
+    async (args) => {
+        await setShipping(args.cart_id, args.address, args.speed);
+        return { content: [{ type: "text", text: "Shipping set" }] };
+    }
+);
+
+// Tool 3: Finalize order (2 parameters)
+mcp.registerTool(
+    'finalize_order',
+    {
+        title: 'Finalize Order',
+        description: 'Complete order and charge payment. Returns order_id. Final step after cart is configured.',
+        inputSchema: {
+            cart_id: z.string(),
+            payment_method: z.string()
+        }
+    },
+    async (args) => {
+        const orderId = await finalizeOrder(args.cart_id, args.payment_method);
+        return { content: [{ type: "text", text: orderId }] };
+    }
+);
+```
+
+**Result:** Three simple tools have higher success rate than one complex tool, even though they require more agent steps.
+
+*Source: "Tool Space Interference in the MCP Era" - Microsoft Research ([microsoft.com/research](https://www.microsoft.com/en-us/research/blog/tool-space-interference-in-the-mcp-era-designing-for-agent-compatibility-at-scale/))*
+
+### Principle 4: Consistent Return Formats
+
+**Standard response envelope:**
+
+```ts Pseudocode
+// Standard response format for all MCP tools
+interface ToolResponse {
+    success: boolean;
+    data?: any;
+    error?: string;
+    message: string;
+}
+
+mcp.registerTool(
+    'example_tool',
+    {
+        title: 'Example Tool',
+        description: 'Tool with consistent response format.',
+        inputSchema: { param: z.string() }
+    },
+    async (args): Promise<ToolResponse> => {
+        try {
+            const result = await process(args.param);
+            return {
+                success: true,
+                data: result,
+                error: undefined,
+                message: "Operation completed successfully"
+            };
+        } catch (e: any) {
+            return {
+                success: false,
+                data: undefined,
+                error: e.constructor.name,
+                message: `Failed: ${e.message}`
+            };
+        }
+    }
+);
+```
+
+**Benefits:**
+- Agent knows what to expect
+- Easy to check success/failure
+- Consistent error handling
+
+## Practical Example: Building a Customer Support Tool Set
+
+Let's build a realistic set of tools for customer support using MCP:
+
+**Tool Schemas:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="27-46" 
+  functionName="main"
+  title="Customer Support Tool Schemas"
+/>
+
+**Knowledge Base Search Tool:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="48-108" 
+  functionName="main"
+  title="Search Knowledge Base Tool"
+/>
+
+**Customer Lookup Tool:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="110-174" 
+  functionName="main"
+  title="Get Customer Info Tool"
+/>
+
+**Support Ticket Creation Tool:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="176-212" 
+  functionName="main"
+  title="Create Support Ticket Tool"
+/>
+
+**Order Status Tool:**
+<CodeEditor 
+  file="src/agents/customer_support_mcp_server.ts" 
+  lines="214-283" 
+  functionName="main"
+  title="Check Order Status Tool"
+/>
+
+## Tool Implementation Patterns
+
+### Pattern 1: Tool Consolidation
+
+**Problem:** Agent has to make 5 sequential calls to get complete data.
+
+<CodeGroup>
+```python Python
+# Inefficient: 5 separate tools
+customer = await get_customer(email)
+orders = await get_customer_orders(customer.id)
+tickets = await get_customer_tickets(customer.id)
+preferences = await get_customer_preferences(customer.id)
+loyalty = await get_loyalty_status(customer.id)
+
+# Result: 5 agent steps, high latency
+```
+
+```ts TypeScript
+// Inefficient: 5 separate tools
+const customer = await getCustomer(email);
+const orders = await getCustomerOrders(customer.id);
+const tickets = await getCustomerTickets(customer.id);
+const preferences = await getCustomerPreferences(customer.id);
+const loyalty = await getLoyaltyStatus(customer.id);
+
+// Result: 5 agent steps, high latency
+```
+</CodeGroup>
+
+**Solution:** Consolidate related data into one tool.
+
+<CodeGroup>
+```python Python
+@server.tool()
+async def get_complete_customer_context(email: str) -> dict:
+    """Get comprehensive customer information in one call.
+    
+    Returns customer profile, recent orders, open tickets, preferences,
+    and loyalty status. Optimized for agent efficiency.
+    """
+    
+    # Fetch in parallel internally
+    customer, orders, tickets, prefs, loyalty = await asyncio.gather(
+        customer_db.find(email),
+        order_api.get_recent(email, limit=5),
+        ticket_api.get_open(email),
+        prefs_api.get(email),
+        loyalty_api.get_status(email),
+        return_exceptions=True
+    )
+    
+    return {
+        "success": True,
+        "data": {
+            "customer": {...},
+            "recent_orders": [...],
+            "open_tickets": [...],
+            "preferences": {...},
+            "loyalty_tier": "gold"
+        },
+        "error": None,
+        "message": "Complete context retrieved"
+    }
+
+# Result: 1 agent step, lower latency
+```
+
+```ts TypeScript
+server.tool({
+    name: "get_complete_customer_context",
+    description: `Get comprehensive customer information in one call.
+    
+    Returns customer profile, recent orders, open tickets, preferences,
+    and loyalty status. Optimized for agent efficiency.`,
+    inputSchema: {
+        type: "object",
+        properties: { email: { type: "string" } },
+        required: ["email"]
+    }
+}, async (params: { email: string }): Promise<any> => {
+    // Fetch in parallel internally
+    const [customer, orders, tickets, prefs, loyalty] = await Promise.allSettled([
+        customerDb.find(params.email),
+        orderApi.getRecent(params.email, { limit: 5 }),
+        ticketApi.getOpen(params.email),
+        prefsApi.get(params.email),
+        loyaltyApi.getStatus(params.email)
+    ]);
+    
+    return {
+        success: true,
+        data: {
+            customer: customer.status === "fulfilled" ? customer.value : undefined,
+            recent_orders: orders.status === "fulfilled" ? orders.value : [],
+            open_tickets: tickets.status === "fulfilled" ? tickets.value : [],
+            preferences: prefs.status === "fulfilled" ? prefs.value : {},
+            loyalty_tier: loyalty.status === "fulfilled" ? loyalty.value : "none"
+        },
+        error: undefined,
+        message: "Complete context retrieved"
+    };
+});
+
+// Result: 1 agent step, lower latency
+```
+</CodeGroup>
+
+**Real Case Study:** SaaS company reduced agent steps from 15 to 3 by consolidating Salesforce API calls. Cost per query dropped 93% ($2.20 → $0.15).
+
+*Source: "Stop Converting Your REST APIs to MCP" by Jeremiah Lowin ([jlowin.dev](https://www.jlowin.dev/blog/stop-converting-rest-apis-to-mcp))*
+
+### Pattern 2: Semantic Enrichment
+
+**Don't just return raw data - add context that helps the agent.**
+
+**Basic tool:**
+
+<CodeGroup>
+```python Python
+@server.tool()
+async def get_order(order_id: str) -> dict:
+    """Get order data."""
+    order = await db.get(order_id)
+    return {"order": order}  # Raw data
+```
+
+```ts TypeScript
+server.tool({
+    name: "get_order",
+    description: "Get order data.",
+    inputSchema: {
+        type: "object",
+        properties: { order_id: { type: "string" } },
+        required: ["order_id"]
+    }
+}, async (params: { order_id: string }): Promise<any> => {
+    const order = await db.get(params.order_id);
+    return { order: order };  // Raw data
+});
+```
+</CodeGroup>
+
+**Enriched tool:**
+
+<CodeGroup>
+```python Python
+@server.tool()
+async def get_order_with_context(order_id: str) -> dict:
+    """Get order with helpful context for customer service.
+    
+    Returns order data plus computed insights that help you
+    assist the customer effectively.
+    """
+    order = await db.get(order_id)
+    
+    # Add semantic enrichment
+    days_since_order = (datetime.now() - order.created).days
+    is_delayed = order.estimated_delivery < datetime.now()
+    can_cancel = order.status in ["pending", "processing"]
+    can_modify = order.status == "pending"
+    
+    return {
+        "success": True,
+        "data": {
+            "order": {
+                "id": order.id,
+                "status": order.status,
+                "total": order.total,
+                "items": order.items
+            },
+            "context": {
+                "days_since_order": days_since_order,
+                "is_delayed": is_delayed,
+                "delay_days": (datetime.now() - order.estimated_delivery).days if is_delayed else 0,
+                "can_cancel": can_cancel,
+                "can_modify": can_modify,
+                "next_actions": self._suggest_actions(order)
+            }
+        },
+        "error": None,
+        "message": f"Order {order_id} retrieved with context"
+    }
+    
+def _suggest_actions(self, order) -> list[str]:
+    """Suggest what agent should offer customer."""
+    actions = []
+    
+    if order.is_delayed:
+        actions.append("offer_apology_for_delay")
+        actions.append("provide_updated_delivery_estimate")
+    
+    if order.can_cancel:
+        actions.append("offer_cancellation_option")
+    
+    if order.status == "delivered" and order.days_since_delivery < 30:
+        actions.append("offer_return_if_unsatisfied")
+    
+    return actions
+```
+
+```ts TypeScript
+server.tool({
+    name: "get_order_with_context",
+    description: `Get order with helpful context for customer service.
+    
+    Returns order data plus computed insights that help you
+    assist the customer effectively.`,
+    inputSchema: {
+        type: "object",
+        properties: { order_id: { type: "string" } },
+        required: ["order_id"]
+    }
+}, async (params: { order_id: string }): Promise<any> => {
+    const order = await db.get(params.order_id);
+    
+    // Add semantic enrichment
+    const daysSinceOrder = Math.floor((Date.now() - order.created.getTime()) / (1000 * 60 * 60 * 24));
+    const isDelayed = order.estimated_delivery < new Date();
+    const canCancel = ["pending", "processing"].includes(order.status);
+    const canModify = order.status === "pending";
+    
+    return {
+        success: true,
+        data: {
+            order: {
+                id: order.id,
+                status: order.status,
+                total: order.total,
+                items: order.items
+            },
+            context: {
+                days_since_order: daysSinceOrder,
+                is_delayed: isDelayed,
+                delay_days: isDelayed ? Math.floor((Date.now() - order.estimated_delivery.getTime()) / (1000 * 60 * 60 * 24)) : 0,
+                can_cancel: canCancel,
+                can_modify: canModify,
+                next_actions: suggestActions(order)
+            }
+        },
+        error: undefined,
+        message: `Order ${params.order_id} retrieved with context`
+    };
+});
+
+function suggestActions(order: any): string[] {
+    // Suggest what agent should offer customer
+    const actions: string[] = [];
+    
+    if (order.is_delayed) {
+        actions.push("offer_apology_for_delay");
+        actions.push("provide_updated_delivery_estimate");
+    }
+    
+    if (order.can_cancel) {
+        actions.push("offer_cancellation_option");
+    }
+    
+    if (order.status === "delivered" && order.days_since_delivery < 30) {
+        actions.push("offer_return_if_unsatisfied");
+    }
+    
+    return actions;
+}
+```
+</CodeGroup>
+
+**Benefit:** Agent doesn't have to compute these insights. Tool provides actionable context.
+
+### Pattern 3: Graceful Error Handling
+
+**Tools should never throw exceptions to the agent.** Always return structured errors.
+
+<CodeGroup>
+```python Python
+@server.tool()
+async def send_email(
+    to: str,
+    subject: str,
+    body: str
+) -> dict:
+    """Send email to customer.
+    
+    Handles errors gracefully and suggests alternatives.
+    """
+    
+    # Validate email format
+    if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", to):
+        return {
+            "success": False,
+            "data": None,
+            "error": "invalid_email",
+            "message": f"Invalid email format: {to}. Ask customer for correct email."
+        }
+    
+    try:
+        # Attempt to send
+        result = await email_api.send(to, subject, body)
+        
+        return {
+            "success": True,
+            "data": {
+                "message_id": result.id,
+                "sent_at": result.timestamp
+            },
+            "error": None,
+            "message": f"Email sent to {to}"
+        }
+        
+    except RateLimitError:
+        return {
+            "success": False,
+            "data": None,
+            "error": "rate_limited",
+            "message": "Email rate limit exceeded. Create ticket for human follow-up instead."
+        }
+    
+    except SMTPError as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": "smtp_error",
+            "message": f"Email system unavailable. Alternative: Call customer at {get_customer_phone(to)}"
+        }
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "data": None,
+            "error": "unknown_error",
+            "message": "Could not send email. Create support ticket for manual outreach."
+        }
+```
+
+```ts TypeScript
+server.tool({
+    name: "send_email",
+    description: `Send email to customer.
+    
+    Handles errors gracefully and suggests alternatives.`,
+    inputSchema: {
+        type: "object",
+        properties: {
+            to: { type: "string" },
+            subject: { type: "string" },
+            body: { type: "string" }
+        },
+        required: ["to", "subject", "body"]
+    }
+}, async (params: { to: string; subject: string; body: string }): Promise<any> => {
+    // Validate email format
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(params.to)) {
+        return {
+            success: false,
+            data: undefined,
+            error: "invalid_email",
+            message: `Invalid email format: ${params.to}. Ask customer for correct email.`
+        };
+    }
+    
+    try {
+        // Attempt to send
+        const result = await emailApi.send(params.to, params.subject, params.body);
+        
+        return {
+            success: true,
+            data: {
+                message_id: result.id,
+                sent_at: result.timestamp
+            },
+            error: undefined,
+            message: `Email sent to ${params.to}`
+        };
+    } catch (e: any) {
+        if (e instanceof RateLimitError) {
+            return {
+                success: false,
+                data: undefined,
+                error: "rate_limited",
+                message: "Email rate limit exceeded. Create ticket for human follow-up instead."
+            };
+        } else if (e instanceof SMTPError) {
+            return {
+                success: false,
+                data: undefined,
+                error: "smtp_error",
+                message: `Email system unavailable. Alternative: Call customer at ${getCustomerPhone(params.to)}`
+            };
+        } else {
+            return {
+                success: false,
+                data: undefined,
+                error: "unknown_error",
+                message: "Could not send email. Create support ticket for manual outreach."
+            };
+        }
+    }
+});
+```
+</CodeGroup>
+
+**Key principle:** Error messages should tell agent what to do next.
+
+---
+
+## Check Your Understanding
+
+1. **Tool Design:** You need a tool to search products. What should you name it and what should the description include?
+   
+   <details>
+   <summary>Answer</summary>
+   
+   **Good name:** `search_products_by_text` or `find_products_by_keyword`
+   
+   **Description must include:**
+   - What it does: "Full-text search across product names, descriptions, SKUs"
+   - When to use: "Use when customer describes product (red shoes, laptop under $1000)"
+   - When NOT to use: "Don't use if you have exact SKU (use get_product_by_sku instead)"
+   - Input format: "query: search text, include_out_of_stock: boolean"
+   - Output format: "List of matching products with name, price, availability"
+   - Example: Show concrete input/output
+   </details>
+
+2. **Parameter Complexity:** Your tool has 8 parameters. What should you do?
+   
+   <details>
+   <summary>Answer</summary>
+   
+   **Break it into multiple simple tools.**
+   
+   Research shows 7+ parameters = 60-70% accuracy.
+   
+   Example:
+   - One complex tool with 8 params → 65% success rate
+   - Three simple tools with 2-3 params each → 85% success rate
+   
+   Even though multiple tools require more agent steps, the higher accuracy makes them more reliable in production.
+   </details>
+

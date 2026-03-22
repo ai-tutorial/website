@@ -1,0 +1,124 @@
+---
+title: Prompt Optimization
+description: Test and iterate on your prompts to improve the performance of your prompts
+sidebarTitle: Prompt Optimization
+icon: book
+mode: wide
+slug: prompting/prompt-optimization-and-testing
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
+## You Can't Improve What You Don't Measure
+
+Many teams iterate on prompts by "vibes" - does the output look good? - or by fixing one scenario at a time, and then don't check for regression testing. That doesn't scale.
+
+**The Production Process:**
+
+```
+1. Define success criteria
+   ↓
+2. Create evaluation dataset
+   ↓
+3. Test current prompt
+   ↓
+4. Analyze failures
+   ↓
+5. Modify prompt
+   ↓
+6. Re-test → repeat
+```
+
+**Example: Customer Sentiment Classification:**
+
+<CodeEditor 
+  file="src/prompting/sentiment_classification.ts" 
+  functionName="main"
+  lines="34-87"
+  title="Customer Sentiment Classification"
+/>
+
+**AI Evaluation Tools:**
+
+Several tools can help you evaluate your prompts:
+
+- **Open Source:** LangFuse, Inspect AI, Phoenix, Opik,
+- **Commercial:** Braintrust, Langsmith, Arize, AgentOps
+
+## A/B Testing Prompts
+
+**Production Pattern: Gradual Rollout:**
+
+Don't deploy a new prompt to 100% of users immediately.
+
+**Metrics to Track:**
+
+- Task success rate
+- User satisfaction (thumbs up/down)
+- Response time
+- Cost per request
+- Error rate
+
+**Analysis After 1000 Requests:**
+
+<CodeGroup>
+
+
+
+
+```ts Pseudocode
+const results = {
+    v2_prompt: {
+        success_rate: 0.87,
+        avg_latency: 1.2,
+        cost_per_request: 0.05,
+        satisfaction: 0.82
+    },
+    v3_prompt: {
+        success_rate: 0.93,  // Better!
+        avg_latency: 1.4,    // Slightly slower
+        cost_per_request: 0.07,  // Slightly more expensive
+        satisfaction: 0.89   // Much better!
+    }
+};
+
+// Decision: v3 wins → roll out to 50%, then 100%
+```
+
+</CodeGroup>
+
+## Common Failure Patterns
+
+### Pattern 1: Prompt Injection
+
+**Example:**
+
+<CodeEditor 
+  file="src/prompting/prompt_injection.ts" 
+  functionName="main"
+  lines="24-34"
+  title="Prompt Injection: Attack and Defense"
+/>
+
+### Pattern 2: Context Stuffing
+
+**Example:**
+
+<CodeEditor 
+  file="src/prompting/context_stuffing.ts" 
+  functionName="main"
+  lines="24-38"
+  title="Context Stuffing: Attack and Defense"
+/>
+
+### Pattern 3: Ambiguous Output Parsing
+
+**Example:**
+
+<CodeEditor 
+  file="src/prompting/ambiguous_output_parsing.ts" 
+  functionName="main"
+  lines="23-31"
+  title="Ambiguous Output Parsing: Problem and Solution"
+/>
+
+Another alternative is to use a structured output format [link](Structured_Prompt_Engineering#gpt-4-/-gpt-4-turbo)

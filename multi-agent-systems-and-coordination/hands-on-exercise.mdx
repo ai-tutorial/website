@@ -1,0 +1,167 @@
+---
+title: Hands-On Exercise
+description: Build an end-to-end multi-agent research system
+sidebarTitle: Hands-On Exercise
+icon: dumbbell
+mode: wide
+slug: multi-agent-systems-and-coordination/hands-on-exercise
+---
+## Project Goal
+
+Build a production-grade multi-agent research system that demonstrates all major Module 5 concepts:
+
+- ✅ **Workflow orchestration** with parallel execution and quality loops
+- ✅ **Agent orchestration** with intelligent task decomposition
+- ✅ **Hybrid architecture** combining both patterns
+- ✅ **Cost management** with model cascading and iteration limits
+- ✅ **Full observability** with structured logging and tracing
+
+## System Architecture
+
+```
+User Query: "Research AI agent adoption in healthcare"
+    |
+    V
++-------------------------------------------------+
+│ Coordinator Agent (Agent Orchestration)         │
+│ - Analyzes query complexity                     │
+│ - Decides: simple lookup OR multi-step research │
+│ - Routes to appropriate workflow                │
++-------------------------------------------------+
+              |
+              V
+    +-------------------+
+    |                   |
+    V                   V
+[Simple Path]      [Complex Path]
+Quick answer        Multi-agent workflow
+                          |
+                          V
+              +--------------------------+
+              │ Research Workflow        │
+              │ (Workflow Orchestration) │
+              +--------------------------+
+                          |
+                          V
+              +-----------------------+
+              |                        |
+              V                        V
+        [Parallel Research]      [Sequential Synthesis]
+        - Market data            1. Combine findings
+        - Academic papers        2. Quality check
+        - Industry reports       3. Generate report
+        - Expert interviews      (Loop if quality < 80%)
+              |
+              V
+        Quality Gate → Output
+```
+
+## Project Requirements
+
+**1. Workflow Orchestration**
+
+Implement multi-agent workflow with:
+
+* A. Parallel Research Stage
+* B. Sequential Synthesis with Quality Loop
+
+**Must demonstrate:**
+- [ ] 4 agents execute in parallel during research phase
+- [ ] Latency improvement: parallel vs. sequential (measure both)
+- [ ] Quality loop with iteration limit (max 3 iterations)
+- [ ] Early termination when quality threshold met (>= 80 score)
+- [ ] Cost tracking per agent and per phase
+
+**2. Agent Orchestration**
+
+Implement coordinator agent that intelligently routes between simple queries and complex queries.
+* SIMPLE QUERIES (route to quick_answer)
+    - Factual lookups ("What is X?")
+    - Simple definitions
+    - Single data points
+    
+* COMPLEX QUERIES (route to multi_agent_workflow)
+    - Market analysis
+    - Comparative research
+    - Trend analysis
+    - Multi-faceted topics
+
+**Must demonstrate:**
+- [ ] Coordinator correctly classifies query complexity (test 10+ queries)
+- [ ] Simple queries route to single agent (< 2 sec latency)
+- [ ] Complex queries route to multi-agent workflow (6-10 sec latency)
+- [ ] Cost comparison: simple path ($0.01) vs. complex path ($0.15)
+- [ ] Routing accuracy: >= 85% correct classification
+
+**3. Hybrid Architecture**
+
+Combine agent and workflow orchestration
+
+**Must demonstrate:**
+- [ ] Clear separation: agent for routing, workflow for execution
+- [ ] Justification for each choice (why agent here, workflow there)
+- [ ] Performance comparison vs. pure agent orchestration
+- [ ] Cost comparison vs. pure agent orchestration
+- [ ] Reliability comparison (determinism where possible)
+
+**4. Production Patterns**
+
+Implement essential production features:
+
+* A. Cost Management
+* B. Observability
+* C. Delegation Loop Prevention
+* D. Timeout Protection
+
+**Must implement:**
+- [ ] Cost tracking with budget limits
+- [ ] Structured logging with request IDs
+- [ ] Delegation tracking prevents loops
+- [ ] Timeout protection on all agents
+- [ ] Circuit breaker for repeated failures
+- [ ] Metrics dashboard (latency, cost, success rate)
+
+## Bonus Challenges
+
+Choose one or more:
+
+- [ ] **A2A Integration:** Expose one specialist agent via A2A, consume from coordinator
+- [ ] **Advanced Parallelism:** Implement batching for 100 queries simultaneously
+- [ ] **Dynamic Tool Selection:** Coordinator chooses tools based on query type
+- [ ] **Multi-Framework:** Use both LangGraph and Google ADK in same system
+- [ ] **Streaming Results:** Stream partial results as agents complete
+- [ ] **Human-in-the-Loop:** Add approval gate for expensive operations (> $0.20)
+- [ ] **Adaptive Budgets:** Allocate more budget for complex queries automatically
+
+### Metrics to Track
+
+**Workflow Orchestration:**
+- Parallel execution latency vs. sequential baseline
+- Quality loop: avg iterations, max iterations hit rate
+- Cost per workflow stage
+- Target: 60%+ latency reduction with parallel, < 2.5 avg iterations
+
+**Agent Orchestration:**
+- Routing accuracy (simple vs. complex classification)
+- Cost savings from intelligent routing (simple path < $0.02, complex < $0.20)
+- Latency by path (simple < 3 sec, complex < 12 sec)
+- Target: 85%+ routing accuracy, 80%+ cost savings on simple queries
+
+**Hybrid Architecture:**
+- Overall system latency (p50, p95, p99)
+- Overall system cost per query (by complexity)
+- Success rate (queries completing without errors)
+- Target: p95 < 15 sec, avg cost < $0.10, success rate > 95%
+
+**Production Patterns:**
+- Budget exceeded rate (should be < 1%)
+- Timeout rate (should be < 2%)
+- Delegation loops prevented (should be 0)
+- All requests have unique request IDs and full trace logs
+
+## Resources
+
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/) - Workflow orchestration examples
+- [Google ADK Multi-Agent Patterns](https://google.github.io/adk-docs/multi-agent/) - Agent orchestration
+- [CrewAI Examples](https://github.com/crewAIInc/crewAI-examples) - Agent coordination patterns
+- [Anthropic: Building Reliable Agents](https://www.anthropic.com/research/building-reliable-agents) - Production best practices

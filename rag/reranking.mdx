@@ -1,0 +1,105 @@
+---
+title: Reranking in Practice
+description: How to implement reranking in a RAG system
+sidebarTitle: Reranking in Practice
+icon: book
+mode: wide
+slug: rag/reranking
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
+
+## What is Reranking?
+
+**Two-stage retrieval for better accuracy:**
+
+1. **Stage 1 (Fast Retrieval) - Maximize Recall:**
+   - **Goal:** Don't miss relevant documents - cast a wide net
+   - **Method:** Retrieve many candidates (e.g., top-50) using fast methods like lexical or vector search
+   - **Trade-off:** Fast but includes some noise/irrelevant results
+
+2. **Stage 2 (Reranking) - Maximize Precision:**
+   - **Goal:** Keep only the truly relevant documents - filter out the noise
+   - **Method:** Use a more accurate cross-encoder model to deeply analyze each candidate and rerank them
+   - **Trade-off:** Slower but much more accurate at identifying relevance
+
+**Why it works:**
+- Fast retrievers are good at finding candidates but not great at ranking them
+- Cross-encoders are excellent at ranking but too slow to run on thousands of documents
+- Combining both gives you speed + accuracy
+
+**Result:** Better quality documents sent to your LLM → better answers
+
+## Minimal rerank pipeline
+
+<CodeEditor 
+  file="src/rag/cross_encoder_reranking.ts" 
+  functionName="main"
+  lines="35-67"
+  title="Cross-Encoder Reranking Pipeline"
+/>
+
+## Integrating with your retriever
+
+<CodeEditor 
+  file="src/rag/cross_encoder_reranking.ts" 
+  functionName="performHybridSearch"
+  lines="85-100"
+  title="Hybrid Search with Reranking Integration"
+/>
+
+The complete pipeline shows:
+1. **First-pass retrieval** (lexical + semantic) - Cast a wide net (top-50)
+2. **Reciprocal Rank Fusion** - Merge the results
+3. **Cross-encoder reranking** - Keep only the best (top-5)
+
+**Latency/cost tips:**
+- Keep candidate pool small (e.g., 20-100) and final top_k small (3-5).
+- Run first-pass lexical + semantic in parallel; batch rerank scoring for throughput.
+- Log latency and token/call costs during the lab.
+
+## Practical Exercise (15 min)
+<CodeGroup>
+```python Python
+# Your task:
+# 0) Corpus: use chunks from 'Assets/paul_graham_essay.txt' (treat each chunk as a doc)
+# 1) Use HybridRetriever to get top-50 for 5 queries.
+# 2) Rerank with CrossEncoderReranker to top-5.
+# 3) Compute NDCG@10, MRR before vs. after reranking.
+# 4) Record end-to-end latency; note candidate pool size impact.
+#
+# Expected insights:
+# - Reranking lifts precision-focused metrics.
+# - Most gains come from better ordering of already-relevant docs.
+# - Larger candidate pools help recall but increase latency.
+#
+# References:
+# - Pinecone Learn (2025): https://www.pinecone.io/learn/retrieval-augmented-generation/
+# - Practitioner write-up (2025): https://dj3dw.com/blog/the-power-of-reranking-in-retrieval-augmented-generation-rag-systems/
+```
+
+```ts TypeScript
+// Your task:
+// 0) Corpus: use chunks from 'Assets/paul_graham_essay.txt' (treat each chunk as a doc)
+// 1) Use HybridRetriever to get top-50 for 5 queries.
+// 2) Rerank with CrossEncoderReranker to top-5.
+// 3) Compute NDCG@10, MRR before vs. after reranking.
+// 4) Record end-to-end latency; note candidate pool size impact.
+//
+// Expected insights:
+// - Reranking lifts precision-focused metrics.
+// - Most gains come from better ordering of already-relevant docs.
+// - Larger candidate pools help recall but increase latency.
+//
+// References:
+// - Pinecone Learn (2025): https://www.pinecone.io/learn/retrieval-augmented-generation/
+// - Practitioner write-up (2025): https://dj3dw.com/blog/the-power-of-reranking-in-retrieval-augmented-generation-rag-systems/
+```
+</CodeGroup>
+
+### Production checklist callout
+- Retrieve top-50 in parallel (lexical + semantic) → cross-encoder rerank top-20 → keep top-5 for generation.
+- Log per-stage latency and cost; adjust candidate pool and rerank depth to stay within budget.
+
+---
+

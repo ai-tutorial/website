@@ -1,0 +1,111 @@
+---
+title: RAG Fundamentals
+description: The core RAG pattern and how it works
+sidebarTitle: RAG Fundamentals
+icon: book
+mode: wide
+slug: rag/fundamentals
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
+## The Core RAG Pattern
+
+RAG isn't just "search + LLM." It's a carefully designed pipeline with specific stages, each solving a distinct problem.
+
+```
++------------------+
+│    User Query    │
++------------------+
+        |
+        v
++------------------+
+│  Stage 1:        │
+│  Fast Retrieval  │  ← Get 10-50 candidates quickly
+│  (Lexical/Vector)│     (prioritize recall over precision)
++------------------+
+        |
+        v
++------------------+
+│  Stage 2:        │
+│  Reranking       │  ← Narrow to top 3-5 precisely
+│  (Cross-Encoder) │     (prioritize precision over speed)
++------------------+
+        |
+        v
++------------------+
+│  Stage 3:        │
+│  LLM Generation  │  ← Use retrieved context to generate
+│  (GPT-4/Claude)  │     grounded response
++------------------+
+        |
+        v
++------------------+
+│    Response      │
++------------------+
+```
+
+### Why Two-Stage Retrieval?
+
+**The Fundamental Trade-off:**
+- Fast retrieval methods (lexical, vector) can process 100K+ documents in milliseconds
+- Accurate ranking methods (cross-encoders) can only handle ~100 documents in reasonable time
+- Solution: Use fast method to filter, accurate method to rank
+
+**Latency in practice (varies by system):**
+- First-pass retrieval returns a small candidate set quickly (implementation-, scale-, and hardware-dependent).
+- Cross-encoder reranking narrows to top results but adds additional latency.
+- Production systems typically target interactive end-to-end latency budgets on available hardware.
+
+## Basic RAG Implementation
+
+Let's start with the simplest working version: 
+[Full runnable example of a simple RAG](https://colab.research.google.com/drive/15LHzIlsxR4W-bm-FOC2HKQCV5siKgK9P?usp=drive_link)
+
+<CodeEditor 
+  file="src/rag/basic_rag.ts" 
+  lines="62-110"
+  functionName="SimpleRAG"
+  title="Basic RAG Implementation"
+/>
+
+**What Makes This Production-Ready?**
+
+Not much yet! This prototype has several problems:
+- ❌ No error handling
+- ❌ No caching (repeated queries waste $$$)
+- ❌ No retrieval quality measurement
+- ❌ Single-stage retrieval (accuracy suffers)
+- ❌ No lexical/vector hybrid search
+- ❌ No metadata or filtering
+
+We'll fix these throughout the module.
+
+## Production RAG: Key Components
+
+A production RAG system needs:
+
+1. **Document Processing Pipeline**
+   - Chunking strategy (size, overlap)
+   - Metadata extraction (title, date, source)
+   - Quality filtering
+
+2. **Two-Stage Retrieval**
+   - First-pass: Fast, broad recall (lexical or vector)
+   - Reranking: Slow, precise scoring
+
+3. **Context Engineering**
+   - Prompt design for grounding
+   - Citation formatting
+   - Handling insufficient context
+
+4. **Evaluation Framework**
+   - Retrieval metrics (Recall@k, NDCG)
+   - Generation metrics (faithfulness, relevance)
+   - Component-level debugging
+
+5. **Observability**
+   - Retrieval quality monitoring
+   - Latency tracking
+   - Cost per query
+
+We'll build each component step by step.
