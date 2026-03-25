@@ -44,6 +44,45 @@ Several tools can help you evaluate your prompts:
 - **Open Source:** LangFuse, Inspect AI, Phoenix, Opik,
 - **Commercial:** Braintrust, Langsmith, Arize, AgentOps
 
+**Programmatic Prompt Optimization:**
+
+The manual cycle above (test → analyze → modify → re-test) can be automated. Frameworks like [DSPy](https://dspy.ai/) replace hand-written prompts with code — you define what you want, and an optimizer finds the best prompt wording for you.
+
+<CodeGroup>
+
+```python DSPy Example
+import dspy
+
+# Step 1: Define what you want (not how to prompt)
+classify = dspy.ChainOfThought("customer_message -> sentiment")
+
+# Step 2: Provide training examples and a metric
+trainset = [
+    dspy.Example(customer_message="Best purchase ever!", sentiment="positive"),
+    dspy.Example(customer_message="Broke after one week.", sentiment="negative"),
+]
+
+# Step 3: Let the optimizer find the best prompt
+optimizer = dspy.MIPROv2(metric=exact_match, auto="light")
+optimized_classify = optimizer.compile(classify, trainset=trainset)
+
+# DSPy automatically generates instructions, selects few-shot examples,
+# and tunes the prompt — no manual tweaking required
+```
+
+</CodeGroup>
+
+**When to Use DSPy:**
+
+- You have an evaluation metric and training examples
+- You're tired of manually tweaking prompt wording
+- You need to re-optimize when switching models
+- Your pipeline has multiple chained LLM calls
+
+<Info>
+DSPy is particularly valuable when the manual test-modify-retest cycle becomes a bottleneck. Learn more in the [DSPy introduction guide](https://www.datacamp.com/blog/dspy-introduction).
+</Info>
+
 ## A/B Testing Prompts
 
 **Production Pattern: Gradual Rollout:**
@@ -61,9 +100,6 @@ Don't deploy a new prompt to 100% of users immediately.
 **Analysis After 1000 Requests:**
 
 <CodeGroup>
-
-
-
 
 ```ts Pseudocode
 const results = {
