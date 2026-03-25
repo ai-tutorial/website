@@ -599,12 +599,19 @@
   transform: scale(0.95);
 }
 
+.llm-chat-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
 .llm-chat-resend-button {
-  background-color: var(--llm-bg-secondary);
+  background-color: #00a884;
 }
 
 .llm-chat-resend-button:hover:not(:disabled) {
-  background-color: var(--llm-text-disabled);
+  background-color: #06cf9c;
 }
 
 /* Settings Panel Styles */

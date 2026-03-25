@@ -588,8 +588,6 @@ export const LLMPlayground = ({
     if (isLoading) return;
     const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === 'user');
     if (!lastUserMsg) return;
-    const lastUserIdx = conversationHistory.findLastIndex(m => m.role === 'user');
-    setConversationHistory(prev => prev.slice(0, lastUserIdx));
     setInput(lastUserMsg.content);
     pendingResendRef.current = true;
   }, [conversationHistory, isLoading]);
@@ -983,7 +981,7 @@ export const LLMPlayground = ({
                     {renderChatInput()}
                   </div>
                   {apiKey && (
-                    <>
+                    <div className="llm-chat-buttons">
                       {canResend && (
                         <button
                           onClick={handleResend}
@@ -992,7 +990,7 @@ export const LLMPlayground = ({
                           aria-label="Resend last prompt"
                           title="Resend last prompt"
                         >
-                          <IconResend size={16} className="llm-chat-send-icon" />
+                          <IconResend size={16} />
                         </button>
                       )}
                       <button
@@ -1007,7 +1005,7 @@ export const LLMPlayground = ({
                           <IconSend size={16} fillColor="#000" className="llm-chat-send-icon" />
                         )}
                       </button>
-                    </>
+                    </div>
                   )}
                 </div>
               </>
