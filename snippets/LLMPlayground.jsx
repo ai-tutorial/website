@@ -324,12 +324,13 @@ export const LLMPlayground = ({
     textarea.style.height = `${newHeight}px`;
   }, []);
 
-  // Auto-resize chat mode textarea
+  // Set initial chat textarea height based on content
   useEffect(() => {
     if (textareaRef.current) {
-      autoResizeTextarea(textareaRef.current);
+      textareaRef.current.style.height = '0px';
+      textareaRef.current.style.height = `${Math.max(textareaRef.current.scrollHeight, 60)}px`;
     }
-  }, [input, autoResizeTextarea]);
+  }, []);
 
   // Scroll to bottom when new messages are added (but not on initial mount)
   useEffect(() => {
@@ -786,10 +787,7 @@ export const LLMPlayground = ({
         <textarea
           ref={textareaRef}
           value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            autoResizeTextarea(e.target);
-          }}
+          onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message"
           disabled={isLoading}
           className="llm-chat-input-textarea"
