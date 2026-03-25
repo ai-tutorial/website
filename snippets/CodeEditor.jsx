@@ -1,8 +1,3 @@
-
-const STORAGE_KEY = 'openai_api_key';
-const GEMINI_STORAGE_KEY = 'gemini_api_key';
-const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
-
 /**
  * CodeEditor component for embedding interactive code examples in StackBlitz
  *
@@ -23,6 +18,11 @@ export const CodeEditor = ({
   functionName,
   theme: userTheme
 }) => {
+  // Constants must be inside the component — snippets are eval'd, not imported as modules
+  const STORAGE_KEY = 'openai_api_key';
+  const GEMINI_STORAGE_KEY = 'gemini_api_key';
+  const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
+
   // Validate required parameter
   if (!functionName) {
     console.warn('CodeEditor: functionName parameter is required');
