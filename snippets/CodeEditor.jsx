@@ -29,7 +29,7 @@ export const CodeEditor = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isStuck, setIsStuck] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
-  const [loadingStep, setLoadingStep] = useState(0); // 0=idle, 1=cloning, 2=mounting, 3=configuring
+  const [isLoading, setIsLoading] = useState(false);
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -188,14 +188,7 @@ AI_PROVIDER=openai
     // Listen for API key changes from other widgets on the same page
     const handleApiKeyChanged = () => {
       if (isApiKeyConfigured()) {
-        // Dismiss the API key dialog if it's showing
         setShowApiKeyDialog(false);
-
-        // Update .env file in the VM if connected
-        if (vmRef.current) {
-          hasCreatedEnvRef.current = false;
-          updateEnvFile(vmRef.current);
-        }
       }
     };
 
@@ -374,9 +367,6 @@ AI_PROVIDER=openai
     });
   };
 
-  // ==================== STYLES ====================
-  // Styles are now in style.css - using CSS classes instead
-
   const LOAD_TIMEOUT_MS = 10000;
   const iframeElRef = useRef(null);
   const hasReloadedRef = useRef(false);
@@ -417,7 +407,7 @@ AI_PROVIDER=openai
       } catch (_) {
         // Best effort on second load
       }
-      setLoadingStep(0);
+      setIsLoading(false);
       return;
     }
 
@@ -436,29 +426,12 @@ AI_PROVIDER=openai
       // Write env files
       await updateEnvFile(vm);
 
-      // Check if env/run.conf exists — if it does, FS is healthy, no reload needed
-      let needsReload = true;
-      try {
-        const snapshot = await vm.getFsSnapshot();
-        if (snapshot && snapshot['env/run.conf']) {
-          needsReload = false;
-        }
-      } catch (_) {
-        // Can't verify — assume reload needed
-      }
-
-      if (needsReload) {
-        // Show overlay and reload — first load had corrupted FS
-        setLoadingStep(1);
-        hasReloadedRef.current = true;
-        vmRef.current = null;
-        hasCreatedEnvRef.current = false;
-        setIframeKey(prev => prev + 1);
-      } else {
-        // FS is healthy — no reload needed
-        vmRef.current = vm;
-        hasReloadedRef.current = true;
-      }
+      // Always reload once — StackBlitz FS is often corrupted on first load
+      setIsLoading(true);
+      hasReloadedRef.current = true;
+      vmRef.current = null;
+      hasCreatedEnvRef.current = false;
+      setIframeKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to connect to StackBlitz VM:', error);
       if (typeof window !== 'undefined' && window.gtag) {
@@ -468,13 +441,15 @@ AI_PROVIDER=openai
           error_message: error.message,
         });
       }
-      // Timeout or connection failure — show overlay and try reload
+      // Timeout or connection failure — show overlay and retry after delay
       if (!hasReloadedRef.current) {
-        setLoadingStep(1);
+        setIsLoading(true);
         hasReloadedRef.current = true;
-        setIframeKey(prev => prev + 1);
+        setTimeout(() => {
+          setIframeKey(prev => prev + 1);
+        }, 2000);
       } else {
-        setLoadingStep(0);
+        setIsLoading(false);
         setIsStuck(true);
       }
     }
@@ -731,28 +706,16 @@ AI_PROVIDER=openai
             allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; xr-spatial-tracking"
             sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
           />
-          {loadingStep > 0 && !isStuck && (
+          {isLoading && !isStuck && (
             <div className="code-editor-loading-overlay">
               <div className="code-editor-loading-box">
                 <div className="code-editor-loading-title">Setting up environment</div>
                 <div className="code-editor-loading-steps">
-                  <div className={`code-editor-loading-step ${loadingStep >= 1 ? 'active' : ''} ${loadingStep > 1 ? 'done' : ''}`}>
+                  <div className="code-editor-loading-step active">
                     <span className="code-editor-loading-step-icon">
-                      {loadingStep > 1 ? '✓' : <span className="code-editor-loading-spinner" />}
+                      <span className="code-editor-loading-spinner" />
                     </span>
                     <span>Cloning repo from GitHub</span>
-                  </div>
-                  <div className={`code-editor-loading-step ${loadingStep >= 2 ? 'active' : ''} ${loadingStep > 2 ? 'done' : ''}`}>
-                    <span className="code-editor-loading-step-icon">
-                      {loadingStep > 2 ? '✓' : loadingStep === 2 ? <span className="code-editor-loading-spinner" /> : '○'}
-                    </span>
-                    <span>Mounting environment in StackBlitz</span>
-                  </div>
-                  <div className={`code-editor-loading-step ${loadingStep >= 3 ? 'active' : ''}`}>
-                    <span className="code-editor-loading-step-icon">
-                      {loadingStep === 3 ? <span className="code-editor-loading-spinner" /> : '○'}
-                    </span>
-                    <span>Configuring environment</span>
                   </div>
                 </div>
               </div>
@@ -770,7 +733,7 @@ AI_PROVIDER=openai
                 <button
                   type="button"
                   className="code-editor-button"
-                  onClick={() => { hasReloadedRef.current = false; setLoadingStep(1); handleRetry(); }}
+                  onClick={() => { hasReloadedRef.current = false; setIsLoading(true); handleRetry(); }}
                   style={{ marginTop: '8px' }}
                 >
                   Retry
