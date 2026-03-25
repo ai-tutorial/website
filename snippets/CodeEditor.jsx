@@ -1,7 +1,11 @@
 
+const STORAGE_KEY = 'openai_api_key';
+const GEMINI_STORAGE_KEY = 'gemini_api_key';
+const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
+
 /**
  * CodeEditor component for embedding interactive code examples in StackBlitz
- * 
+ *
  * @param {Object} props - Component props
  * @param {string} [props.file='src/hello_world.ts'] - Path to the file to display
  * @param {string|Object} [props.lines] - Line numbers to highlight (e.g., "10-20" or {start: 10, end: 20})
@@ -64,9 +68,6 @@ export const CodeEditor = ({
    * Helper functions for managing OpenAI API key in localStorage
    * Note: Communication with StackBlitz is handled directly via SDK in CodeEmbed component
    */
-  const STORAGE_KEY = 'openai_api_key';
-  const GEMINI_STORAGE_KEY = 'gemini_api_key';
-  const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
   const [selectedProvider, setSelectedProvider] = useState(() => {
     if (typeof window === 'undefined') return 'gemini';
     return localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
@@ -95,8 +96,6 @@ export const CodeEditor = ({
     }
   };
 
-
-
   /**
    * Save the OpenAI API key to localStorage
    * @param {string} apiKey - The OpenAI API key to save
@@ -118,36 +117,12 @@ export const CodeEditor = ({
   /**
    * Create or update .env file in StackBlitz VM
    */
-  const updateEnvFile = async (vm) => {
-    if (!vm) {
-      return;
-    }
+  const buildEnvContent = () => {
+    const openaiKey = localStorage.getItem(STORAGE_KEY)?.trim();
+    const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY)?.trim();
 
-    try {
-      // Use isApiKeyConfigured to check if key is properly configured
-      const configured = isApiKeyConfigured();
-      let envContent;
-
-      if (configured) {
-        const openaiKey = localStorage.getItem(STORAGE_KEY);
-        const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY);
-        const lines = ['# Using the API key(s) you configured. This file will be created when the dialog is loaded.'];
-
-        if (openaiKey && openaiKey.trim()) {
-          lines.push(`OPENAI_MODEL=gpt-4.1-nano`);
-          lines.push(`OPENAI_API_KEY=${openaiKey.trim()}`);
-        }
-        if (geminiKey && geminiKey.trim()) {
-          lines.push(`GEMINI_MODEL=gemini-2.5-flash-lite`);
-          lines.push(`GOOGLE_GENERATIVE_AI_API_KEY=${geminiKey.trim()}`);
-        }
-        const activeProvider = geminiKey && geminiKey.trim() ? 'gemini' : 'openai';
-        lines.push(`AI_PROVIDER=${activeProvider}`);
-
-        envContent = lines.join('\n');
-      } else {
-        // Use mock keys if not configured
-        envContent = `OPENAI_MODEL=gpt-4.1-nano
+    if (!openaiKey && !geminiKey) {
+      return `OPENAI_MODEL=gpt-4.1-nano
 OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 GEMINI_MODEL=gemini-2.5-flash-lite
 GOOGLE_GENERATIVE_AI_API_KEY=
@@ -158,20 +133,32 @@ AI_PROVIDER=openai
 # 2. For OpenAI: Go to https://platform.openai.com/api-keys
 # 3. Enter it in the configuration form above this editor
 # 4. The .env file will be automatically updated with your key`;
-      }
+    }
 
-      // Create run.conf with the file name in env directory
-      const baseFilePath = file || 'src/hello_world.ts';
-      const configContent = `file=${baseFilePath}`;
+    const envLines = ['# Using the API key(s) you configured. This file will be created when the dialog is loaded.'];
+    if (openaiKey) {
+      envLines.push(`OPENAI_MODEL=gpt-4.1-nano`);
+      envLines.push(`OPENAI_API_KEY=${openaiKey}`);
+    }
+    if (geminiKey) {
+      envLines.push(`GEMINI_MODEL=gemini-2.5-flash-lite`);
+      envLines.push(`GOOGLE_GENERATIVE_AI_API_KEY=${geminiKey}`);
+    }
+    envLines.push(`AI_PROVIDER=${geminiKey ? 'gemini' : 'openai'}`);
+    return envLines.join('\n');
+  };
 
+  const updateEnvFile = async (vm) => {
+    if (!vm) return;
+
+    try {
       await vm.applyFsDiff({
         create: {
-          'env/.env': envContent,
-          'env/run.conf': configContent
+          'env/.env': buildEnvContent(),
+          'env/run.conf': `file=${file}`
         },
         destroy: []
       });
-
       hasCreatedEnvRef.current = true;
     } catch (error) {
       console.error('Failed to write env files:', error);
@@ -302,21 +289,17 @@ AI_PROVIDER=openai
 
   // Build the file path with optional line numbers for display
   let filePath = baseFilePath;
-  if (lines) {
-    if (typeof lines === 'string' && lines.trim()) {
-      const lineParts = lines.split('-');
-      if (lineParts.length === 2) {
-        filePath = `${filePath}:L${lineParts[0].trim()}-L${lineParts[1].trim()}`;
-      } else if (lineParts[0] && lineParts[0].trim()) {
-        filePath = `${filePath}:L${lineParts[0].trim()}`;
-      }
-    } else if (lines && typeof lines === 'object' && lines.start !== undefined) {
-      if (lines.end !== undefined) {
-        filePath = `${filePath}:L${lines.start}-L${lines.end}`;
-      } else {
-        filePath = `${filePath}:L${lines.start}`;
-      }
+  if (typeof lines === 'string' && lines.trim()) {
+    const lineParts = lines.split('-');
+    if (lineParts.length === 2) {
+      filePath = `${filePath}:L${lineParts[0].trim()}-L${lineParts[1].trim()}`;
+    } else {
+      filePath = `${filePath}:L${lineParts[0].trim()}`;
     }
+  } else if (typeof lines === 'object' && lines.start !== undefined) {
+    filePath = lines.end !== undefined
+      ? `${filePath}:L${lines.start}-L${lines.end}`
+      : `${filePath}:L${lines.start}`;
   }
 
   // Build StackBlitz iframe URL
@@ -738,7 +721,7 @@ AI_PROVIDER=openai
                 <button
                   type="button"
                   className="code-editor-button"
-                  onClick={() => { hasReloadedRef.current = false; setIsLoading(true); handleRetry(); }}
+                  onClick={() => { setIsLoading(true); handleRetry(); }}
                   style={{ marginTop: '8px' }}
                 >
                   Retry
