@@ -20,7 +20,8 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 
 **The Problem:**
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Let's do some math"
   defaultMode="chat"
   defaultInput={`What's 15% tip on a $47.83 bill?`}
   response={`$7.17`}
@@ -29,7 +30,8 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 
 But what if you need to debug a wrong answer? You can't see the reasoning. The expected response would be something like (note: the response shown below is a placeholder example, not a real API response):
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Chain-of-Thought"
   defaultMode="advanced"
   defaultMessages={[
     {"role": "system", "content": "Show your reasoning steps briefly before the final answer."},
@@ -52,7 +54,8 @@ But what if you need to debug a wrong answer? You can't see the reasoning. The e
 
 **Production Pattern:**
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: CoT Production Pattern"
   defaultMode="advanced"
   defaultMessages={[
     {"role": "system", "content": "You are a helpful assistant that solves problems step by step."},

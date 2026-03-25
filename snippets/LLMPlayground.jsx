@@ -593,6 +593,16 @@ export const LLMPlayground = ({
     </>
   );
 
+  const renderMarkdown = (text) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   const renderChatMessage = (message, index, isPlaceholder = false) => {
     const isUser = message.role === 'user';
     return (
@@ -603,7 +613,7 @@ export const LLMPlayground = ({
         <div
           className={`llm-chat-bubble ${isUser ? 'llm-chat-bubble-user' : 'llm-chat-bubble-assistant'} ${isPlaceholder ? 'llm-chat-bubble-placeholder' : ''}`}
         >
-          {message.content}
+          {renderMarkdown(message.content)}
         </div>
       </div>
     );
@@ -995,7 +1005,7 @@ export const LLMPlayground = ({
                     ) : (
                       <>
                         {output ? (
-                          <div className="llm-response-box">{output}</div>
+                          <div className="llm-response-box">{renderMarkdown(output)}</div>
                         ) : isLoading ? (
                           <div className="llm-tab-loading">
                             <span className="llm-tab-loading-content">

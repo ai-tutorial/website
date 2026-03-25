@@ -23,7 +23,8 @@ import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
 
 If we put all these components together, we get the following prompt. This promt looks more complex than the previous one, but this reflects the complexity of the task and the context needed to complete it when you use the API. 
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Structured Prompt Anatomy"
   defaultMode="advanced"
   defaultMessages={[
     {
@@ -90,7 +91,8 @@ Compare these two approaches to structuring prompts:
 
 #### ❌ Antipattern
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Unstructured Prompt (Antipattern)"
   defaultMode="chat"
   defaultInput={`System: You are a helpful assistant.
 User question: What is the return policy?
@@ -101,7 +103,8 @@ Previous conversation: Customer asked about shipping times. We responded that st
 
 #### ✅ Best Practice
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: XML-Tagged Prompt"
   defaultMode="chat"
   defaultInput={`<role>You are a helpful assistant</role>
 
@@ -164,7 +167,8 @@ This approach uses prompt instructions to request XML output combined with XML p
 - Edge cases need clarification
 
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Few-Shot Classification"
   defaultMode="chat"
   defaultInput={`<task>Classify customer sentiment</task>
 

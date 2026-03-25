@@ -87,7 +87,8 @@ LLMs are trained to predict the next plausible token. They're not fact-checking 
 
 Run the same prompt twice, get different answers. That's by design (temperature \> 0). Try running the same prompt multiple times with different temperature settings to see how the model generates different responses:
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Temperature & Non-Determinism"
   defaultInput="Summarize this customer complaint in 10 words:
 
 
@@ -156,6 +157,7 @@ When you want structured output, give the LLM a pattern to complete. Compare the
 First, try the vague prompt and see how the LLM responds in prose. Then try the pattern-based approach to get structured output:
 
 <LLMPlayground
+  title="Playground: Vague Prompt (Antipattern)"
   defaultInput={`//  Vague: "Extract the customer's name and email"
 // LLM might respond in prose: "The customer's name is John and his email is..."
 
@@ -167,6 +169,7 @@ Extract the customer's name and email from: "Hi, I'm John Smith and you can reac
 #### ✅ Best Practice
 
 <LLMPlayground
+  title="Playground: Pattern-Based Prompt"
   defaultInput={`// Pattern to complete:
 // LLM completes the pattern: "Name: John Smith\nEmail: john@email.com"
 
