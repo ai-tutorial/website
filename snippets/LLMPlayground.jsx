@@ -166,13 +166,6 @@ export const LLMPlayground = ({
     </svg>
   );
 
-  const IconResend = ({ size = 16, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <polyline points="1 4 1 10 7 10"></polyline>
-      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-    </svg>
-  );
-
   const IconInfo = ({ size = 12, className = '' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <circle cx="12" cy="12" r="10"></circle>
@@ -582,26 +575,6 @@ export const LLMPlayground = ({
 
   // Removed handleKeyDown - Enter should add new line, submit only via play button
 
-  const pendingResendRef = useRef(false);
-
-  const handleResend = useCallback(() => {
-    if (isLoading) return;
-    const lastUserMsg = [...conversationHistory].reverse().find(m => m.role === 'user');
-    if (!lastUserMsg) return;
-    setInput(lastUserMsg.content);
-    pendingResendRef.current = true;
-  }, [conversationHistory, isLoading]);
-
-  useEffect(() => {
-    if (pendingResendRef.current && input) {
-      pendingResendRef.current = false;
-      handleSubmit();
-    }
-  }, [input, handleSubmit]);
-
-  const canResend = mode === 'chat' && conversationHistory.length >= 2 &&
-    conversationHistory[conversationHistory.length - 1]?.role === 'assistant';
-
   // ==================== RENDER HELPERS ====================
   const errorMessage = typeof error === 'object' ? error.message : error;
   const isRateLimitError = typeof error === 'object' && error.isRateLimit;
@@ -981,31 +954,18 @@ export const LLMPlayground = ({
                     {renderChatInput()}
                   </div>
                   {apiKey && (
-                    <div className="llm-chat-buttons">
-                      {canResend && (
-                        <button
-                          onClick={handleResend}
-                          disabled={isLoading}
-                          className="llm-chat-send-button llm-chat-resend-button"
-                          aria-label="Resend last prompt"
-                          title="Resend last prompt"
-                        >
-                          <IconResend size={16} />
-                        </button>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={isLoading || !isFormValid}
+                      className="llm-chat-send-button"
+                      aria-label="Send message"
+                    >
+                      {isLoading ? (
+                        <IconLoadingSpinner size={16} strokeColor="#000" strokeWidth="2.5" strokeLinecap="round" className="llm-chat-send-spinner" />
+                      ) : (
+                        <IconSend size={16} fillColor="#000" className="llm-chat-send-icon" />
                       )}
-                      <button
-                        onClick={handleSubmit}
-                        disabled={isLoading || !isFormValid}
-                        className="llm-chat-send-button"
-                        aria-label="Send message"
-                      >
-                        {isLoading ? (
-                          <IconLoadingSpinner size={16} strokeColor="#000" strokeWidth="2.5" strokeLinecap="round" className="llm-chat-send-spinner" />
-                        ) : (
-                          <IconSend size={16} fillColor="#000" className="llm-chat-send-icon" />
-                        )}
-                      </button>
-                    </div>
+                    </button>
                   )}
                 </div>
               </>
