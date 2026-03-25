@@ -22,6 +22,7 @@
           "prompting/structured-prompt-engineering",
           "prompting/advanced-techniques",
           "prompting/prompt-optimization-and-testing",
+          "prompting/prompt-security",
           "prompting/model-selection-and-cost-optimization",
           "prompting/production-considerations",
           "prompting/hands-on-exercise",

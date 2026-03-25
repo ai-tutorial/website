@@ -271,6 +271,19 @@ export const LLMPlayground = ({
     const storedKey = localStorage.getItem(storageKey);
     if (storedKey) {
       setApiKey(storedKey);
+    } else {
+      // Check other providers for a stored key
+      for (const [provKey, prov] of Object.entries(PROVIDERS)) {
+        if (provKey === currentProvider) continue;
+        const otherKey = localStorage.getItem(prov.storageKey);
+        if (otherKey) {
+          setApiKey(otherKey);
+          setProvider(provKey);
+          setModel(prov.models[0].value);
+          localStorage.setItem(PROVIDER_STORAGE_KEY, provKey);
+          break;
+        }
+      }
     }
 
     // Listen for API key changes from other widgets on the same page
