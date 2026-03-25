@@ -1,8 +1,154 @@
 const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
+// ==================== CONSTANTS ====================
+const OPENAI_STORAGE_KEY = 'openai_api_key';
+const GEMINI_STORAGE_KEY = 'gemini_api_key';
+const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
+const SETTINGS_PANEL_KEY = 'llm_playground_settings_open';
+const SETTINGS_PANEL_WIDTH = 220;
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const MAX_TOKENS = 2000;
+
+const OPENAI_MODELS = [
+  { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
+  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+  { value: 'gpt-4.1', label: 'GPT-4.1' },
+  { value: 'o4-mini', label: 'o4 Mini' },
+  { value: 'o3', label: 'o3' },
+];
+
+const GEMINI_MODELS = [
+  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+];
+
+const PROVIDERS = {
+  gemini: { label: 'Gemini', models: GEMINI_MODELS, storageKey: GEMINI_STORAGE_KEY, apiUrl: GEMINI_API_URL },
+  openai: { label: 'OpenAI', models: OPENAI_MODELS, storageKey: OPENAI_STORAGE_KEY, apiUrl: OPENAI_API_URL },
+};
+
+// ==================== ICON HELPERS ====================
+const IconWarningSun = ({ size = 14, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+  </svg>
+);
+
+const IconLoadingSpinner = ({ size = 14, className = '', strokeColor = 'currentColor', strokeWidth = '2', strokeLinecap = 'butt' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={strokeColor}
+    strokeWidth={strokeWidth}
+    strokeLinecap={strokeLinecap}
+    className={className}
+  >
+    <path d="M21 12a9 9 0 11-6.219-8.56"></path>
+  </svg>
+);
+
+const IconWarningTriangle = ({ size = 16, strokeColor = '#f59e0b', className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className={className}>
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+    <line x1="12" y1="9" x2="12" y2="13"></line>
+    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+  </svg>
+);
+
+const IconClose = ({ size = 10, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
+const IconPlus = ({ size = 12, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+);
+
+const IconError = ({ size = 14, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="8" x2="12" y2="12"></line>
+    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+  </svg>
+);
+
+const IconTrash = ({ size = 14, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    <line x1="10" y1="11" x2="10" y2="17"></line>
+    <line x1="14" y1="11" x2="14" y2="17"></line>
+  </svg>
+);
+
+const IconSend = ({ size = 16, fillColor = '#000', className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill={fillColor}
+    className={className}
+  >
+    <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z" />
+  </svg>
+);
+
+const IconCheckmark = ({ size = 14, strokeColor = '#22c55e', className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className={className}>
+    <polyline points="9 11 12 14 22 4"></polyline>
+    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+  </svg>
+);
+
+const IconXStatus = ({ size = 14, strokeColor = '#ef4444', className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className={className}>
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="9" y1="9" x2="15" y2="15"></line>
+    <line x1="15" y1="9" x2="9" y2="15"></line>
+  </svg>
+);
+
+const IconChevron = ({ size = 12, isOpen = false, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    {isOpen ? (
+      <polyline points="18 15 12 9 6 15"></polyline>
+    ) : (
+      <polyline points="6 9 12 15 18 9"></polyline>
+    )}
+  </svg>
+);
+
+const IconInfo = ({ size = 12, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <circle cx="12" cy="12" r="10"></circle>
+    <line x1="12" y1="16" x2="12" y2="12"></line>
+    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+  </svg>
+);
+
 /**
  * LLMPlayground component for interactive LLM testing
- * 
+ *
  * @param {Object} props - Component props
  * @param {string} [props.defaultInput=''] - Default input text
  * @param {string} [props.defaultModel='gpt-4o-mini'] - Default model
@@ -22,158 +168,11 @@ export const LLMPlayground = ({
   keepInput = false,
   defaultMode = 'chat',
   defaultMessages = [],
-
   response = '',
   forceSettingsOpen = false,
   title,
   theme: userTheme
 }) => {
-  // ==================== CONSTANTS ====================
-  const OPENAI_STORAGE_KEY = 'openai_api_key';
-  const GEMINI_STORAGE_KEY = 'gemini_api_key';
-  const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
-  const SETTINGS_PANEL_KEY = 'llm_playground_settings_open';
-  const SETTINGS_PANEL_WIDTH = 220;
-  const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-  const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-  const MAX_TOKENS = 2000;
-
-  const OPENAI_MODELS = [
-    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
-    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
-    { value: 'gpt-4.1', label: 'GPT-4.1' },
-    { value: 'o4-mini', label: 'o4 Mini' },
-    { value: 'o3', label: 'o3' },
-  ];
-
-  const GEMINI_MODELS = [
-    { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite' },
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-  ];
-
-  const PROVIDERS = {
-    gemini: { label: 'Gemini', models: GEMINI_MODELS, storageKey: GEMINI_STORAGE_KEY, apiUrl: GEMINI_API_URL },
-    openai: { label: 'OpenAI', models: OPENAI_MODELS, storageKey: OPENAI_STORAGE_KEY, apiUrl: OPENAI_API_URL },
-  };
-
-
-  // ==================== ICON HELPERS ====================
-  const IconWarningSun = ({ size = 14, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-    </svg>
-  );
-
-  const IconLoadingSpinner = ({ size = 14, className = '', strokeColor = 'currentColor', strokeWidth = '2', strokeLinecap = 'butt' }) => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={strokeColor}
-      strokeWidth={strokeWidth}
-      strokeLinecap={strokeLinecap}
-      className={className}
-    >
-      <path d="M21 12a9 9 0 11-6.219-8.56"></path>
-    </svg>
-  );
-
-  const IconWarningTriangle = ({ size = 16, strokeColor = '#f59e0b', className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className={className}>
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-      <line x1="12" y1="9" x2="12" y2="13"></line>
-      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-    </svg>
-  );
-
-  const IconClose = ({ size = 10, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
-      <line x1="18" y1="6" x2="6" y2="18"></line>
-      <line x1="6" y1="6" x2="18" y2="18"></line>
-    </svg>
-  );
-
-  const IconPlus = ({ size = 12, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={className}>
-      <line x1="12" y1="5" x2="12" y2="19"></line>
-      <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-  );
-
-  const IconError = ({ size = 14, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="12" y1="8" x2="12" y2="12"></line>
-      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-    </svg>
-  );
-  
-  const IconTrash = ({ size = 14, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <polyline points="3 6 5 6 21 6"></polyline>
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-      <line x1="10" y1="11" x2="10" y2="17"></line>
-      <line x1="14" y1="11" x2="14" y2="17"></line>
-    </svg>
-  );
-
-  const IconSend = ({ size = 16, fillColor = '#000', className = '' }) => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill={fillColor}
-      className={className}
-    >
-      <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z" />
-    </svg>
-  );
-
-  const IconCheckmark = ({ size = 14, strokeColor = '#22c55e', className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className={className}>
-      <polyline points="9 11 12 14 22 4"></polyline>
-      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-    </svg>
-  );
-
-  const IconXStatus = ({ size = 14, strokeColor = '#ef4444', className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2" className={className}>
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-      <line x1="9" y1="9" x2="15" y2="15"></line>
-      <line x1="15" y1="9" x2="9" y2="15"></line>
-    </svg>
-  );
-
-  const IconChevron = ({ size = 12, isOpen = false, className = '' }) => (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      {isOpen ? (
-        <polyline points="18 15 12 9 6 15"></polyline>
-      ) : (
-        <polyline points="6 9 12 15 18 9"></polyline>
-      )}
-    </svg>
-  );
-
-  const IconInfo = ({ size = 12, className = '' }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="12" y1="16" x2="12" y2="12"></line>
-      <line x1="12" y1="8" x2="12.01" y2="8"></line>
-    </svg>
-  );
 
   // ==================== STYLES ====================
   // Styles are now in style.css - using CSS classes instead
@@ -302,22 +301,6 @@ export const LLMPlayground = ({
   useEffect(() => {
     responseCountRef.current = responseCount;
   }, [responseCount]);
-
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
-      }
-    };
-  }, []);
 
   // ==================== HELPER FUNCTIONS ====================
   const filterComments = useCallback((text) => {
@@ -800,13 +783,6 @@ export const LLMPlayground = ({
           placeholder="Type a message"
           disabled={isLoading}
           className="llm-chat-input-textarea"
-          onBlur={(e) => {
-            const container = e.target.parentElement;
-            if (container) {
-              container.style.borderColor = '#2a3942';
-              container.style.backgroundColor = '#2a3942';
-            }
-          }}
         />
       </div>
     );
@@ -818,12 +794,6 @@ export const LLMPlayground = ({
         <div
           key={index}
           className="llm-advanced-message-box"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'var(--llm-border-hover)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--llm-border-color)';
-          }}
         >
           <div className="llm-advanced-message-header">
             <div className="llm-advanced-message-header-row">
@@ -842,9 +812,6 @@ export const LLMPlayground = ({
                   message.role === 'user' ? 'llm-advanced-role-select-user' :
                     'llm-advanced-role-select-assistant'
                   }`}
-                onBlur={(e) => {
-                  e.target.style.boxShadow = 'none';
-                }}
               >
                 <option value="system">system</option>
                 <option value="user">user</option>
@@ -897,12 +864,6 @@ export const LLMPlayground = ({
       </button>
     </div>
   );
-
-
-  const renderChatResponse = () => {
-    // Chat interface is now integrated into the main layout
-    return null;
-  };
 
   // ==================== MAIN RENDER ====================
   return (
@@ -1151,10 +1112,6 @@ export const LLMPlayground = ({
                   onChange={(e) => setModel(e.target.value)}
                   disabled={isLoading}
                   className="llm-settings-select"
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'var(--llm-border-color)';
-                    e.target.style.boxShadow = 'none';
-                  }}
                 >
                   {PROVIDERS[provider].models.map((m) => (
                     <option key={m.value} value={m.value} className="llm-settings-option">
