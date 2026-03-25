@@ -384,9 +384,8 @@ AI_PROVIDER=openai
   };
 
   // Handle iframe load event — called via onLoad prop to avoid race conditions.
-  // StackBlitz embeds can get stuck or have a corrupted FS on first load.
-  // A second load (reload) fixes it. So we: connect, write env files, then
-  // always reload once. The user sees a loading overlay the whole time.
+  // On success: connect SDK, write env files, done — no reload needed.
+  // On failure: the FS write didn't land, so reload and retry.
   // Known issues:
   //   https://github.com/stackblitz/core/issues/2849
   //   https://github.com/stackblitz/core/issues/2847
@@ -395,43 +394,46 @@ AI_PROVIDER=openai
     const iframe = iframeElRef.current;
     if (!iframe) return;
 
-    // After reload, we're done — reveal the iframe
+    // After a connection failure: two reloads to recover
     if (hasReloadedRef.current) {
+      if (hasCreatedEnvRef.current) {
+        // Reload #2 — write env again (first write may not have stuck), then reveal
+        try {
+          const sdk = await loadSDK();
+          const vm = await sdk.connect(iframe);
+          vmRef.current = vm;
+          await updateEnvFile(vm);
+        } catch (_) {
+          // Best effort
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Reload #1 — connect, write env (may not stick on corrupted FS), then reload again
       try {
         const sdk = await loadSDK();
         const vm = await sdk.connect(iframe);
-        vmRef.current = vm;
-        if (!hasCreatedEnvRef.current) {
-          await updateEnvFile(vm);
-        }
+        await updateEnvFile(vm);
       } catch (_) {
-        // Best effort on second load
+        // Best effort on first reload
       }
-      setIsLoading(false);
+      setIframeKey(prev => prev + 1);
       return;
     }
 
+    let vm;
     try {
       const sdk = await loadSDK();
 
       if (vmRef.current) return;
 
-      const vm = await Promise.race([
+      vm = await Promise.race([
         sdk.connect(iframe),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('connect timeout')), LOAD_TIMEOUT_MS)
         )
       ]);
-
-      // Write env files
-      await updateEnvFile(vm);
-
-      // Always reload once — StackBlitz FS is often corrupted on first load
-      setIsLoading(true);
-      hasReloadedRef.current = true;
-      vmRef.current = null;
-      hasCreatedEnvRef.current = false;
-      setIframeKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to connect to StackBlitz VM:', error);
       if (typeof window !== 'undefined' && window.gtag) {
@@ -441,7 +443,7 @@ AI_PROVIDER=openai
           error_message: error.message,
         });
       }
-      // Timeout or connection failure — show overlay and retry after delay
+      // Connection failed — FS may be corrupted, reload to retry
       if (!hasReloadedRef.current) {
         setIsLoading(true);
         hasReloadedRef.current = true;
@@ -452,7 +454,12 @@ AI_PROVIDER=openai
         setIsLoading(false);
         setIsStuck(true);
       }
+      return;
     }
+
+    vmRef.current = vm;
+    await updateEnvFile(vm);
+    setIsLoading(false);
   };
 
   // Safari is not supported by StackBlitz WebContainers
