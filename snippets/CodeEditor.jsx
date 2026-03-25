@@ -33,7 +33,7 @@ export const CodeEditor = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isStuck, setIsStuck] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -353,7 +353,6 @@ AI_PROVIDER=openai
   const LOAD_TIMEOUT_MS = 10000;
   const iframeElRef = useRef(null);
   const reloadCountRef = useRef(0);
-
   const handleRetry = () => {
     vmRef.current = null;
     hasCreatedEnvRef.current = false;
@@ -384,29 +383,15 @@ AI_PROVIDER=openai
     const iframe = iframeElRef.current;
     if (!iframe) return;
 
-    // After a connection failure: two reloads to recover
+    // After first iframe refresh — try to connect, then reveal
     if (reloadCountRef.current > 0) {
-      if (reloadCountRef.current >= 2) {
-        // Reload #2 — write env again (first write may not have stuck), then reveal
-        try {
-          const vm = await connectToVM(iframe);
-          vmRef.current = vm;
-          await updateEnvFile(vm);
-        } catch (_) {
-          // Best effort
-        }
-        setIsLoading(false);
-        return;
-      }
-
-      // Reload #1 — connect, write env (may not stick on corrupted FS), then full page reload
       try {
         const vm = await connectToVM(iframe);
+        vmRef.current = vm;
         await updateEnvFile(vm);
       } catch (_) {
         // Best effort
       }
-      window.location.reload();
       return;
     }
 
@@ -423,7 +408,6 @@ AI_PROVIDER=openai
 
       vmRef.current = vm;
       await updateEnvFile(vm);
-      setIsLoading(false);
     } catch (error) {
       console.error('Failed to connect to StackBlitz VM:', error);
       if (typeof window !== 'undefined' && window.gtag) {
@@ -433,8 +417,7 @@ AI_PROVIDER=openai
           error_message: error.message,
         });
       }
-      // Connection failed — FS may be corrupted, start two-reload recovery
-      setIsLoading(true);
+      // Connection failed — refresh iframe once to recover
       reloadCountRef.current = 1;
       setTimeout(() => {
         setIframeKey(prev => prev + 1);
@@ -693,21 +676,7 @@ AI_PROVIDER=openai
             allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; xr-spatial-tracking"
             sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
           />
-          {isLoading && !isStuck && (
-            <div className="code-editor-loading-overlay">
-              <div className="code-editor-loading-box">
-                <div className="code-editor-loading-title">Setting up environment</div>
-                <div className="code-editor-loading-steps">
-                  <div className="code-editor-loading-step active">
-                    <span className="code-editor-loading-step-icon">
-                      <span className="code-editor-loading-spinner" />
-                    </span>
-                    <span>Cloning repo from GitHub</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+
           {isStuck && (
             <div className="code-editor-stuck-overlay">
               <div className="code-editor-stuck-box">
@@ -720,7 +689,7 @@ AI_PROVIDER=openai
                 <button
                   type="button"
                   className="code-editor-button"
-                  onClick={() => { setIsLoading(true); handleRetry(); }}
+                  onClick={handleRetry}
                   style={{ marginTop: '8px' }}
                 >
                   Retry
