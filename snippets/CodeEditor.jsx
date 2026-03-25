@@ -399,15 +399,14 @@ AI_PROVIDER=openai
         return;
       }
 
-      // Reload #1 — connect, write env (may not stick on corrupted FS), then reload again
+      // Reload #1 — connect, write env (may not stick on corrupted FS), then full page reload
       try {
         const vm = await connectToVM(iframe);
         await updateEnvFile(vm);
       } catch (_) {
         // Best effort
       }
-      reloadCountRef.current = 2;
-      setIframeKey(prev => prev + 1);
+      window.location.reload();
       return;
     }
 
