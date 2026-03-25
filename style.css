@@ -599,6 +599,14 @@
   transform: scale(0.95);
 }
 
+.llm-chat-resend-button {
+  background-color: var(--llm-bg-secondary);
+}
+
+.llm-chat-resend-button:hover:not(:disabled) {
+  background-color: var(--llm-text-disabled);
+}
+
 /* Settings Panel Styles */
 .llm-settings-panel {
   width: 200px;
