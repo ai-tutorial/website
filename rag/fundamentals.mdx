@@ -56,11 +56,11 @@ That's it. Everything else — chunking, embeddings, reranking, hybrid search �
 
 ## Basic RAG Implementation
 
-The simplest RAG you can build: fetch today's news from Reuters and ask the LLM about it. The model's training data has a cutoff — it can't know what happened today. But with RAG, it can.
+The company documents live in a JSON file (`assets/company_docs.json`), but they could come from anywhere — a database, an API, a CMS, a web scraper. The RAG pattern is the same regardless of the data source.
 
 <CodeEditor
   file="src/rag/basic_rag.ts"
-  lines="50-81"
+  lines="52-84"
   functionName="main"
   title="Basic RAG Implementation"
 />
@@ -111,6 +111,16 @@ Production RAG systems go beyond "search + LLM." They use a carefully designed m
 │    Response      │
 +------------------+
 ```
+
+Here's a real example — chunking a document, building a semantic (vector) index, and retrieving relevant context before generating an answer:
+
+<CodeEditor
+  file="src/rag/rag_semantic.ts"
+  functionName="main"
+  lines="60-81"
+  title="Semantic RAG with Vector Search"
+/>
+
 
 ### Why Two-Stage Retrieval?
 
