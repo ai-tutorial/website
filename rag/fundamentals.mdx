@@ -8,9 +8,75 @@ slug: rag/fundamentals
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
 
-## The Core RAG Pattern
+## Why RAG?
 
-RAG isn't just "search + LLM." It's a carefully designed pipeline with specific stages, each solving a distinct problem.
+LLMs are powerful — but they have a fundamental limitation: **they only know what they were trained on.**
+
+Ask an LLM about your company's Q4 revenue, yesterday's incident report, or a document you uploaded last week, and it will either hallucinate an answer or admit it doesn't know. This is the **knowledge boundary problem**, and RAG is how production systems solve it.
+
+### The Problem RAG Solves
+
+<CodeGroup>
+
+```text Without RAG
+User: What was our Q4 2024 revenue?
+LLM:  I don't have access to your company's financial data.
+      Based on public information... [hallucinated answer]
+```
+
+```text With RAG
+User: What was our Q4 2024 revenue?
+System: [retrieves Q4 financial report from company database]
+LLM:  Based on the Q4 2024 financial report, revenue was
+      $2.3B, up 15% year-over-year. (Source: Q4-2024-report.pdf, p.12)
+```
+
+</CodeGroup>
+
+### When You Need RAG
+
+| Scenario | Why the LLM alone fails | What RAG adds |
+|---|---|---|
+| **Data freshness** | Training data has a cutoff date — the model doesn't know about anything after | Retrieves current data from live sources |
+| **Proprietary data** | Your internal docs, databases, and APIs were never in the training set | Connects the LLM to your private knowledge base |
+| **Accuracy & citations** | The model can hallucinate plausible-sounding but wrong answers | Constrains generation to retrieved facts with source citations |
+| **Cost** | Fine-tuning a model on new data is expensive and slow to update | Just update your document store — no retraining needed |
+| **Auditability** | You can't trace why the model said something | Every answer links back to specific source documents |
+
+### The Simplest RAG: Three Lines of Logic
+
+At its core, RAG is just three steps:
+
+```text
+1. RETRIEVE  →  Find relevant documents for the user's question
+2. AUGMENT   →  Insert those documents into the prompt as context
+3. GENERATE  →  Have the LLM answer using only the provided context
+```
+
+That's it. Everything else — chunking, embeddings, reranking, hybrid search — is about making each step better. Let's start with the simplest working version.
+
+## Basic RAG Implementation
+
+<CodeEditor
+  file="src/rag/basic_rag.ts"
+  lines="58-81"
+  functionName="main"
+  title="Basic RAG Implementation"
+/>
+
+This prototype works but has clear limitations:
+- No error handling
+- No caching (repeated queries waste $$$)
+- No retrieval quality measurement
+- Single-stage retrieval (accuracy suffers)
+- No lexical/vector hybrid search
+- No metadata or filtering
+
+We'll fix these throughout the module.
+
+## The Real-Life RAG Pipeline
+
+Production RAG systems go beyond "search + LLM." They use a carefully designed multi-stage pipeline where each stage solves a distinct problem.
 
 ```
 +------------------+
@@ -55,30 +121,6 @@ RAG isn't just "search + LLM." It's a carefully designed pipeline with specific 
 - First-pass retrieval returns a small candidate set quickly (implementation-, scale-, and hardware-dependent).
 - Cross-encoder reranking narrows to top results but adds additional latency.
 - Production systems typically target interactive end-to-end latency budgets on available hardware.
-
-## Basic RAG Implementation
-
-Let's start with the simplest working version: 
-[Full runnable example of a simple RAG](https://colab.research.google.com/drive/15LHzIlsxR4W-bm-FOC2HKQCV5siKgK9P?usp=drive_link)
-
-<CodeEditor 
-  file="src/rag/basic_rag.ts"
-  lines="62-83"
-  functionName="main"
-  title="Basic RAG Implementation"
-/>
-
-**What Makes This Production-Ready?**
-
-Not much yet! This prototype has several problems:
-- ❌ No error handling
-- ❌ No caching (repeated queries waste $$$)
-- ❌ No retrieval quality measurement
-- ❌ Single-stage retrieval (accuracy suffers)
-- ❌ No lexical/vector hybrid search
-- ❌ No metadata or filtering
-
-We'll fix these throughout the module.
 
 ## Production RAG: Key Components
 
