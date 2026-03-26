@@ -166,39 +166,3 @@ Long documents (100+ pages) present unique challenges:
     functionName="UnstructuredDataPipeline"
     title="Complete Unstructured Data Pipeline"
 />
-
-## Practical Exercise (20 min)
-
-Process a mixed document corpus:
-
-```ts Pseudocode
-/**
- * Practical Exercise: Unstructured Data Pipeline
- */
-async function processMixedCorpus(documents: File[]) {
-  // 1. Process text document
-  const textDoc = documents.find(d => d.name === "paul_graham_essay.txt");
-  const textResult = await processText(textDoc);
-  
-  // 2. Apply chunking strategy (see Lesson 2.3)
-  const chunks = chunkDocument(textResult.content, { strategy: "semantic" });
-  storeMetadata(chunks);
-
-  // 3. (Optional) Compare with PDF/Image processing
-  if (hasMultimedia(documents)) {
-    const visionResult = await processVision(documents.image);
-    const pdfResult = await processPDF(documents.pdf);
-    
-    compareLatencyAndQuality(textResult, visionResult, pdfResult);
-  }
-
-  // 4. Analyze results
-  // - Measure processing time
-  // - Check for quality risks (short chunks, OCR noise)
-  // - Validate confidence scores
-}
-
-// Expected Insights:
-// - Text path is high-confidence & fast
-// - Vision/OCR adds latency & uncertainty
-```
