@@ -73,6 +73,10 @@ Steps:
 
 If function not found or file missing, report warning and skip.
 
+### Keep recap pages up to date
+
+When adding, removing, or renaming sections in any module page, check the corresponding `recap-and-resources.mdx` for that module. The recap's "Key Takeaways" section should reflect all topics covered in the module pages. Update it to stay in sync.
+
 ## Related Repositories
 
 - **Examples repo**: https://github.com/ai-tutorial/typescript-examples — TypeScript code examples referenced by CodeEditor components
