@@ -11,12 +11,20 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 
 ## The Chunking Problem
 
-Documents are long. LLM context windows are limited (even at 128K tokens). You must split documents into chunks, but how?
+Before retrieval works, data must be stored and indexed (vector, keyword, or both). You can't index a 50-page PDF as a single blob — documents must be split into chunks that are explicit enough to match against a query. How you chunk is a trade-off:
 
-**The core tension:**
-- **Small chunks (100-200 tokens):** Precise retrieval, but lose context
-- **Large chunks (1000+ tokens):** Keep context, but dilute relevance signal
-- **The sweet spot:** Depends on your use case
+<Note>
+Context windows have grown (200K–1M+ tokens), but chunking is still essential — stuffing entire documents wastes tokens, costs more, and dilutes retrieval relevance at scale.
+</Note>
+
+| | Small chunks (100-200 tokens) | Large chunks (1000+ tokens) |
+|---|---|---|
+| **Retrieval precision** | High — matches specific queries well | Low — relevant signal gets buried in noise |
+| **Context preserved** | Low — meaning gets cut across boundaries | High — full paragraphs and reasoning intact |
+| **Index size** | More chunks to store and search | Fewer chunks, faster search |
+| **Best for** | Factual Q&A, lookups | Summaries, complex reasoning |
+
+The sweet spot depends on your use case — and you can mix strategies.
 
 ## Chunking Strategies
 

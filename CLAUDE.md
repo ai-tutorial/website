@@ -60,6 +60,8 @@ console.log(response.output[0].content[0].text);
 
 ### Update CodeEditor line numbers (`update-codeeditor-lines`)
 
+**IMPORTANT:** Whenever code in the typescript-examples repo is changed (added, removed, or moved), the `lines` props on all `<CodeEditor>` components referencing that file MUST be updated. Stale line numbers will display the wrong code to readers.
+
 Update `lines` props in CodeEditor components by finding the actual function line numbers in the source files.
 
 Steps:
