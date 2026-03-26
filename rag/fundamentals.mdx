@@ -7,6 +7,7 @@ mode: wide
 slug: rag/fundamentals
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
 
 ## Why RAG?
 
@@ -16,22 +17,20 @@ Ask an LLM about your company's Q4 revenue, yesterday's incident report, or a do
 
 ### The Problem RAG Solves
 
-<CodeGroup>
+Try asking the model about private company data — it simply doesn't have it:
 
-```text Without RAG
-User: What was our Q4 2024 revenue?
-LLM:  I don't have access to your company's financial data.
-      Based on public information... [hallucinated answer]
-```
+<LLMPlayground
+  title="Playground: The Knowledge Boundary"
+  defaultMode="chat"
+  defaultInput={`What was Acme Corp's Q4 2024 revenue?`}
+  response={`I don't have access to Acme Corp's internal financial data. Based on publicly available information, I cannot determine their Q4 2024 revenue. You would need to check their financial reports, SEC filings, or contact the company directly for this information.`}
+  height="400px"
+  keepInput={true}
+/>
 
-```text With RAG
-User: What was our Q4 2024 revenue?
-System: [retrieves Q4 financial report from company database]
-LLM:  Based on the Q4 2024 financial report, revenue was
-      $2.3B, up 15% year-over-year. (Source: Q4-2024-report.pdf, p.12)
-```
-
-</CodeGroup>
+<Note>
+If you try this same question in ChatGPT, you might get a real answer — but that's because ChatGPT is not a pure LLM. It has built-in tools (web browsing, code interpreter, etc.) that fetch live data behind the scenes. Under the hood, it's doing exactly what we're about to build: retrieving external data and injecting it into the prompt. The difference is that you don't control the retrieval pipeline — ChatGPT decides what to search, which sources to trust, and what context to use. Building your own RAG gives you full control over these decisions.
+</Note>
 
 ### When You Need RAG
 
@@ -57,16 +56,19 @@ That's it. Everything else — chunking, embeddings, reranking, hybrid search �
 
 ## Basic RAG Implementation
 
+The simplest RAG you can build: fetch today's news from Reuters and ask the LLM about it. The model's training data has a cutoff — it can't know what happened today. But with RAG, it can.
+
 <CodeEditor
   file="src/rag/basic_rag.ts"
-  lines="58-81"
+  lines="31-58"
   functionName="main"
   title="Basic RAG Implementation"
 />
 
 This prototype works but has clear limitations:
+
 - No error handling
-- No caching (repeated queries waste $$$)
+- No caching (repeated queries waste money)
 - No retrieval quality measurement
 - Single-stage retrieval (accuracy suffers)
 - No lexical/vector hybrid search

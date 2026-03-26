@@ -45,7 +45,7 @@ Rules:
 - Fix grammar/syntax issues from the Python code in the translation
 
 Example output format:
-```jsx
+````jsx
 <CodeGroup>
 ```python Python
 response = completion(model="gpt-4o-mini", messages=[...])
@@ -56,7 +56,7 @@ const response = await client.responses.create({ model: "gpt-4o-mini", input: ".
 console.log(response.output[0].content[0].text);
 ```
 </CodeGroup>
-```
+````
 
 ### Update CodeEditor line numbers (`update-codeeditor-lines`)
 
