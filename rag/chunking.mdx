@@ -135,7 +135,6 @@ Good metadata transforms retrieval quality. Don't just store text — store cont
 - Version (for audit trails)
 
 **Use when:** You have diverse document types and need precise, filterable retrieval
-## Quiz
 
 <Quiz>
 <QuizQuestion question="Why is chunking still necessary even with large context windows (1M+ tokens)?" options={["It isn't — large windows eliminate the need for chunking", "Stuffing entire documents wastes tokens, costs more, and dilutes retrieval relevance", "Chunking is only needed for documents under 1000 words"]} answer={1} explanation="Even with large windows, retrieving entire documents wastes tokens and money while diluting the relevance signal that helps the LLM focus on what matters." />

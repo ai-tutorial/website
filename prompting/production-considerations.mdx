@@ -165,7 +165,6 @@ Before deploying any LLM feature:
 ---
 
 
-## Quiz
 
 <Quiz>
 <QuizQuestion question="You deploy prompt v3 to 10% of traffic. Accuracy is 94% (vs 92% for v2). Should you immediately roll to 100%?" options={["Yes — 94% beats 92%, ship it", "No — 10% traffic may not cover all edge cases; monitor for at least a week and check segment-level metrics before full rollout", "Only if latency is also lower"]} answer={1} explanation="10% rollout might miss low-frequency query types. Gradual rollout with monitoring catches regressions that small samples miss." />

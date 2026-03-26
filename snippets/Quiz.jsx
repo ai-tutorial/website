@@ -55,9 +55,10 @@ const QuizQuestion = ({ question, options, answer, explanation }) => {
  * @param {Object} props
  * @param {React.ReactNode} props.children - QuizQuestion components
  */
-export const Quiz = ({ children }) => {
+export const Quiz = ({ title = "Check Your Understanding", children }) => {
   return (
     <div style={{ marginTop: '24px' }}>
+      <div className="quiz-title">{title}</div>
       {children}
     </div>
   );

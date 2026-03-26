@@ -186,7 +186,6 @@ When evaluation reveals problems, debug systematically.
 - Full golden dataset evaluation weekly
 - Alert on >10% metric drops
 
-## Quiz
 
 <Quiz>
 <QuizQuestion question="Your RAG system gives wrong answers. What should you check first?" options={["Whether the LLM prompt needs better instructions", "Whether retrieval found the right documents (context relevance) — most failures are retrieval failures", "Whether the model is too small"]} answer={1} explanation="70% of RAG failures come from retrieval, not generation. Always check if the right documents were found before tuning prompts." />

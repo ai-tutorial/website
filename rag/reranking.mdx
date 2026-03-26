@@ -60,7 +60,6 @@ The complete pipeline shows:
 - Log latency and token/call costs during the lab.
 
 
-## Quiz
 
 <Quiz>
 <QuizQuestion question="Why use two-stage retrieval instead of just one accurate method?" options={["Two stages are always faster than one", "Fast methods handle scale (100K+ docs) while accurate methods (cross-encoders) can only handle ~100 — combining both gives speed + accuracy", "It's a requirement of all vector databases"]} answer={1} explanation="Cross-encoders are too slow for thousands of documents. Fast retrieval narrows the candidate set, then cross-encoders precisely rerank the small shortlist." />

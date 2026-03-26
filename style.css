@@ -1641,6 +1641,17 @@
 }
 
 /* Quiz Component Styles */
+.quiz-title {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--llm-text-secondary, #a3a3a3);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--llm-border-color, #262626);
+}
+
 .quiz-card {
   border: 1px solid var(--llm-border-color);
   border-radius: 8px;
@@ -1746,6 +1757,11 @@ html:not(.dark) .quiz-option-wrong {
 .quiz-feedback-wrong {
   background: rgba(239, 68, 68, 0.1);
   border-left: 3px solid var(--llm-accent-red);
+}
+
+html:not(.dark) .quiz-title {
+  color: #4b5563;
+  border-bottom-color: #e5e7eb;
 }
 
 html:not(.dark) .quiz-card {

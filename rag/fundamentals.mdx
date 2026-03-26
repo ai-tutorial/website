@@ -165,7 +165,6 @@ A production RAG system needs:
 
 We'll build each component step by step.
 
-## Quiz
 
 <Quiz>
 <QuizQuestion question="Your RAG system answers 'I don't know' to a question you know is in the documents. Where is the failure most likely?" options={["The LLM is too weak to generate a good answer", "Retrieval failed to find the relevant document — fix chunking, embeddings, or search strategy first", "The user's question is poorly worded"]} answer={1} explanation="When the answer exists but the system says 'I don't know,' retrieval is the bottleneck. The LLM never saw the right document. Always diagnose retrieval before tuning generation." />
