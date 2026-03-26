@@ -12,14 +12,12 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 
 Let's start with the basics. You've been using LLMs for single-shot tasks:
 
-```ts Pseudocode
-// Simple LLM call - one question, one answer
-const response = await llm.chat({
-    model: "claude-sonnet-4-20250514",
-    messages: [{ role: "user", content: "What's the capital of France?" }]
-});
-// → "Paris"
-```
+<CodeEditor
+  file="src/agents/simple_llm_call.ts"
+  lines="19-29"
+  functionName="main"
+  title="Simple LLM Call"
+/>
 
 This works great for simple questions. But what if you need to:
 - **Look up information** the LLM doesn't know (customer data, inventory levels)

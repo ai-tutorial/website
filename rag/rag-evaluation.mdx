@@ -7,6 +7,7 @@ mode: wide
 slug: rag/rag-evaluation
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 
 ## Why Evaluation is Non-Negotiable
@@ -184,3 +185,8 @@ When evaluation reveals problems, debug systematically.
 - Evaluate 10% of queries (cost management)
 - Full golden dataset evaluation weekly
 - Alert on >10% metric drops
+
+<Quiz>
+<QuizQuestion question="Your RAG system gives wrong answers. What should you check first?" options={["Whether the LLM prompt needs better instructions", "Whether retrieval found the right documents (context relevance) — most failures are retrieval failures", "Whether the model is too small"]} answer={1} explanation="70% of RAG failures come from retrieval, not generation. Always check if the right documents were found before tuning prompts." />
+<QuizQuestion question="What is the main advantage of LLM-as-Judge evaluation?" options={["It's free to run", "It can evaluate in production without ground truth labels by comparing responses against retrieved context", "It's more accurate than human evaluation"]} answer={1} explanation="LLM-as-Judge can run on any query-response pair in production without needing pre-labeled ground truth, making it ideal for continuous monitoring." />
+</Quiz>

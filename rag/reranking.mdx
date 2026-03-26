@@ -7,6 +7,7 @@ mode: wide
 slug: rag/reranking
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 
 ## What is Reranking?
@@ -58,3 +59,8 @@ The complete pipeline shows:
 - Run first-pass lexical + semantic in parallel; batch rerank scoring for throughput.
 - Log latency and token/call costs during the lab.
 
+
+<Quiz>
+<QuizQuestion question="Why use two-stage retrieval instead of just one accurate method?" options={["Two stages are always faster than one", "Fast methods handle scale (100K+ docs) while accurate methods (cross-encoders) can only handle ~100 — combining both gives speed + accuracy", "It's a requirement of all vector databases"]} answer={1} explanation="Cross-encoders are too slow for thousands of documents. Fast retrieval narrows the candidate set, then cross-encoders precisely rerank the small shortlist." />
+<QuizQuestion question="What does reranking optimize for?" options={["Recall — finding more documents", "Precision — ensuring the top results are truly the most relevant", "Speed — making retrieval faster"]} answer={1} explanation="Reranking's job is precision: taking a broad set of candidates and ensuring only the most relevant ones reach the LLM." />
+</Quiz>

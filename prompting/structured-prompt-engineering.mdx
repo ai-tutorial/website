@@ -7,7 +7,8 @@ mode: wide
 slug: prompting/structured-prompt-engineering
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
-import { LLMPlayground } from '/snippets/LLMPlayground.jsx'; 
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 ## The Anatomy of a Production Prompt
 
@@ -291,3 +292,9 @@ Based on ALL of the above context, answer: What are the main findings from the r
 ```
 
 ---
+
+<Quiz>
+<QuizQuestion question="Your prompt has instructions, user input, and context all in one block — the model keeps confusing them. What's the most effective fix?" options={["Make the instructions longer and more detailed", "Wrap each section in XML tags to create explicit boundaries the model can parse", "Switch to a larger model that handles ambiguity better"]} answer={1} explanation="XML tags create unambiguous boundaries between prompt sections, solving the common problem of models confusing instructions with user input or context." />
+<QuizQuestion question="You add 5 few-shot examples but the model's accuracy drops. What's the most likely cause?" options={["The examples are contradictory or show inconsistent patterns the model can't reconcile", "Few-shot always hurts — zero-shot is better", "You need at least 10 examples for few-shot to work"]} answer={0} explanation="Contradictory or inconsistent examples confuse the model more than no examples. Quality and consistency of examples matters more than quantity." />
+<QuizQuestion question="You request JSON output but the model sometimes wraps it in markdown code fences. What's the best production fix?" options={["Ask the model more forcefully to not use code fences", "Use the API's structured output / JSON mode if available, or parse with a regex fallback", "Switch to XML output instead"]} answer={1} explanation="API-level JSON mode guarantees valid JSON. If unavailable, a parsing layer with fallbacks is more reliable than prompt-only solutions." />
+</Quiz>

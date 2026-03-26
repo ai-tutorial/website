@@ -52,6 +52,7 @@ The manual cycle above (test → analyze → modify → re-test) can be automate
 
 ```python DSPy Example
 import dspy
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 # Step 1: Define what you want (not how to prompt)
 classify = dspy.ChainOfThought("customer_message -> sentiment")
@@ -122,3 +123,8 @@ const results = {
 
 </CodeGroup>
 
+
+<Quiz>
+<QuizQuestion question="You rewrote a prompt and it 'feels better' on 3 test cases. Is it ready for production?" options={["Yes — if it works on representative examples, ship it", "No — you need a larger eval set with metrics because 3 examples can't reveal regressions on edge cases", "Only if a senior engineer reviews it"]} answer={1} explanation="Small sample sizes miss edge cases. A prompt that improves 3 cases might break 30 others. Always measure on a representative eval set before deploying." />
+<QuizQuestion question="Your A/B test shows Prompt B scores 2% higher than Prompt A on 50 test cases. Should you switch?" options={["Yes — any improvement is worth shipping", "Not necessarily — 2% on 50 cases may not be statistically significant; you might be seeing noise", "Only if Prompt B is also cheaper"]} answer={1} explanation="Small improvements on small datasets can be noise. Check statistical significance (p-value) before concluding one prompt is better." />
+</Quiz>

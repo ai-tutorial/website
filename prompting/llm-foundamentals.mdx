@@ -7,7 +7,8 @@ mode: wide
 slug: prompting/llm-foundamentals
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
-import { LLMPlayground } from '/snippets/LLMPlayground.jsx'; 
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 
 ## Hello World
@@ -186,3 +187,9 @@ From: "Hi, I'm John Smith and you can reach me at john.smith@email.com for the o
   height="500px"
   keepInput={true}
 />
+
+<Quiz>
+<QuizQuestion question="You set temperature to 0 but the model still occasionally gives slightly different outputs. Why?" options={["Temperature 0 doesn't guarantee determinism — sampling ties, batching, and floating-point differences can still cause variation", "The model is broken — temperature 0 should always be deterministic", "The API is caching a previous response"]} answer={0} explanation="Even at temperature 0, implementation details like floating-point precision and parallel processing can cause minor variations. True determinism often requires setting a seed parameter too." />
+<QuizQuestion question="A user asks 'Is this contract legally binding?' and the model gives a confident, detailed legal analysis. What's the core risk?" options={["The response will be too long and expensive", "The model is pattern-matching legal language, not reasoning about law — it may sound authoritative while being wrong", "The model needs a legal fine-tune to answer correctly"]} answer={1} explanation="LLMs optimize for plausibility, not correctness. Legal-sounding output doesn't mean legal accuracy. This is hallucination at its most dangerous — confident and wrong." />
+<QuizQuestion question="You're building a system that extracts dates from documents. Should you rely on the LLM's knowledge of date formats?" options={["Yes — LLMs understand dates well from training data", "No — provide explicit format examples in the prompt because the model's 'understanding' is just pattern matching", "Only if you use GPT-4 or better"]} answer={1} explanation="LLMs don't truly understand dates — they match patterns. Without explicit format guidance, the model might output '03/04/2024' ambiguously (March 4 or April 3?)." />
+</Quiz>

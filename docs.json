@@ -83,12 +83,7 @@
     "dark": "/logo/logo-dark-full.svg"
   },
   "navbar": {
-    "links": [
-      {
-        
-        
-      }
-    ],
+    "links": [],
     "primary": {
       "type": "button",
       "label": "Contact",
