@@ -106,6 +106,8 @@ import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 **Cost:** Variable (depends on SQL complexity + retrieval)
 **Benefit:** Answers questions that pure document RAG can't handle
 
+## Quiz
+
 <Quiz>
 <QuizQuestion question="When should you use GraphRAG instead of basic RAG?" options={["For all queries — it's always more accurate", "When queries require multi-hop reasoning across connected entities (e.g., people, projects, relationships)", "Only when you have a graph database"]} answer={1} explanation="GraphRAG excels when answers require traversing relationships between entities — something basic vector search can't do." />
 <QuizQuestion question="What problem does Iterative RAG solve?" options={["Slow retrieval speed", "Vague or poorly formed user queries that need refinement based on initial results", "Documents that are too long to process"]} answer={1} explanation="Iterative RAG uses the LLM to refine the query based on initial results, progressively improving retrieval quality for ambiguous questions." />

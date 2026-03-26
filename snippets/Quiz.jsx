@@ -19,80 +19,29 @@ const QuizQuestion = ({ question, options, answer, explanation }) => {
 
   const isCorrect = selected === answer;
 
+  const getOptionClass = (i) => {
+    const classes = ['quiz-option'];
+    if (revealed) {
+      classes.push('quiz-option-disabled');
+      if (i === answer) classes.push('quiz-option-correct');
+      else if (i === selected && !isCorrect) classes.push('quiz-option-wrong');
+    }
+    return classes.join(' ');
+  };
+
   return (
-    <div style={{
-      border: '1px solid var(--border-color, #333)',
-      borderRadius: '8px',
-      padding: '16px',
-      marginBottom: '12px',
-      background: 'var(--bg-secondary, #1a1a2e)',
-    }}>
-      <p style={{ fontWeight: 600, marginBottom: '12px', fontSize: '15px' }}>{question}</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {options.map((option, i) => {
-          let bg = 'transparent';
-          let borderColor = 'var(--border-color, #444)';
-
-          if (revealed) {
-            if (i === answer) {
-              bg = 'rgba(34, 197, 94, 0.15)';
-              borderColor = '#22c55e';
-            } else if (i === selected && !isCorrect) {
-              bg = 'rgba(239, 68, 68, 0.15)';
-              borderColor = '#ef4444';
-            }
-          } else if (i === selected) {
-            borderColor = 'var(--primary-color, #6366f1)';
-          }
-
-          return (
-            <button
-              key={i}
-              onClick={() => handleSelect(i)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '10px 14px',
-                border: `1px solid ${borderColor}`,
-                borderRadius: '6px',
-                background: bg,
-                cursor: revealed ? 'default' : 'pointer',
-                textAlign: 'left',
-                fontSize: '14px',
-                color: 'inherit',
-                transition: 'border-color 0.2s',
-                width: '100%',
-              }}
-            >
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                borderRadius: '50%',
-                border: `1px solid ${borderColor}`,
-                fontSize: '12px',
-                fontWeight: 600,
-                flexShrink: 0,
-              }}>
-                {String.fromCharCode(65 + i)}
-              </span>
-              {option}
-            </button>
-          );
-        })}
+    <div className="quiz-card">
+      <p className="quiz-question">{question}</p>
+      <div className="quiz-options">
+        {options.map((option, i) => (
+          <button key={i} onClick={() => handleSelect(i)} className={getOptionClass(i)}>
+            <span className="quiz-letter">{String.fromCharCode(65 + i)}</span>
+            {option}
+          </button>
+        ))}
       </div>
       {revealed && (
-        <div style={{
-          marginTop: '12px',
-          padding: '12px',
-          borderRadius: '6px',
-          background: isCorrect ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-          borderLeft: `3px solid ${isCorrect ? '#22c55e' : '#ef4444'}`,
-          fontSize: '14px',
-        }}>
+        <div className={`quiz-feedback ${isCorrect ? 'quiz-feedback-correct' : 'quiz-feedback-wrong'}`}>
           <strong>{isCorrect ? 'Correct!' : 'Incorrect.'}</strong> {explanation}
         </div>
       )}
@@ -104,13 +53,11 @@ const QuizQuestion = ({ question, options, answer, explanation }) => {
  * Quiz wrapper component
  *
  * @param {Object} props
- * @param {string} [props.title="Quiz: Check Your Understanding"] - Quiz section title
  * @param {React.ReactNode} props.children - QuizQuestion components
  */
-export const Quiz = ({ title = "Quiz: Check Your Understanding", children }) => {
+export const Quiz = ({ children }) => {
   return (
-    <div style={{ marginTop: '32px' }}>
-      <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '16px' }}>{title}</h2>
+    <div style={{ marginTop: '24px' }}>
       {children}
     </div>
   );

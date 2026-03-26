@@ -118,6 +118,8 @@ import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 **Recommendation:** Start with hybrid unless you have strict latency requirements (\<50ms) or very clear use case for lexical-only.
 
+## Quiz
+
 <Quiz>
 <QuizQuestion question="A user searches for 'ERR_CONN_REFUSED' in your support docs. Semantic search returns results about 'connection problems' but misses the exact error code document. Why?" options={["The embedding model is too small", "Semantic search matches meaning, not exact strings — lexical search would find the exact error code", "The document wasn't chunked properly"]} answer={1} explanation="Semantic search understands concepts but can miss exact terms like error codes, product IDs, and acronyms. This is precisely where lexical search excels." />
 <QuizQuestion question="You implement hybrid search but results are worse than semantic-only. What's the most likely cause?" options={["Hybrid search is always worse than single-strategy search", "The fusion weights are wrong — lexical results are drowning out better semantic results for your query types", "You need more documents in your corpus"]} answer={1} explanation="Hybrid search requires tuning the balance between lexical and semantic scores (e.g., RRF k parameter, weight ratio). Bad weights can make the combination worse than either alone." />

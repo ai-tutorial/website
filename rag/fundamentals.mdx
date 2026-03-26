@@ -165,6 +165,8 @@ A production RAG system needs:
 
 We'll build each component step by step.
 
+## Quiz
+
 <Quiz>
 <QuizQuestion question="Your RAG system answers 'I don't know' to a question you know is in the documents. Where is the failure most likely?" options={["The LLM is too weak to generate a good answer", "Retrieval failed to find the relevant document — fix chunking, embeddings, or search strategy first", "The user's question is poorly worded"]} answer={1} explanation="When the answer exists but the system says 'I don't know,' retrieval is the bottleneck. The LLM never saw the right document. Always diagnose retrieval before tuning generation." />
 <QuizQuestion question="Should you fine-tune a model on your company's data instead of using RAG?" options={["Yes — fine-tuning is always more accurate than RAG", "Usually no — RAG is cheaper, easier to update, and provides citations; fine-tuning is for style/behavior changes, not knowledge updates", "Only if your dataset is larger than 10GB"]} answer={1} explanation="Fine-tuning changes how a model behaves, not what it knows. For injecting knowledge that changes frequently, RAG is far more practical — just update the document store." />
