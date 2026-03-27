@@ -1,9 +1,10 @@
 ---
-title: "Hands-On Exercise"
-description: "Build a production-ready prompt"
-sidebarTitle: "Hands-On Exercise"
-icon: "dumbbell"
-mode: "wide"
+title: Hands-On Exercise
+description: Build a production-ready RAG system
+sidebarTitle: Hands-On Exercise
+icon: dumbbell
+mode: wide
+slug: rag/hands-on-exercise
 ---
 
 ## Build a Complete, Production-Grade RAG System and Evaluate It Rigorously
@@ -44,3 +45,124 @@ Must demonstrate:
 - [ ] Chunking strategy comparison (test 2+ strategies)
 - [ ] Search strategy comparison (BM25, semantic, hybrid)
 - [ ] Document optimization decisions with metrics
+
+---
+
+## Module Exercises
+
+### Chunking Strategies
+
+Experiment with chunking strategies:
+
+```ts Pseudocode
+// Your task:
+// 1. Load 'Assets/paul_graham_essay.txt'
+// 2. Chunk with: fixed-size (200 char), semantic (500 char), structure-aware (if converted to HTML/Markdown)
+// 3. For each strategy, evaluate:
+//    - How many chunks produced?
+//    - Are section boundaries respected?
+//    - Does any important info get split awkwardly?
+// 4. Pick best strategy for this document type and justify
+
+// Expected insight: Semantic chunking preserves paragraph/context well for essays;
+// structure-aware helps if headings are available
+```
+
+### Search Strategy Selection
+
+Implement and compare all three approaches on the same dataset:
+
+```ts Pseudocode
+// Pseudocode: Comparison Task Logic
+async function compareSearchStrategies() {
+  // 1. Data Preparation
+  const essay = await loadFile('Assets/paul_graham_essay.txt');
+  const corpus = chunkDocument(essay);
+
+  // 2. Define Benchmark
+  const queries = [
+    "exact phrases",        // Targets BM25
+    "thematic concepts",    // Targets Semantic
+    "mixed queries"         // Targets Hybrid
+  ];
+
+  // 3. Execution & Comparison
+  for (const query of queries) {
+    const lexical = searchLexical(corpus, query);
+    const semantic = searchSemantic(corpus, query);
+    const hybrid = searchHybrid(corpus, query);
+
+    // 4. Analysis
+    logStrategyWins({ lexical, semantic, hybrid });
+  }
+}
+```
+
+### Reranking
+
+```ts Pseudocode
+// Your task:
+// 0) Corpus: use chunks from 'Assets/paul_graham_essay.txt' (treat each chunk as a doc)
+// 1) Use HybridRetriever to get top-50 for 5 queries.
+// 2) Rerank with CrossEncoderReranker to top-5.
+// 3) Compute NDCG@10, MRR before vs. after reranking.
+// 4) Record end-to-end latency; note candidate pool size impact.
+//
+// Expected insights:
+// - Reranking lifts precision-focused metrics.
+// - Most gains come from better ordering of already-relevant docs.
+// - Larger candidate pools help recall but increase latency.
+```
+
+### Unstructured Data
+
+Process a mixed document corpus:
+
+```ts Pseudocode
+async function processMixedCorpus(documents: File[]) {
+  // 1. Process text document
+  const textDoc = documents.find(d => d.name === "paul_graham_essay.txt");
+  const textResult = await processText(textDoc);
+
+  // 2. Apply chunking strategy (see Chunking Strategies)
+  const chunks = chunkDocument(textResult.content, { strategy: "semantic" });
+  storeMetadata(chunks);
+
+  // 3. (Optional) Compare with PDF/Image processing
+  if (hasMultimedia(documents)) {
+    const visionResult = await processVision(documents.image);
+    const pdfResult = await processPDF(documents.pdf);
+
+    compareLatencyAndQuality(textResult, visionResult, pdfResult);
+  }
+
+  // 4. Analyze results
+  // - Measure processing time
+  // - Check for quality risks (short chunks, OCR noise)
+  // - Validate confidence scores
+}
+
+// Expected Insights:
+// - Text path is high-confidence & fast
+// - Vision/OCR adds latency & uncertainty
+```
+
+### RAG Evaluation
+
+Evaluate your RAG system:
+
+```txt
+// Your task:
+// 0. Corpus: use chunks from 'Assets/paul_graham_essay.txt' for retrieval
+// 1. Load test cases (or create 20 Q/A pairs about the essay if missing)
+// 2. Run RAG system on all queries
+// 3. Use LlamaIndex evaluations to compute retrieval metrics (Recall@5, Precision@5, NDCG@10)
+// 4. Use LlamaIndex evaluations for generation (Faithfulness, Relevance)
+// 5. Identify 3 worst-performing queries
+// 6. Debug: Is failure in retrieval or generation?
+
+// Expected insights:
+// - Retrieval usually bottleneck (70% of failures)
+// - Multi-hop queries hardest
+// - Ambiguous queries need query refinement
+```

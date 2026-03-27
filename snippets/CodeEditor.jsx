@@ -1,7 +1,6 @@
-
 /**
  * CodeEditor component for embedding interactive code examples in StackBlitz
- * 
+ *
  * @param {Object} props - Component props
  * @param {string} [props.file='src/hello_world.ts'] - Path to the file to display
  * @param {string|Object} [props.lines] - Line numbers to highlight (e.g., "10-20" or {start: 10, end: 20})
@@ -19,6 +18,11 @@ export const CodeEditor = ({
   functionName,
   theme: userTheme
 }) => {
+  // Constants must be inside the component — snippets are eval'd, not imported as modules
+  const STORAGE_KEY = 'openai_api_key';
+  const GEMINI_STORAGE_KEY = 'gemini_api_key';
+  const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
+
   // Validate required parameter
   if (!functionName) {
     console.warn('CodeEditor: functionName parameter is required');
@@ -29,7 +33,7 @@ export const CodeEditor = ({
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isStuck, setIsStuck] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
-  const [loadingStep, setLoadingStep] = useState(0); // 0=idle, 1=cloning, 2=mounting, 3=configuring
+
   const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
@@ -64,9 +68,6 @@ export const CodeEditor = ({
    * Helper functions for managing OpenAI API key in localStorage
    * Note: Communication with StackBlitz is handled directly via SDK in CodeEmbed component
    */
-  const STORAGE_KEY = 'openai_api_key';
-  const GEMINI_STORAGE_KEY = 'gemini_api_key';
-  const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
   const [selectedProvider, setSelectedProvider] = useState(() => {
     if (typeof window === 'undefined') return 'gemini';
     return localStorage.getItem(PROVIDER_STORAGE_KEY) || 'gemini';
@@ -95,8 +96,6 @@ export const CodeEditor = ({
     }
   };
 
-
-
   /**
    * Save the OpenAI API key to localStorage
    * @param {string} apiKey - The OpenAI API key to save
@@ -118,36 +117,12 @@ export const CodeEditor = ({
   /**
    * Create or update .env file in StackBlitz VM
    */
-  const updateEnvFile = async (vm) => {
-    if (!vm) {
-      return;
-    }
+  const buildEnvContent = () => {
+    const openaiKey = localStorage.getItem(STORAGE_KEY)?.trim();
+    const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY)?.trim();
 
-    try {
-      // Use isApiKeyConfigured to check if key is properly configured
-      const configured = isApiKeyConfigured();
-      let envContent;
-
-      if (configured) {
-        const openaiKey = localStorage.getItem(STORAGE_KEY);
-        const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY);
-        const lines = ['# Using the API key(s) you configured. This file will be created when the dialog is loaded.'];
-
-        if (openaiKey && openaiKey.trim()) {
-          lines.push(`OPENAI_MODEL=gpt-4.1-nano`);
-          lines.push(`OPENAI_API_KEY=${openaiKey.trim()}`);
-        }
-        if (geminiKey && geminiKey.trim()) {
-          lines.push(`GEMINI_MODEL=gemini-2.5-flash-lite`);
-          lines.push(`GOOGLE_GENERATIVE_AI_API_KEY=${geminiKey.trim()}`);
-        }
-        const activeProvider = geminiKey && geminiKey.trim() ? 'gemini' : 'openai';
-        lines.push(`AI_PROVIDER=${activeProvider}`);
-
-        envContent = lines.join('\n');
-      } else {
-        // Use mock keys if not configured
-        envContent = `OPENAI_MODEL=gpt-4.1-nano
+    if (!openaiKey && !geminiKey) {
+      return `OPENAI_MODEL=gpt-4.1-nano
 OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 GEMINI_MODEL=gemini-2.5-flash-lite
 GOOGLE_GENERATIVE_AI_API_KEY=
@@ -158,20 +133,32 @@ AI_PROVIDER=openai
 # 2. For OpenAI: Go to https://platform.openai.com/api-keys
 # 3. Enter it in the configuration form above this editor
 # 4. The .env file will be automatically updated with your key`;
-      }
+    }
 
-      // Create run.conf with the file name in env directory
-      const baseFilePath = file || 'src/hello_world.ts';
-      const configContent = `file=${baseFilePath}`;
+    const envLines = ['# Using the API key(s) you configured. This file will be created when the dialog is loaded.'];
+    if (openaiKey) {
+      envLines.push(`OPENAI_MODEL=gpt-4.1-nano`);
+      envLines.push(`OPENAI_API_KEY=${openaiKey}`);
+    }
+    if (geminiKey) {
+      envLines.push(`GEMINI_MODEL=gemini-2.5-flash-lite`);
+      envLines.push(`GOOGLE_GENERATIVE_AI_API_KEY=${geminiKey}`);
+    }
+    envLines.push(`AI_PROVIDER=${geminiKey ? 'gemini' : 'openai'}`);
+    return envLines.join('\n');
+  };
 
+  const updateEnvFile = async (vm) => {
+    if (!vm) return;
+
+    try {
       await vm.applyFsDiff({
         create: {
-          'env/.env': envContent,
-          'env/run.conf': configContent
+          'env/.env': buildEnvContent(),
+          'env/run.conf': `file=${file}`
         },
         destroy: []
       });
-
       hasCreatedEnvRef.current = true;
     } catch (error) {
       console.error('Failed to write env files:', error);
@@ -188,14 +175,7 @@ AI_PROVIDER=openai
     // Listen for API key changes from other widgets on the same page
     const handleApiKeyChanged = () => {
       if (isApiKeyConfigured()) {
-        // Dismiss the API key dialog if it's showing
         setShowApiKeyDialog(false);
-
-        // Update .env file in the VM if connected
-        if (vmRef.current) {
-          hasCreatedEnvRef.current = false;
-          updateEnvFile(vmRef.current);
-        }
       }
     };
 
@@ -309,21 +289,17 @@ AI_PROVIDER=openai
 
   // Build the file path with optional line numbers for display
   let filePath = baseFilePath;
-  if (lines) {
-    if (typeof lines === 'string' && lines.trim()) {
-      const lineParts = lines.split('-');
-      if (lineParts.length === 2) {
-        filePath = `${filePath}:L${lineParts[0].trim()}-L${lineParts[1].trim()}`;
-      } else if (lineParts[0] && lineParts[0].trim()) {
-        filePath = `${filePath}:L${lineParts[0].trim()}`;
-      }
-    } else if (lines && typeof lines === 'object' && lines.start !== undefined) {
-      if (lines.end !== undefined) {
-        filePath = `${filePath}:L${lines.start}-L${lines.end}`;
-      } else {
-        filePath = `${filePath}:L${lines.start}`;
-      }
+  if (typeof lines === 'string' && lines.trim()) {
+    const lineParts = lines.split('-');
+    if (lineParts.length === 2) {
+      filePath = `${filePath}:L${lineParts[0].trim()}-L${lineParts[1].trim()}`;
+    } else {
+      filePath = `${filePath}:L${lineParts[0].trim()}`;
     }
+  } else if (typeof lines === 'object' && lines.start !== undefined) {
+    filePath = lines.end !== undefined
+      ? `${filePath}:L${lines.start}-L${lines.end}`
+      : `${filePath}:L${lines.start}`;
   }
 
   // Build StackBlitz iframe URL
@@ -374,16 +350,13 @@ AI_PROVIDER=openai
     });
   };
 
-  // ==================== STYLES ====================
-  // Styles are now in style.css - using CSS classes instead
-
   const LOAD_TIMEOUT_MS = 10000;
   const iframeElRef = useRef(null);
-  const hasReloadedRef = useRef(false);
-
+  const reloadCountRef = useRef(0);
   const handleRetry = () => {
     vmRef.current = null;
     hasCreatedEnvRef.current = false;
+    reloadCountRef.current = 0;
     setIsStuck(false);
     setIframeKey(prev => prev + 1);
   };
@@ -393,10 +366,15 @@ AI_PROVIDER=openai
     iframeElRef.current = iframe;
   };
 
+  // Connect to the StackBlitz VM via SDK
+  const connectToVM = async (iframe) => {
+    const sdk = await loadSDK();
+    return sdk.connect(iframe);
+  };
+
   // Handle iframe load event — called via onLoad prop to avoid race conditions.
-  // StackBlitz embeds can get stuck or have a corrupted FS on first load.
-  // A second load (reload) fixes it. So we: connect, write env files, then
-  // always reload once. The user sees a loading overlay the whole time.
+  // On success: connect SDK, write env files, done — no reload needed.
+  // On connection failure: two reloads to recover corrupted FS.
   // Known issues:
   //   https://github.com/stackblitz/core/issues/2849
   //   https://github.com/stackblitz/core/issues/2847
@@ -405,60 +383,31 @@ AI_PROVIDER=openai
     const iframe = iframeElRef.current;
     if (!iframe) return;
 
-    // After reload, we're done — reveal the iframe
-    if (hasReloadedRef.current) {
+    // After first iframe refresh — try to connect, then reveal
+    if (reloadCountRef.current > 0) {
       try {
-        const sdk = await loadSDK();
-        const vm = await sdk.connect(iframe);
+        const vm = await connectToVM(iframe);
         vmRef.current = vm;
-        if (!hasCreatedEnvRef.current) {
-          await updateEnvFile(vm);
-        }
+        await updateEnvFile(vm);
       } catch (_) {
-        // Best effort on second load
+        // Best effort
       }
-      setLoadingStep(0);
       return;
     }
 
+    // Initial load — connect with timeout
     try {
-      const sdk = await loadSDK();
-
       if (vmRef.current) return;
 
       const vm = await Promise.race([
-        sdk.connect(iframe),
+        connectToVM(iframe),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('connect timeout')), LOAD_TIMEOUT_MS)
         )
       ]);
 
-      // Write env files
+      vmRef.current = vm;
       await updateEnvFile(vm);
-
-      // Check if env/run.conf exists — if it does, FS is healthy, no reload needed
-      let needsReload = true;
-      try {
-        const snapshot = await vm.getFsSnapshot();
-        if (snapshot && snapshot['env/run.conf']) {
-          needsReload = false;
-        }
-      } catch (_) {
-        // Can't verify — assume reload needed
-      }
-
-      if (needsReload) {
-        // Show overlay and reload — first load had corrupted FS
-        setLoadingStep(1);
-        hasReloadedRef.current = true;
-        vmRef.current = null;
-        hasCreatedEnvRef.current = false;
-        setIframeKey(prev => prev + 1);
-      } else {
-        // FS is healthy — no reload needed
-        vmRef.current = vm;
-        hasReloadedRef.current = true;
-      }
     } catch (error) {
       console.error('Failed to connect to StackBlitz VM:', error);
       if (typeof window !== 'undefined' && window.gtag) {
@@ -468,15 +417,11 @@ AI_PROVIDER=openai
           error_message: error.message,
         });
       }
-      // Timeout or connection failure — show overlay and try reload
-      if (!hasReloadedRef.current) {
-        setLoadingStep(1);
-        hasReloadedRef.current = true;
+      // Connection failed — refresh iframe once to recover
+      reloadCountRef.current = 1;
+      setTimeout(() => {
         setIframeKey(prev => prev + 1);
-      } else {
-        setLoadingStep(0);
-        setIsStuck(true);
-      }
+      }, 2000);
     }
   };
 
@@ -731,33 +676,7 @@ AI_PROVIDER=openai
             allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; xr-spatial-tracking"
             sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
           />
-          {loadingStep > 0 && !isStuck && (
-            <div className="code-editor-loading-overlay">
-              <div className="code-editor-loading-box">
-                <div className="code-editor-loading-title">Setting up environment</div>
-                <div className="code-editor-loading-steps">
-                  <div className={`code-editor-loading-step ${loadingStep >= 1 ? 'active' : ''} ${loadingStep > 1 ? 'done' : ''}`}>
-                    <span className="code-editor-loading-step-icon">
-                      {loadingStep > 1 ? '✓' : <span className="code-editor-loading-spinner" />}
-                    </span>
-                    <span>Cloning repo from GitHub</span>
-                  </div>
-                  <div className={`code-editor-loading-step ${loadingStep >= 2 ? 'active' : ''} ${loadingStep > 2 ? 'done' : ''}`}>
-                    <span className="code-editor-loading-step-icon">
-                      {loadingStep > 2 ? '✓' : loadingStep === 2 ? <span className="code-editor-loading-spinner" /> : '○'}
-                    </span>
-                    <span>Mounting environment in StackBlitz</span>
-                  </div>
-                  <div className={`code-editor-loading-step ${loadingStep >= 3 ? 'active' : ''}`}>
-                    <span className="code-editor-loading-step-icon">
-                      {loadingStep === 3 ? <span className="code-editor-loading-spinner" /> : '○'}
-                    </span>
-                    <span>Configuring environment</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+
           {isStuck && (
             <div className="code-editor-stuck-overlay">
               <div className="code-editor-stuck-box">
@@ -770,7 +689,7 @@ AI_PROVIDER=openai
                 <button
                   type="button"
                   className="code-editor-button"
-                  onClick={() => { hasReloadedRef.current = false; setLoadingStep(1); handleRetry(); }}
+                  onClick={handleRetry}
                   style={{ marginTop: '8px' }}
                 >
                   Retry

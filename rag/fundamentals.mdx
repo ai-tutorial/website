@@ -7,10 +7,79 @@ mode: wide
 slug: rag/fundamentals
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
-## The Core RAG Pattern
+## Why RAG?
 
-RAG isn't just "search + LLM." It's a carefully designed pipeline with specific stages, each solving a distinct problem.
+LLMs are powerful — but they have a fundamental limitation: **they only know what they were trained on.**
+
+Ask an LLM about your company's Q4 revenue, yesterday's incident report, or a document you uploaded last week, and it will either hallucinate an answer or admit it doesn't know. This is the **knowledge boundary problem**, and RAG is how production systems solve it.
+
+### The Problem RAG Solves
+
+Try asking the model about private company data — it simply doesn't have it:
+
+<LLMPlayground
+  title="Playground: The Knowledge Boundary"
+  defaultMode="chat"
+  defaultInput={`What was MySecretCompany's Q4 2024 revenue?`}
+  response={`I don't have access to MySecretCompany's internal financial data. Based on publicly available information, I cannot determine their Q4 2024 revenue. You would need to check their financial reports or contact the company directly for this information.`}
+  height="400px"
+  keepInput={true}
+/>
+
+<Note>
+If you try this same question in ChatGPT, you might get a real answer — but that's because ChatGPT is not a pure LLM. It has built-in tools (web browsing, code interpreter, etc.) that fetch live data behind the scenes. Under the hood, it's doing exactly what we're about to build: retrieving external data and injecting it into the prompt. The difference is that you don't control the retrieval pipeline — ChatGPT decides what to search, which sources to trust, and what context to use. Building your own RAG gives you full control over these decisions.
+</Note>
+
+### When You Need RAG
+
+| Scenario | Why the LLM alone fails | What RAG adds |
+|---|---|---|
+| **Data freshness** | Training data has a cutoff date — the model doesn't know about anything after | Retrieves current data from live sources |
+| **Proprietary data** | Your internal docs, databases, and APIs were never in the training set | Connects the LLM to your private knowledge base |
+| **Accuracy & citations** | The model can hallucinate plausible-sounding but wrong answers | Constrains generation to retrieved facts with source citations |
+| **Cost** | Fine-tuning a model on new data is expensive and slow to update | Just update your document store — no retraining needed |
+| **Auditability** | You can't trace why the model said something | Every answer links back to specific source documents |
+
+### The Simplest RAG: Three Lines of Logic
+
+At its core, RAG is just three steps:
+
+```text
+1. RETRIEVE  →  Find relevant documents for the user's question
+2. AUGMENT   →  Insert those documents into the prompt as context
+3. GENERATE  →  Have the LLM answer using only the provided context
+```
+
+That's it. Everything else — chunking, embeddings, reranking, hybrid search — is about making each step better. Let's start with the simplest working version.
+
+## Basic RAG Implementation
+
+The company documents live in a JSON file (`assets/company_docs.json`), but they could come from anywhere — a database, an API, a CMS, a web scraper. The RAG pattern is the same regardless of the data source.
+
+<CodeEditor
+  file="src/rag/basic_rag.ts"
+  lines="52-84"
+  functionName="main"
+  title="Basic RAG Implementation"
+/>
+
+This prototype works but has clear limitations:
+
+- No error handling
+- No caching (repeated queries waste money)
+- No retrieval quality measurement
+- Single-stage retrieval (accuracy suffers)
+- No lexical/vector hybrid search
+- No metadata or filtering
+
+We'll fix these throughout the module.
+
+## The Real-Life RAG Pipeline
+
+Production RAG systems go beyond "search + LLM." They use a carefully designed multi-stage pipeline where each stage solves a distinct problem.
 
 ```
 +------------------+
@@ -44,6 +113,16 @@ RAG isn't just "search + LLM." It's a carefully designed pipeline with specific 
 +------------------+
 ```
 
+Here's a real example — chunking a document, building a semantic (vector) index, and retrieving relevant context before generating an answer:
+
+<CodeEditor
+  file="src/rag/rag_semantic.ts"
+  functionName="main"
+  lines="60-81"
+  title="Semantic RAG with Vector Search"
+/>
+
+
 ### Why Two-Stage Retrieval?
 
 **The Fundamental Trade-off:**
@@ -55,30 +134,6 @@ RAG isn't just "search + LLM." It's a carefully designed pipeline with specific 
 - First-pass retrieval returns a small candidate set quickly (implementation-, scale-, and hardware-dependent).
 - Cross-encoder reranking narrows to top results but adds additional latency.
 - Production systems typically target interactive end-to-end latency budgets on available hardware.
-
-## Basic RAG Implementation
-
-Let's start with the simplest working version: 
-[Full runnable example of a simple RAG](https://colab.research.google.com/drive/15LHzIlsxR4W-bm-FOC2HKQCV5siKgK9P?usp=drive_link)
-
-<CodeEditor 
-  file="src/rag/basic_rag.ts" 
-  lines="62-110"
-  functionName="SimpleRAG"
-  title="Basic RAG Implementation"
-/>
-
-**What Makes This Production-Ready?**
-
-Not much yet! This prototype has several problems:
-- ❌ No error handling
-- ❌ No caching (repeated queries waste $$$)
-- ❌ No retrieval quality measurement
-- ❌ Single-stage retrieval (accuracy suffers)
-- ❌ No lexical/vector hybrid search
-- ❌ No metadata or filtering
-
-We'll fix these throughout the module.
 
 ## Production RAG: Key Components
 
@@ -109,3 +164,9 @@ A production RAG system needs:
    - Cost per query
 
 We'll build each component step by step.
+
+
+<Quiz>
+<QuizQuestion question="Your RAG system answers 'I don't know' to a question you know is in the documents. Where is the failure most likely?" options={["The LLM is too weak to generate a good answer", "Retrieval failed to find the relevant document — fix chunking, embeddings, or search strategy first", "The user's question is poorly worded"]} answer={1} explanation="When the answer exists but the system says 'I don't know,' retrieval is the bottleneck. The LLM never saw the right document. Always diagnose retrieval before tuning generation." />
+<QuizQuestion question="Should you fine-tune a model on your company's data instead of using RAG?" options={["Yes — fine-tuning is always more accurate than RAG", "Usually no — RAG is cheaper, easier to update, and provides citations; fine-tuning is for style/behavior changes, not knowledge updates", "Only if your dataset is larger than 10GB"]} answer={1} explanation="Fine-tuning changes how a model behaves, not what it knows. For injecting knowledge that changes frequently, RAG is far more practical — just update the document store." />
+</Quiz>

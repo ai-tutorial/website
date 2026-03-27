@@ -22,6 +22,7 @@
           "prompting/structured-prompt-engineering",
           "prompting/advanced-techniques",
           "prompting/prompt-optimization-and-testing",
+          "prompting/prompt-security",
           "prompting/model-selection-and-cost-optimization",
           "prompting/production-considerations",
           "prompting/hands-on-exercise",
@@ -39,6 +40,7 @@
           "rag/rag-evaluation",
           "rag/reranking",
           "rag/advanced-rag-patterns",
+          "rag/hands-on-exercise",
           "rag/recap-and-resources"
         ]
       },
@@ -81,12 +83,7 @@
     "dark": "/logo/logo-dark-full.svg"
   },
   "navbar": {
-    "links": [
-      {
-        
-        
-      }
-    ],
+    "links": [],
     "primary": {
       "type": "button",
       "label": "Contact",

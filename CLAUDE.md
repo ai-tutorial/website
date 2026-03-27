@@ -45,7 +45,7 @@ Rules:
 - Fix grammar/syntax issues from the Python code in the translation
 
 Example output format:
-```jsx
+````jsx
 <CodeGroup>
 ```python Python
 response = completion(model="gpt-4o-mini", messages=[...])
@@ -56,9 +56,11 @@ const response = await client.responses.create({ model: "gpt-4o-mini", input: ".
 console.log(response.output[0].content[0].text);
 ```
 </CodeGroup>
-```
+````
 
 ### Update CodeEditor line numbers (`update-codeeditor-lines`)
+
+**IMPORTANT:** Whenever code in the typescript-examples repo is changed (added, removed, or moved), the `lines` props on all `<CodeEditor>` components referencing that file MUST be updated. Stale line numbers will display the wrong code to readers.
 
 Update `lines` props in CodeEditor components by finding the actual function line numbers in the source files.
 
@@ -72,6 +74,10 @@ Steps:
 7. Report old vs new line numbers
 
 If function not found or file missing, report warning and skip.
+
+### Keep recap pages up to date
+
+When adding, removing, or renaming sections in any module page, check the corresponding `recap-and-resources.mdx` for that module. The recap's "Key Takeaways" section should reflect all topics covered in the module pages. Update it to stay in sync.
 
 ## Related Repositories
 

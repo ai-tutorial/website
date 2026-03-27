@@ -1,12 +1,13 @@
 ---
-title: Reranking in Practice
+title: Reranking & Precision Optimization
 description: How to implement reranking in a RAG system
-sidebarTitle: Reranking in Practice
+sidebarTitle: Reranking & Precision Optimization
 icon: book
 mode: wide
 slug: rag/reranking
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 
 ## What is Reranking?
@@ -35,7 +36,7 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 <CodeEditor 
   file="src/rag/cross_encoder_reranking.ts" 
   functionName="main"
-  lines="35-67"
+  lines="127-165"
   title="Cross-Encoder Reranking Pipeline"
 />
 
@@ -44,7 +45,7 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 <CodeEditor 
   file="src/rag/cross_encoder_reranking.ts" 
   functionName="performHybridSearch"
-  lines="85-100"
+  lines="47-58"
   title="Hybrid Search with Reranking Integration"
 />
 
@@ -58,48 +59,9 @@ The complete pipeline shows:
 - Run first-pass lexical + semantic in parallel; batch rerank scoring for throughput.
 - Log latency and token/call costs during the lab.
 
-## Practical Exercise (15 min)
-<CodeGroup>
-```python Python
-# Your task:
-# 0) Corpus: use chunks from 'Assets/paul_graham_essay.txt' (treat each chunk as a doc)
-# 1) Use HybridRetriever to get top-50 for 5 queries.
-# 2) Rerank with CrossEncoderReranker to top-5.
-# 3) Compute NDCG@10, MRR before vs. after reranking.
-# 4) Record end-to-end latency; note candidate pool size impact.
-#
-# Expected insights:
-# - Reranking lifts precision-focused metrics.
-# - Most gains come from better ordering of already-relevant docs.
-# - Larger candidate pools help recall but increase latency.
-#
-# References:
-# - Pinecone Learn (2025): https://www.pinecone.io/learn/retrieval-augmented-generation/
-# - Practitioner write-up (2025): https://dj3dw.com/blog/the-power-of-reranking-in-retrieval-augmented-generation-rag-systems/
-```
 
-```ts TypeScript
-// Your task:
-// 0) Corpus: use chunks from 'Assets/paul_graham_essay.txt' (treat each chunk as a doc)
-// 1) Use HybridRetriever to get top-50 for 5 queries.
-// 2) Rerank with CrossEncoderReranker to top-5.
-// 3) Compute NDCG@10, MRR before vs. after reranking.
-// 4) Record end-to-end latency; note candidate pool size impact.
-//
-// Expected insights:
-// - Reranking lifts precision-focused metrics.
-// - Most gains come from better ordering of already-relevant docs.
-// - Larger candidate pools help recall but increase latency.
-//
-// References:
-// - Pinecone Learn (2025): https://www.pinecone.io/learn/retrieval-augmented-generation/
-// - Practitioner write-up (2025): https://dj3dw.com/blog/the-power-of-reranking-in-retrieval-augmented-generation-rag-systems/
-```
-</CodeGroup>
 
-### Production checklist callout
-- Retrieve top-50 in parallel (lexical + semantic) → cross-encoder rerank top-20 → keep top-5 for generation.
-- Log per-stage latency and cost; adjust candidate pool and rerank depth to stay within budget.
-
----
-
+<Quiz>
+<QuizQuestion question="Why use two-stage retrieval instead of just one accurate method?" options={["Two stages are always faster than one", "Fast methods handle scale (100K+ docs) while accurate methods (cross-encoders) can only handle ~100 — combining both gives speed + accuracy", "It's a requirement of all vector databases"]} answer={1} explanation="Cross-encoders are too slow for thousands of documents. Fast retrieval narrows the candidate set, then cross-encoders precisely rerank the small shortlist." />
+<QuizQuestion question="What does reranking optimize for?" options={["Recall — finding more documents", "Precision — ensuring the top results are truly the most relevant", "Speed — making retrieval faster"]} answer={1} explanation="Reranking's job is precision: taking a broad set of candidates and ensuring only the most relevant ones reach the LLM." />
+</Quiz>

@@ -7,6 +7,7 @@ mode: wide
 slug: rag/working-with-unstructured-data
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 
 # Working with PDF and Images
@@ -33,7 +34,7 @@ Not all PDFs are created equal.
 
 <CodeEditor 
     file="src/rag/pdf_processing.ts" 
-    lines="49-67"
+    lines="19-37"
     functionName="extractDigitalPdf"
     title="Digital PDF Extraction"
 />
@@ -42,7 +43,7 @@ Not all PDFs are created equal.
 
 <CodeEditor 
     file="src/rag/pdf_processing.ts" 
-    lines="69-112"
+    lines="39-82"
     functionName="extractScannedPdf"
     title="Scanned PDF Extraction (OCR)"
 />
@@ -53,7 +54,7 @@ Not all PDFs are created equal.
 
 <CodeEditor 
     file="src/rag/pdf_processing.ts" 
-    lines="119-183"
+    lines="89-154"
     functionName="PDFProcessor"
     title="Combined PDF Processing Pipeline"
 />
@@ -167,38 +168,8 @@ Long documents (100+ pages) present unique challenges:
     title="Complete Unstructured Data Pipeline"
 />
 
-## Practical Exercise (20 min)
 
-Process a mixed document corpus:
-
-```ts Pseudocode
-/**
- * Practical Exercise: Unstructured Data Pipeline
- */
-async function processMixedCorpus(documents: File[]) {
-  // 1. Process text document
-  const textDoc = documents.find(d => d.name === "paul_graham_essay.txt");
-  const textResult = await processText(textDoc);
-  
-  // 2. Apply chunking strategy (see Lesson 2.3)
-  const chunks = chunkDocument(textResult.content, { strategy: "semantic" });
-  storeMetadata(chunks);
-
-  // 3. (Optional) Compare with PDF/Image processing
-  if (hasMultimedia(documents)) {
-    const visionResult = await processVision(documents.image);
-    const pdfResult = await processPDF(documents.pdf);
-    
-    compareLatencyAndQuality(textResult, visionResult, pdfResult);
-  }
-
-  // 4. Analyze results
-  // - Measure processing time
-  // - Check for quality risks (short chunks, OCR noise)
-  // - Validate confidence scores
-}
-
-// Expected Insights:
-// - Text path is high-confidence & fast
-// - Vision/OCR adds latency & uncertainty
-```
+<Quiz>
+<QuizQuestion question="What is the key difference between processing digital PDFs and scanned PDFs?" options={["There is no difference — all PDFs are processed the same way", "Digital PDFs have extractable text; scanned PDFs are images that require OCR", "Scanned PDFs are always higher quality"]} answer={1} explanation="Digital PDFs contain selectable text that can be extracted directly. Scanned PDFs are images of text that need OCR (Optical Character Recognition) first." />
+<QuizQuestion question="When should you use vision-language models instead of OCR for table extraction?" options={["Always — vision models are always more accurate", "When tables are complex, messy, or have irregular layouts that confuse traditional extractors", "Only for tables with fewer than 5 rows"]} answer={1} explanation="Vision models 'see' the table layout holistically, making them better at complex or messy tables. Use specialized extractors first for clean tables (faster and cheaper), and fall back to vision for difficult cases." />
+</Quiz>

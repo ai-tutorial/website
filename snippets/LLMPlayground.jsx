@@ -1,8 +1,6 @@
-const { useState, useEffect, useMemo, useCallback, useRef } = React;
-
 /**
  * LLMPlayground component for interactive LLM testing
- * 
+ *
  * @param {Object} props - Component props
  * @param {string} [props.defaultInput=''] - Default input text
  * @param {string} [props.defaultModel='gpt-4o-mini'] - Default model
@@ -22,12 +20,14 @@ export const LLMPlayground = ({
   keepInput = false,
   defaultMode = 'chat',
   defaultMessages = [],
-
   response = '',
   forceSettingsOpen = false,
   title,
   theme: userTheme
 }) => {
+  // Everything must be inside the component — snippets are eval'd, not imported as modules
+  const { useState, useEffect, useMemo, useCallback, useRef } = React;
+
   // ==================== CONSTANTS ====================
   const OPENAI_STORAGE_KEY = 'openai_api_key';
   const GEMINI_STORAGE_KEY = 'gemini_api_key';
@@ -57,7 +57,6 @@ export const LLMPlayground = ({
     gemini: { label: 'Gemini', models: GEMINI_MODELS, storageKey: GEMINI_STORAGE_KEY, apiUrl: GEMINI_API_URL },
     openai: { label: 'OpenAI', models: OPENAI_MODELS, storageKey: OPENAI_STORAGE_KEY, apiUrl: OPENAI_API_URL },
   };
-
 
   // ==================== ICON HELPERS ====================
   const IconWarningSun = ({ size = 14, className = '' }) => (
@@ -110,7 +109,7 @@ export const LLMPlayground = ({
       <line x1="12" y1="16" x2="12.01" y2="16"></line>
     </svg>
   );
-  
+
   const IconTrash = ({ size = 14, className = '' }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <polyline points="3 6 5 6 21 6"></polyline>
@@ -272,6 +271,19 @@ export const LLMPlayground = ({
     const storedKey = localStorage.getItem(storageKey);
     if (storedKey) {
       setApiKey(storedKey);
+    } else {
+      // Check other providers for a stored key
+      for (const [provKey, prov] of Object.entries(PROVIDERS)) {
+        if (provKey === currentProvider) continue;
+        const otherKey = localStorage.getItem(prov.storageKey);
+        if (otherKey) {
+          setApiKey(otherKey);
+          setProvider(provKey);
+          setModel(prov.models[0].value);
+          localStorage.setItem(PROVIDER_STORAGE_KEY, provKey);
+          break;
+        }
+      }
     }
 
     // Listen for API key changes from other widgets on the same page
@@ -303,22 +315,6 @@ export const LLMPlayground = ({
     responseCountRef.current = responseCount;
   }, [responseCount]);
 
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
-      }
-    };
-  }, []);
-
   // ==================== HELPER FUNCTIONS ====================
   const filterComments = useCallback((text) => {
     return text
@@ -341,12 +337,13 @@ export const LLMPlayground = ({
     textarea.style.height = `${newHeight}px`;
   }, []);
 
-  // Auto-resize chat mode textarea
+  // Set initial chat textarea height based on content
   useEffect(() => {
     if (textareaRef.current) {
-      autoResizeTextarea(textareaRef.current);
+      textareaRef.current.style.height = '0px';
+      textareaRef.current.style.height = `${Math.max(textareaRef.current.scrollHeight, 60)}px`;
     }
-  }, [input, autoResizeTextarea]);
+  }, []);
 
   // Scroll to bottom when new messages are added (but not on initial mount)
   useEffect(() => {
@@ -610,6 +607,16 @@ export const LLMPlayground = ({
     </>
   );
 
+  const renderMarkdown = (text) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   const renderChatMessage = (message, index, isPlaceholder = false) => {
     const isUser = message.role === 'user';
     return (
@@ -620,7 +627,7 @@ export const LLMPlayground = ({
         <div
           className={`llm-chat-bubble ${isUser ? 'llm-chat-bubble-user' : 'llm-chat-bubble-assistant'} ${isPlaceholder ? 'llm-chat-bubble-placeholder' : ''}`}
         >
-          {message.content}
+          {renderMarkdown(message.content)}
         </div>
       </div>
     );
@@ -793,20 +800,10 @@ export const LLMPlayground = ({
         <textarea
           ref={textareaRef}
           value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            autoResizeTextarea(e.target);
-          }}
+          onChange={(e) => setInput(e.target.value)}
           placeholder="Type a message"
           disabled={isLoading}
           className="llm-chat-input-textarea"
-          onBlur={(e) => {
-            const container = e.target.parentElement;
-            if (container) {
-              container.style.borderColor = '#2a3942';
-              container.style.backgroundColor = '#2a3942';
-            }
-          }}
         />
       </div>
     );
@@ -818,12 +815,6 @@ export const LLMPlayground = ({
         <div
           key={index}
           className="llm-advanced-message-box"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'var(--llm-border-hover)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--llm-border-color)';
-          }}
         >
           <div className="llm-advanced-message-header">
             <div className="llm-advanced-message-header-row">
@@ -842,9 +833,6 @@ export const LLMPlayground = ({
                   message.role === 'user' ? 'llm-advanced-role-select-user' :
                     'llm-advanced-role-select-assistant'
                   }`}
-                onBlur={(e) => {
-                  e.target.style.boxShadow = 'none';
-                }}
               >
                 <option value="system">system</option>
                 <option value="user">user</option>
@@ -897,12 +885,6 @@ export const LLMPlayground = ({
       </button>
     </div>
   );
-
-
-  const renderChatResponse = () => {
-    // Chat interface is now integrated into the main layout
-    return null;
-  };
 
   // ==================== MAIN RENDER ====================
   return (
@@ -1034,7 +1016,7 @@ export const LLMPlayground = ({
                     ) : (
                       <>
                         {output ? (
-                          <div className="llm-response-box">{output}</div>
+                          <div className="llm-response-box">{renderMarkdown(output)}</div>
                         ) : isLoading ? (
                           <div className="llm-tab-loading">
                             <span className="llm-tab-loading-content">
@@ -1151,10 +1133,6 @@ export const LLMPlayground = ({
                   onChange={(e) => setModel(e.target.value)}
                   disabled={isLoading}
                   className="llm-settings-select"
-                  onBlur={(e) => {
-                    e.target.style.borderColor = 'var(--llm-border-color)';
-                    e.target.style.boxShadow = 'none';
-                  }}
                 >
                   {PROVIDERS[provider].models.map((m) => (
                     <option key={m.value} value={m.value} className="llm-settings-option">

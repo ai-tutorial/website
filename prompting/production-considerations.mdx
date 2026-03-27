@@ -164,3 +164,9 @@ Before deploying any LLM feature:
 
 ---
 
+
+
+<Quiz>
+<QuizQuestion question="You deploy prompt v3 to 10% of traffic. Accuracy is 94% (vs 92% for v2). Should you immediately roll to 100%?" options={["Yes — 94% beats 92%, ship it", "No — 10% traffic may not cover all edge cases; monitor for at least a week and check segment-level metrics before full rollout", "Only if latency is also lower"]} answer={1} explanation="10% rollout might miss low-frequency query types. Gradual rollout with monitoring catches regressions that small samples miss." />
+<QuizQuestion question="Your LLM system's p50 latency is 200ms but p99 is 8 seconds. What does this tell you?" options={["The system is fine — average latency is fast", "1% of users experience 40x worse latency, likely due to long outputs or retries — you need to investigate the tail", "You should only optimize p50 since it affects most users"]} answer={1} explanation="P99 reveals the worst user experience. A 40x gap between p50 and p99 suggests some queries trigger much more work (long outputs, retries, or timeouts) that need investigation." />
+</Quiz>

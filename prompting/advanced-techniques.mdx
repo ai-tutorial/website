@@ -8,6 +8,7 @@ slug: prompting/advanced-techniques
 ---
 import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 
 ## Chain-of-Thought (CoT): Making Reasoning Visible
@@ -20,16 +21,19 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 
 **The Problem:**
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Let's do some math"
   defaultMode="chat"
   defaultInput={`What's 15% tip on a $47.83 bill?`}
   response={`$7.17`}
   height="400px"
+  keepInput={true}
 />
 
 But what if you need to debug a wrong answer? You can't see the reasoning. The expected response would be something like (note: the response shown below is a placeholder example, not a real API response):
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Chain-of-Thought"
   defaultMode="advanced"
   defaultMessages={[
     {"role": "system", "content": "Show your reasoning steps briefly before the final answer."},
@@ -52,7 +56,8 @@ But what if you need to debug a wrong answer? You can't see the reasoning. The e
 
 **Production Pattern:**
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: CoT Production Pattern"
   defaultMode="advanced"
   defaultMessages={[
     {"role": "system", "content": "You are a helpful assistant that solves problems step by step."},
@@ -73,9 +78,9 @@ But what if you need to debug a wrong answer? You can't see the reasoning. The e
 
 **The Solution:** Generate multiple responses and vote.
 <CodeEditor 
-  file="src/prompting/advance_self_consistency.ts" 
+  file="src/prompting/advance_self_consistency.ts"
   functionName="main"
-  lines="23-35"
+  lines="24-36"
   title="Advanced Self-Consistency"
 /> 
 
@@ -189,9 +194,9 @@ flowchart LR
 ```
 
 <CodeEditor 
-  file="src/prompting/prompt_chaining.ts" 
+  file="src/prompting/prompt_chaining.ts"
   functionName="main"
-  lines="23-34"
+  lines="127-139"
   title="Prompt Chaining"
 /> 
 
@@ -209,3 +214,9 @@ flowchart LR
 - Multiple LLM calls (but often cheaper overall)
 
 ---
+
+<Quiz>
+<QuizQuestion question="You add 'think step by step' to a simple factual lookup ('What's the capital of France?'). What happens?" options={["Accuracy improves significantly", "You waste tokens — CoT helps complex reasoning, not simple recall", "The model refuses to answer"]} answer={1} explanation="CoT adds value for multi-step reasoning (math, logic, analysis). For simple factual retrieval, it just burns tokens without improving accuracy." />
+<QuizQuestion question="Your prompt chain has 4 steps. Step 3 fails 20% of the time. What's the best fix?" options={["Add retry logic for step 3 only, without re-running the entire chain", "Combine all 4 steps into one prompt to avoid the failure point", "Lower the temperature globally across all steps"]} answer={0} explanation="Prompt chaining's key advantage: you can retry or fix individual steps. Combining everything into one prompt makes the whole thing fragile and harder to debug." />
+<QuizQuestion question="You run self-consistency with 5 samples and get: 'Paris, Paris, Lyon, Paris, Marseille'. The majority answer is Paris. Should you trust it?" options={["Yes — 3/5 agreement is strong enough for production", "It depends — 60% agreement is moderate; check if the dissenting answers reveal ambiguity in the question itself", "No — you need at least 80% agreement"]} answer={1} explanation="Low agreement (60%) can signal an ambiguous question or insufficient context. Before trusting majority vote, investigate why the model produced different answers." />
+</Quiz>

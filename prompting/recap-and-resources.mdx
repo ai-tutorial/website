@@ -24,7 +24,17 @@ slug: prompting/recap-and-resources
    - Iterate systematically
    - A/B test in production
 
-4. **Production is Different from Prototyping**
+4. **Prompt Security**
+   - Prompt injection: use role separation and input sanitization
+   - Context stuffing: verify data server-side, use XML tags
+   - Ambiguous parsing: specify explicit output formats
+   - Indirect injection: isolate external content with untrusted data tags
+   - Data exfiltration: domain allowlists and tool-layer validation
+   - Jailbreaking: fixed identity prompts and input pattern detection
+   - Sensitive data leakage: minimal context exposure and output redaction
+   - Over-permissioned tools: least privilege and human-in-the-loop gates
+
+5. **Production is Different from Prototyping**
    - Versioning and rollback
    - Monitoring and alerts
    - Cost optimization

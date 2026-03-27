@@ -7,6 +7,7 @@ mode: wide
 slug: prompting/model-selection-and-cost-optimization
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 ## Model Selection Decision Framework
 
@@ -117,9 +118,9 @@ savings = $1,050 (70% reduction)
 **Implementation:**
 
 <CodeEditor 
-  file="src/prompting/model_cascading.ts" 
+  file="src/prompting/model_cascading.ts"
   functionName="main"
-  lines="31-55"
+  lines="100-115"
   title="Model Cascading"
 />
 
@@ -172,3 +173,9 @@ Return ONLY TOON with the same header; set [N] to match rows.
 **Practical exercise:** Convert your JSON examples to TOON and compare input token counts and task accuracy.
 
 See: [TOON repository](https://github.com/toon-format/toon) and [official site/spec](https://toonformat.dev)
+
+
+<Quiz>
+<QuizQuestion question="You're processing 10K customer queries/day with the same 2000-token system prompt. What's the single highest-impact cost optimization?" options={["Switch to a smaller model for all queries", "Enable prompt caching — the shared system prompt prefix is processed once and reused across all 10K calls", "Reduce the system prompt to 500 tokens"]} answer={1} explanation="With 10K calls sharing the same prefix, prompt caching saves ~90% of input token costs on that prefix. This is the highest leverage optimization for high-volume, same-prompt workloads." />
+<QuizQuestion question="Your model cascade uses Haiku for simple queries and Opus for complex ones. 80% of queries hit Haiku. But you notice complex queries are sometimes misrouted to Haiku. What's the risk?" options={["No risk — Haiku will just take longer on complex queries", "Haiku gives wrong answers on complex queries, degrading user trust while appearing to save money", "The cascade automatically retries with Opus"]} answer={1} explanation="Misrouting complex queries to a weak model gives confidently wrong answers. The cost savings are illusory if quality drops. Your classifier's accuracy directly determines cascade effectiveness." />
+</Quiz>

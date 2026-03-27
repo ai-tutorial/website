@@ -7,7 +7,8 @@ mode: wide
 slug: prompting/structured-prompt-engineering
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
-import { LLMPlayground } from '/snippets/LLMPlayground.jsx'; 
+import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 ## The Anatomy of a Production Prompt
 
@@ -23,7 +24,8 @@ import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
 
 If we put all these components together, we get the following prompt. This promt looks more complex than the previous one, but this reflects the complexity of the task and the context needed to complete it when you use the API. 
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Structured Prompt Anatomy"
   defaultMode="advanced"
   defaultMessages={[
     {
@@ -90,18 +92,21 @@ Compare these two approaches to structuring prompts:
 
 #### ❌ Antipattern
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Unstructured Prompt (Antipattern)"
   defaultMode="chat"
   defaultInput={`System: You are a helpful assistant.
 User question: What is the return policy?
 Background context: Our store offers a 30-day return window for all purchases. Items must be in original packaging. Electronics require a receipt.
 Previous conversation: Customer asked about shipping times. We responded that standard shipping takes 5-7 business days.`}
   height="400px"
+  keepInput={true}
 />
 
 #### ✅ Best Practice
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: XML-Tagged Prompt"
   defaultMode="chat"
   defaultInput={`<role>You are a helpful assistant</role>
 
@@ -119,6 +124,7 @@ Previous conversation: Customer asked about shipping times. We responded that st
   What is the return policy?
 </user_question>`}
   height="400px"
+  keepInput={true}
 />
 
 **In Production:**
@@ -164,7 +170,8 @@ This approach uses prompt instructions to request XML output combined with XML p
 - Edge cases need clarification
 
 
-<LLMPlayground 
+<LLMPlayground
+  title="Playground: Few-Shot Classification"
   defaultMode="chat"
   defaultInput={`<task>Classify customer sentiment</task>
 
@@ -194,6 +201,7 @@ For each <input>, produce the corresponding <output>.
 The shipping was fast and the product arrived in perfect condition. Would buy again!
 </input>`}
   height="500px"
+  keepInput={true}
 />
 
 **Quality Over Quantity:**
@@ -284,3 +292,9 @@ Based on ALL of the above context, answer: What are the main findings from the r
 ```
 
 ---
+
+<Quiz>
+<QuizQuestion question="Your prompt has instructions, user input, and context all in one block — the model keeps confusing them. What's the most effective fix?" options={["Make the instructions longer and more detailed", "Wrap each section in XML tags to create explicit boundaries the model can parse", "Switch to a larger model that handles ambiguity better"]} answer={1} explanation="XML tags create unambiguous boundaries between prompt sections, solving the common problem of models confusing instructions with user input or context." />
+<QuizQuestion question="You add 5 few-shot examples but the model's accuracy drops. What's the most likely cause?" options={["The examples are contradictory or show inconsistent patterns the model can't reconcile", "Few-shot always hurts — zero-shot is better", "You need at least 10 examples for few-shot to work"]} answer={0} explanation="Contradictory or inconsistent examples confuse the model more than no examples. Quality and consistency of examples matters more than quantity." />
+<QuizQuestion question="You request JSON output but the model sometimes wraps it in markdown code fences. What's the best production fix?" options={["Ask the model more forcefully to not use code fences", "Use the API's structured output / JSON mode if available, or parse with a regex fallback", "Switch to XML output instead"]} answer={1} explanation="API-level JSON mode guarantees valid JSON. If unavailable, a parsing layer with fallbacks is more reliable than prompt-only solutions." />
+</Quiz>
