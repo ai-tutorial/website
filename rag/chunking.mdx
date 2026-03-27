@@ -10,6 +10,8 @@ slug: rag/chunking
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
 import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
+Before retrieval works, documents must be split into searchable chunks. This page covers fixed-size, semantic, and structure-aware chunking, plus metadata enrichment.
+
 ## The Chunking Problem
 
 Before retrieval works, data must be stored and indexed (vector, keyword, or both). You can't index a 50-page PDF as a single blob — documents must be split into chunks that are explicit enough to match against a query. How you chunk is a trade-off:

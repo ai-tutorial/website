@@ -10,6 +10,8 @@ import { CodeEditor } from '/snippets/CodeEditor.jsx';
 import { LLMPlayground } from '/snippets/LLMPlayground.jsx';
 import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
+LLMs only know what they were trained on. RAG bridges this gap by retrieving relevant data and injecting it into the prompt. This page covers the core pattern and a production pipeline.
+
 ## Why RAG?
 
 LLMs are powerful — but they have a fundamental limitation: **they only know what they were trained on.**

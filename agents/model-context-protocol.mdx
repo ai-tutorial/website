@@ -10,6 +10,8 @@ slug: agents/model-context-protocol
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
 import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
+MCP is the open standard for connecting agents to tools. Instead of hardcoding tools inside agents, MCP servers expose them over HTTP — any agent can discover and use them.
+
 ## What is MCP?
 
 The **Model Context Protocol (MCP)** is an open standard introduced by Anthropic in late 2024 that defines how AI agents connect to external tools and data sources. Before MCP, every agent framework invented its own way to define and call tools — leading to fragmentation and vendor lock-in.

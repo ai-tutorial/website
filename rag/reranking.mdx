@@ -1,6 +1,6 @@
 ---
 title: Reranking & Precision Optimization
-description: How to implement reranking in a RAG system
+description: Two-stage retrieval with cross-encoders to improve precision after fast first-pass search
 sidebarTitle: Reranking & Precision Optimization
 icon: book
 mode: wide
@@ -8,6 +8,8 @@ slug: rag/reranking
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
 import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+Fast retrieval finds candidates but ranks them poorly. This page covers two-stage retrieval with cross-encoder reranking for precision optimization.
 
 
 ## What is Reranking?

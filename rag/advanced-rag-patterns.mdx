@@ -9,6 +9,8 @@ slug: rag/advanced-rag-patterns
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
 import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
+Basic RAG works for simple queries. Complex questions need multi-hop reasoning or structured data. This page covers GraphRAG, iterative RAG, agentic RAG, and hybrid data patterns.
+
 
 ## Pattern 1: GraphRAG (Knowledge Graphs + RAG)
 
@@ -44,8 +46,6 @@ import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 - What aspect? (Cause, impact, resolution, timeline)
 
 **Solution:** Use LLM to refine query based on initial results.
-
-[Full runnable example of Iterative RAG](https://colab.research.google.com/drive/1qHfVmIYni7Um7FPYVDUOxUh1tntPpZVH?usp=drive_link)
 
 <CodeEditor 
   file="src/rag/rag_iterative.ts"
@@ -93,7 +93,7 @@ import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 <CodeEditor 
   file="src/rag/rag_hybrid_data.ts"
-  lines="115-137"
+  lines="131-153"
   functionName="main"
   title="Hybrid Data RAG Implementation"
 />

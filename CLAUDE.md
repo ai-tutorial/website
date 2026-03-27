@@ -55,9 +55,21 @@ Each item: **Bold name** — short description.
 Each content page should follow this structure:
 - Frontmatter with `title`, `description`, `sidebarTitle`, `icon: book`, `mode: wide`, `slug`
 - Imports: `CodeEditor`, `Quiz`/`QuizQuestion` as needed
+- **Frontmatter description** must NOT be a copy of the title. Write a meaningful 1-line summary of what the page actually covers.
+- **Page intro** (required): 1-3 line paragraph immediately after imports, before the first `## `. Summarizes what the page covers. No heading — just text. Must NOT repeat the title.
 - Content sections with `## ` headings
 - `CodeEditor` components for all runnable examples
 - `<Quiz>` at the end with 2 scenario-based questions (3 options each)
+
+Example page intro:
+```
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+
+LLMs are powerful but they only know what they were trained on. This page covers
+the core RAG pattern — retrieve, augment, generate — and how to implement it.
+
+## Why RAG?
+```
 
 ### Style
 

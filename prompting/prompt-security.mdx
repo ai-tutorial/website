@@ -9,6 +9,8 @@ slug: prompting/prompt-security
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
 import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
+LLMs are vulnerable to prompt injection, data leakage, and jailbreaking. This page covers the attack vectors and deterministic defenses for each.
+
 ## Why Prompt Security Matters
 
 When prompts move from prototypes to production, they become attack surfaces. Users — intentionally or not — can submit inputs that hijack behavior, forge context, or produce unparseable outputs. Understanding these patterns is the first step toward building resilient LLM applications.
