@@ -7,38 +7,53 @@ mode: wide
 slug: rag/overview
 ---
 
-## What You'll Learn
+## Module Overview
 
-By the end of this module, you'll be able to:
-- Implement two-stage retrieval (first-pass + reranking) pipelines
-- Choose between full-text, semantic, and hybrid search strategies
-- Optimize chunking strategies for different document types
-- Process unstructured data (PDFs, images) reliably
-- Evaluate retrieval and generation quality independently
-- Debug RAG failures using component-level analysis
+**You've probably noticed:** LLMs confidently answer questions about data they've never seen — hallucinating facts, missing recent information, and unable to cite sources.
 
-## Why RAG Matters in Production
+**Here's why that happens:** LLMs only know what they were trained on. Your company's documents, yesterday's data, and proprietary knowledge are invisible to them.
 
-RAG (Retrieval-Augmented Generation) is the workhorse of production AI systems. Here's why:
+**In this module:** You'll build production RAG systems that connect LLMs to your data — with retrieval, chunking, evaluation, and reranking patterns that work at scale.
 
-- **Adoption:** Many enterprises favor RAG to access current, proprietary data; reported adoption varies by survey (2024–2025).
-- **It solves the knowledge problem:** LLMs are frozen in time at training. RAG connects them to current, proprietary data
-- **Cost-effective:** Update your knowledge base without retraining; fine-tuning can incur significant one-time and ongoing costs depending on model size and infrastructure.
-- **Grounded responses:** RAG reduces hallucinations by constraining generation to retrieved context
+## Learning Objectives
 
-## Real-World Context
+By the end of this module, you will be able to:
+
+✅ Implement the core RAG pattern: retrieve, augment, generate
+✅ Choose between lexical, semantic, and hybrid search strategies
+✅ Design chunking strategies for different document types
+✅ Process unstructured data: PDFs, images, tables
+✅ Evaluate retrieval and generation quality independently
+✅ Apply reranking for precision optimization
+✅ Implement advanced patterns: GraphRAG, iterative RAG, hybrid data RAG
+
+## Why This Matters
+
+RAG is the workhorse of production AI systems:
+
+- **It solves the knowledge problem:** LLMs are frozen at training. RAG connects them to current, proprietary data
+- **Cost-effective:** Update your knowledge base without retraining — no fine-tuning costs
+- **Grounded responses:** Constraining generation to retrieved context reduces hallucinations
+- **Auditable:** Every answer links back to source documents
 
 **Case Study: Legal Document Analysis**
 
-A law firm tried using GPT-4 directly to answer questions about case law. Problems:
-- Hallucinated legal precedents (dangerous!)
-- Couldn't access firm's proprietary case notes
+A law firm tried using GPT-4 directly to answer questions about case law:
+- Hallucinated legal precedents (dangerous)
+- Couldn't access the firm's proprietary case notes
 - No way to cite sources or verify claims
 
 **The RAG Solution:**
 - Retrieved relevant cases and notes from their database
-- Constrained LLM to only use retrieved context
+- Constrained the LLM to only use retrieved context
 - Generated answers with citations to source documents
 - **Result:** 95% accuracy, full auditability, zero hallucinations on verified cases
 
-Let's learn how they built it.
+## What You'll Build
+
+- **Basic RAG** — keyword search + LLM generation over company documents
+- **Semantic search** — vector embeddings with provider-agnostic models (OpenAI, Gemini)
+- **Hybrid search** — BM25 + semantic with Reciprocal Rank Fusion
+- **Cross-encoder reranking** — two-stage retrieval for precision
+- **PDF pipeline** — digital + scanned PDF extraction, table parsing, image captioning
+- **RAG evaluation** — retrieval metrics (Hit Rate, MRR) and LLM-as-Judge for generation quality

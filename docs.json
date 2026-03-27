@@ -52,29 +52,16 @@
           "agents/intro",
           "agents/model-context-protocol",
           "agents/memory",
+          "agent-reliability-and-optimization/business-rules-and-guardrails",
+          "agent-reliability-and-optimization/tool-selection-and-optimization",
           "agents/hands-on-exercise",
           "agents/recap-and-resources"
         ]
       },
       {
-        "group": "Agent Reliability & Optimization",
+        "group": "Coming Soon",
         "pages": [
-          "agent-reliability-and-optimization/overview",
-          "agent-reliability-and-optimization/business-rules-and-guardrails",
-          "agent-reliability-and-optimization/tool-selection-and-optimization",
-          "agent-reliability-and-optimization/hands-on-exercise",
-          "agent-reliability-and-optimization/recap-and-resources"
-        ]
-      },
-      {
-        "group": "Multi-Agent Systems & Coordination",
-        "pages": [
-          "multi-agent-systems-and-coordination/overview",
-          "multi-agent-systems-and-coordination/multi-agent-with-workflow-orchestration",
-          "multi-agent-systems-and-coordination/multi-agent-with-agent-orchestration",
-          "multi-agent-systems-and-coordination/agent-to-agent-a2a-communication-protocols",
-          "multi-agent-systems-and-coordination/hands-on-exercise",
-          "multi-agent-systems-and-coordination/recap-and-resources"
+          "coming-soon"
         ]
       }
     ]

@@ -23,7 +23,41 @@ This is the documentation site for [aitutorial.dev](https://aitutorial.dev), bui
 - Follow heading hierarchy: `### Practical Implication` > `#### ❌ Antipattern` > `#### ✅ Best Practice`
 - Use `LLMPlayground` for interactive prompt examples
 - Use `CodeEditor` for displaying code files from the typescript-examples repo
-- Use markdown code blocks for simple, non-interactive examples
+- Use markdown code blocks only for short pseudocode (< 10 lines). All real examples must use `CodeEditor`
+- Use `<Quiz>` + `<QuizQuestion>` at the end of content pages (3 options per question, scenario-based)
+- Never use `<CodeGroup>` with Python/TypeScript pairs — all examples are TypeScript via CodeEditor
+
+### Overview page layout (every module must follow this)
+
+Each module's `overview.mdx` must have exactly three sections in this order:
+
+```
+## Module Overview
+3 short paragraphs using this pattern:
+- **You've probably noticed:** [hook — the pain point]
+- **Here's why that happens:** [root cause]
+- **In this module:** [what they'll learn]
+
+## Learning Objectives
+Checklist with ✅ emoji. One line per objective. 5-8 objectives.
+
+## Why This Matters
+Bullet list of real-world reasons this module matters.
+Include concrete data points, case studies, or cost/accuracy numbers.
+
+## What You'll Build
+Bullet list of concrete examples/projects built in this module.
+Each item: **Bold name** — short description.
+```
+
+### Content page layout
+
+Each content page should follow this structure:
+- Frontmatter with `title`, `description`, `sidebarTitle`, `icon: book`, `mode: wide`, `slug`
+- Imports: `CodeEditor`, `Quiz`/`QuizQuestion` as needed
+- Content sections with `## ` headings
+- `CodeEditor` components for all runnable examples
+- `<Quiz>` at the end with 2 scenario-based questions (3 options each)
 
 ### Style
 

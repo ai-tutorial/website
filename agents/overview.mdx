@@ -6,22 +6,42 @@ icon: book
 mode: wide
 slug: agents/overview
 ---
+
 ## Module Overview
 
-**You've probably noticed:** Simple LLM calls work great for one-shot tasks, but real applications need systems that can use tools, maintain context, and execute multi-step workflows reliably. That's where AI agents come in.
+**You've probably noticed:** Simple LLM calls work great for one-shot tasks, but real applications need systems that can use tools, maintain context, and execute multi-step workflows reliably.
 
-**Here's the challenge:** Building agents that work in demos is easy. Building agents that meet enterprise reliability requirements (95%+ accuracy) is hard. Most agent projects fail not because of the LLM, but because of how they're designed and orchestrated.
+**Here's the challenge:** Building agents that work in demos is easy. Building agents that meet enterprise reliability requirements (95%+ accuracy) is hard. Most agent projects fail not because of the LLM, but because of tool design, memory architecture, and rule enforcement.
 
-**In this module:** You'll learn to build production-grade agent systems from the ground up. We start with simple single-agent patterns, then explore tool design following MCP best practices, and implement production memory architectures. These foundational concepts prepare you for advanced topics in reliability and multi-agent coordination covered in subsequent modules.
+**In this module:** You'll build production-grade agent systems — from single-tool agents to multi-server MCP architectures with thread-based memory, security guardrails, and deterministic business rule validation.
 
 ## Learning Objectives
 
 By the end of this module, you will be able to:
 
-✅ Build agents that can use tools to accomplish tasks  
-✅ Design effective tools following MCP best practices  
-✅ Implement appropriate memory architecture for agent continuity  
-✅ Choose between working memory and long-term memory appropriately  
-✅ Select the right memory integration pattern for your use case  
-✅ Apply memory strategies for continuous learning  
-✅ Build agents with both tool capabilities and persistent context
+✅ Build agents with tool calling using LangChain's `createAgent`
+✅ Design and deploy MCP servers with proper tool descriptions
+✅ Connect agents to multiple MCP servers via `MultiServerMCPClient`
+✅ Implement thread-based memory with `MemorySaver` and long-term memory patterns
+✅ Enforce business rules deterministically with validation tools
+✅ Build security guardrails: PII detection, jailbreak prevention, output filtering
+✅ Optimize tool selection for accuracy at scale
+
+## Why This Matters
+
+The gap between an agent demo and a production agent is enormous:
+
+- **Tool accuracy:** Agent accuracy drops from 92% to 58% as you go from 5 to 20+ tools. Design matters more than model choice
+- **Business rules:** LLMs enforce prompt-based rules ~85% of the time. For financial, legal, or healthcare use cases, that's not enough — deterministic validation is required
+- **Security:** Agents with tool access can leak PII, execute destructive actions, or be manipulated via indirect injection. Guardrails are not optional
+- **Interoperability:** MCP is the emerging standard for tool integration. Building on it now means your tools work with Claude, ChatGPT, Cursor, and any future MCP client
+
+## What You'll Build
+
+- **Weather agent** — LangChain ReAct agent with tool calling
+- **MCP servers** — 3 domain servers (KnowledgeBase, CustomerInfo, IncidentTicket)
+- **Customer support agent** — multi-server agent with thread-based sessions and user identity via headers
+- **Memory examples** — working memory (MemorySaver) and long-term memory (cross-session persistence)
+- **Expense validator** — deterministic business rule enforcement via validation tools
+- **Security guardrails** — PII detection/redaction, jailbreak detection, output filtering pipeline
+- **Tool analytics** — usage tracking with optimization recommendations

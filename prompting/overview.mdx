@@ -7,26 +7,38 @@ mode: wide
 slug: prompting/overview
 ---
 
-## Overview
+## Module Overview
 
-By the end of this module, you'll be able to:
-- Understand how LLMs process context and why it matters for production
-- Design structured prompts that often reduce hallucinations (results vary by task/model)
-- Apply advanced techniques like Chain-of-Thought and extended thinking
-- Select appropriate models and optimize costs through caching
-- Test and iterate on prompts systematically
+**You've probably noticed:** LLM prototypes seem promising but break when real data, cost, and reliability constraints show up.
 
-**Why This Matters:** 
-Most Gen AI projects fail not because of model limitations, but because of poor prompt engineering. The difference between a \$5.000 monthly OpenAI bill and a \$500 monthly bill often comes down to how you structure your prompts. We'll learn production patterns that actually work, backed by real-world data.
+**Here's why that happens:** Prompts are unstructured, context is unmanaged, and models are asked to do work better handled by deterministic systems.
 
-**You've probably noticed:**
-LLM prototypes seem promising but break when real data, cost, and reliability constraints show up.
+**In this module:** You'll learn patterns to structure prompts, reduce hallucinations, and lower costs without sacrificing quality — backed by real-world production data.
 
-**Here's why that happens:**
-Prompts are unstructured, context is unmanaged, and models are asked to do work better handled by deterministic systems.
+## Learning Objectives
 
-**In this module:**
-You'll learn patterns to structure prompts, reduce hallucinations, and lower costs without sacrificing quality.
+By the end of this module, you will be able to:
 
-**Real-world impact:**
-Teams using these patterns report 50-70% cost reductions from caching and 10-20% accuracy gains from structured prompting.
+✅ Understand how LLMs process context and why it matters for production
+✅ Design structured prompts using XML tags, few-shot examples, and JSON schemas
+✅ Apply advanced techniques: Chain-of-Thought, self-consistency, prompt chaining
+✅ Select appropriate models and optimize costs through caching and cascading
+✅ Test and iterate on prompts systematically with evaluation datasets
+✅ Implement prompt security defenses against injection, jailbreaking, and data leakage
+
+## Why This Matters
+
+Most GenAI projects fail not because of model limitations, but because of poor prompt engineering:
+
+- **Cost:** The difference between a $5,000 and $500 monthly bill often comes down to prompt structure — caching, cascading, and token optimization
+- **Reliability:** Unstructured prompts produce inconsistent results. Structured prompts with schemas and examples reduce hallucinations significantly
+- **Security:** Without guardrails, LLMs are vulnerable to prompt injection, data leakage, and jailbreaking — all preventable with the right patterns
+- **Debugging:** When a prompt fails in production, you need systematic evaluation — not "try a different wording"
+
+## What You'll Build
+
+- **Interactive LLM Playground** — test prompts with different models and temperatures
+- **Structured outputs** — extract data reliably using JSON mode and XML schemas
+- **Prompt chains** — break complex tasks into debuggable, sequential steps
+- **Security defenses** — prompt injection detection, PII filtering, jailbreak prevention
+- **Cost optimization** — model cascading and prompt caching strategies
