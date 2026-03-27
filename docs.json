@@ -101,9 +101,23 @@
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/pluna/ai-tutorial",
-      "linkedin": "https://linkedin.com/in/luna-pablo"
-    }
+      "github": "https://github.com/ai-tutorial"
+    },
+    "links": [
+      {
+        "title": "Authors",
+        "links": [
+          {
+            "label": "Pablo Luna (LinkedIn)",
+            "href": "https://www.linkedin.com/in/luna-pablo/"
+          },
+          {
+            "label": "Paulo Veiga (LinkedIn)",
+            "href": "https://www.linkedin.com/in/paulo-gustavo-veiga-877b572/"
+          }
+        ]
+      }
+    ]
   },
   "customScripts": [
     "https://unpkg.com/@stackblitz/sdk/bundles/sdk.umd.js"

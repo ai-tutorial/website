@@ -1,272 +1,51 @@
-# AI Tutorial.dev - LLM-Friendly Documentation Index
+# AI Tutorial - LLM-Friendly Documentation Index
 
-> An Interactive AI Tutorial With Concepts and Leassons Learned. Learn by experimenting with real code in an interactive sandbox. No setup, no dependencies—just open your browser and start building. Every concept includes runnable examples across multiple frameworks, so you can try things immediately and see what actually works.
-> Last Updated: 6b9cc28e19f403b60aa6b77e43216dcd923c7eb5 2025-11-24 07:41:21 -0800
+> An Interactive AI Tutorial With Concepts and Lessons Learned. Learn by experimenting with real code — no setup, no dependencies. Every example runs in your browser via StackBlitz with multi-provider support (OpenAI, Gemini, Claude).
 > Site: https://aitutorial.dev
+> Source: https://github.com/ai-tutorial
 
 ## Table of Contents
 
 ### Home
-- [What Makes This Different - Interactive sandbox learning](https://aitutorial.dev)
+- [What Makes This Different](https://aitutorial.dev): Interactive sandbox learning with real code
 
 ### Context Engineering & Prompt Design
-- [Module Overview](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Module%20Overview): Foundation for prompt design, cost optimization
-- [LLM Fundamentals](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/LLM_Foundamentals): Understanding context windows, limitations, token economics
-- [Structured Prompt Engineering](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Structured_Prompt_Engineering): Production prompts with XML tags, few-shot examples
-- [Advanced Techniques](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Advanced%20Techniques): Chain-of-Thought, self-consistency, extended thinking, prompt chaining
-- [Prompt Optimization & Testing](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Prompt%20Optimization%20%26%20Testing): A/B testing, failure patterns, evaluation datasets
-- [Model Selection & Cost Optimization](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Model%20Selection%20%26%20Cost%20Optimization): Model comparison, prompt caching (50-90% savings), cascading, TOON format
-- [Production Considerations](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Production%20Considerations): Versioning, monitoring, production checklist
-- [Hands-On Exercise](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Hands-On%20Exercise): Build production-ready contract summarizer
-- [Recap & Resources](https://aitutorial.dev/Context_Engineering_&_Prompt_Design/Recap%20%26%20Resources): Key takeaways, common pitfalls, tools
+- [Overview & Learning Objectives](https://aitutorial.dev/prompting/overview)
+- [LLM Fundamentals](https://aitutorial.dev/prompting/llm-fundamentals): Tokenization, temperature, context windows, hallucinations
+- [Structured Prompt Engineering](https://aitutorial.dev/prompting/structured-prompt-engineering): XML tags, few-shot examples, JSON/XML structured outputs
+- [Advanced Techniques](https://aitutorial.dev/prompting/advanced-techniques): Chain-of-Thought, self-consistency, extended thinking, prompt chaining
+- [Prompt Optimization](https://aitutorial.dev/prompting/prompt-optimization-and-testing): Evaluation datasets, A/B testing, systematic iteration
+- [Prompt Security](https://aitutorial.dev/prompting/prompt-security): Prompt injection, jailbreaking, data exfiltration, PII leakage defenses
+- [Model Selection & Cost Optimization](https://aitutorial.dev/prompting/model-selection-and-cost-optimization): Model cascading, prompt caching, TOON format
+- [Production Considerations](https://aitutorial.dev/prompting/production-considerations): Versioning, monitoring, deployment checklist
+- [Hands-On Exercise](https://aitutorial.dev/prompting/hands-on-exercise): Build a contract summarizer
+- [Recap & Resources](https://aitutorial.dev/prompting/recap-and-resources)
 
 ### Retrieval Augmented Generation (RAG)
-- [Module Overview](https://aitutorial.dev/RAG/Module%20Overview): Production RAG fundamentals, real-world adoption
-- [RAG Fundamentals](https://aitutorial.dev/RAG/RAG%20Fundamentals): Two-stage retrieval pattern, basic implementation
-- [Search Strategy Selection](https://aitutorial.dev/RAG/Search%20Strategy%20Selection): BM25, semantic search, hybrid search with RRF
-- [Chunking and Metadata Strategies](https://aitutorial.dev/RAG/Chunking%20and%20Metadata%20Strategies): Fixed-size, semantic, structure-aware chunking
-- [Working with Unstructured Data](https://aitutorial.dev/RAG/Working%20with%20Unstructured%20Data): PDF processing (digital vs scanned), table extraction, image handling
-- [RAG Evaluation](https://aitutorial.dev/RAG/RAG%20Evaluation): Retrieval metrics (Recall@k, NDCG), generation metrics (faithfulness, relevance), LLM-as-Judge
-- [Reranking in Practice](https://aitutorial.dev/RAG/Reranking%20in%20Practice): Cross-encoder reranking, production patterns
-- [Advanced RAG Patterns](https://aitutorial.dev/RAG/Advanced%20RAG%20Patterns): GraphRAG, iterative RAG, agentic RAG, hybrid data RAG
-- [Hands-On Exercise](https://aitutorial.dev/RAG/Hands-On%20Exercise): Build and evaluate production-grade RAG system
-- [Recap & Resources](https://aitutorial.dev/RAG/Recap%20%26%20Resources): Two-stage retrieval standard, hybrid search, chunking matters
+- [Overview & Learning Objectives](https://aitutorial.dev/rag/overview)
+- [RAG Fundamentals](https://aitutorial.dev/rag/fundamentals): Core retrieve-augment-generate pattern, production pipeline
+- [Search Strategy Selection](https://aitutorial.dev/rag/search-strategy-selection): Lexical (BM25), semantic (vector), hybrid search with RRF
+- [Chunking & Metadata Strategies](https://aitutorial.dev/rag/chunking): Fixed-size, semantic, structure-aware chunking, metadata enrichment
+- [Working with PDFs](https://aitutorial.dev/rag/working-with-pdfs): Digital and scanned PDF extraction, table parsing
+- [Images & Long Documents](https://aitutorial.dev/rag/images-and-long-documents): OCR, image captioning, map-reduce summarization
+- [Evaluation & Quality Metrics](https://aitutorial.dev/rag/evaluation-and-quality-metrics): Retrieval metrics, LLM-as-Judge, golden datasets, failure debugging
+- [Reranking & Precision Optimization](https://aitutorial.dev/rag/reranking): Two-stage retrieval with cross-encoder reranking
+- [Advanced RAG Patterns](https://aitutorial.dev/rag/advanced-rag-patterns): GraphRAG, iterative RAG, agentic RAG, hybrid data RAG
+- [Hands-On Exercise](https://aitutorial.dev/rag/hands-on-exercise): Build a production RAG system
+- [Recap & Resources](https://aitutorial.dev/rag/recap-and-resources)
 
 ### AI Agents
-- [Module Overview](https://aitutorial.dev/AI%20Agents/Module%20Overview): From demos to enterprise-grade agents (95%+ accuracy)
-- [Introduction to AI Agents](https://aitutorial.dev/AI%20Agents/Introduction%20to%20AI%20Agents): Agent loop (perceive, think, act, remember), basic tool use
-- [Tool Design & Implementation](https://aitutorial.dev/AI%20Agents/Tool%20Design%20%26%20Implementation): MCP introduction, design principles, parameter complexity impacts (1-3 params = 90%, 7+ params = 60-70%)
-- [Agent Memory](https://aitutorial.dev/AI%20Agents/Agent%20Memory): Two-tier system (working memory + long-term memory), integration patterns
-- [Hands-On Exercise](https://aitutorial.dev/AI%20Agents/Hands-On%20Exercise): Build customer support agent with tools and memory
-- [Recap & Resources](https://aitutorial.dev/AI%20Agents/Recap%20%26%20Resources): Tool design impacts reliability, MCP standard, memory prevents waste
+- [Overview & Learning Objectives](https://aitutorial.dev/agents/overview)
+- [Introduction to AI Agents](https://aitutorial.dev/agents/intro): LLM vs agent, ReAct loop, LangChain createAgent, weather agent
+- [Model Context Protocol (MCP)](https://aitutorial.dev/agents/model-context-protocol): MCP architecture, multi-server design, tool registration, customer support example
+- [Agent Memory](https://aitutorial.dev/agents/memory): Working memory (MemorySaver + thread_id), long-term memory, integration patterns
+- [Business Rules & Guardrails](https://aitutorial.dev/agents/business-rules-and-guardrails): Deterministic validation, pre/post guardrails, PII detection, jailbreak prevention
+- [Tool Selection & Optimization](https://aitutorial.dev/agents/tool-selection-and-optimization): Hierarchical routing, context-based filtering, tool analytics
+- [Hands-On Exercise](https://aitutorial.dev/agents/hands-on-exercise): Build a customer support agent
+- [Recap & Resources](https://aitutorial.dev/agents/recap-and-resources)
 
----
+### Coming Soon
+- [Coming Soon](https://aitutorial.dev/coming-soon): Multi-Agent Systems, Fine-Tuning, Evaluation & Observability, Data Governance
 
-## Module Summaries
-
-### Context Engineering & Prompt Design
-**Summary:** Master structured prompting, advanced techniques, and cost optimization for production LLM applications.
-
-**Key Topics:**
-- Context windows and token economics (GPT-4: 128K, Claude 4.5: 200K, Gemini 1.5: 2M tokens)
-- Structured prompts with role, context, instructions, constraints, examples, input
-- XML tags reduce hallucinations and improve parsing
-- Chain-of-Thought (CoT) for reasoning tasks, self-consistency for reliability
-- Prompt caching: 50-90% cost reduction on repeated content
-- Model cascading: Use cheap models first, escalate when uncertain
-- TOON format: 30-60% token reduction for tabular data
-- A/B testing, prompt versioning, golden datasets for evaluation
-
-**Production Impact:** Teams report 50-70% cost reductions from caching, 10-20% accuracy gains from structured prompting.
-
----
-
-### Retrieval Augmented Generation (RAG)
-**Summary:** Build production RAG systems with two-stage retrieval, hybrid search, and component-level evaluation.
-
-**Key Topics:**
-- Two-stage retrieval: Fast first-pass (BM25/vectors) + precise reranking (cross-encoders)
-- Hybrid search: Combine BM25 (exact matches) + semantic search (concepts) with Reciprocal Rank Fusion
-- Chunking strategies: Fixed-size (simple), semantic (better), structure-aware (production)
-- Metadata enrichment: Source, timestamps, sections for filtering
-- Unstructured data: Digital PDF extraction, OCR for scanned docs, table extraction with vision models
-- Evaluation metrics: Recall@k, NDCG@k, MRR for retrieval; faithfulness and relevance for generation
-- LLM-as-Judge: Production evaluation without ground truth
-- Advanced patterns: GraphRAG for multi-hop, iterative RAG for query refinement, agentic RAG
-
-**Production Impact:** Two-stage retrieval + hybrid search often yields 85-92% relevant results vs 70-75% for single-stage.
-
----
-
-### AI Agents
-**Summary:** Design production-grade agents with intelligent tool use, MCP standards, and two-tier memory architecture.
-
-**Key Topics:**
-- Agent loop: User query → think → act (tools) → think → respond
-- Model Context Protocol (MCP): Universal standard for connecting AI to data/tools
-- Tool design principles: Clear names (verb_noun_context), comprehensive descriptions, 1-3 parameters
-- Parameter complexity impact: 1-3 params = 90%+ accuracy, 7+ params = 60-70% accuracy
-- Tool patterns: Consolidation (reduce steps), semantic enrichment (add context), graceful errors
-- Memory architecture: Working memory (session-scoped, Redis key-value) + long-term memory (persistent, vector-indexed)
-- Memory integration: LLM-driven (tools), code-driven (programmatic), background extraction (automatic)
-- Memory strategies: Discrete facts, summaries, preferences, custom extraction
-
-**Production Impact:** SaaS company reduced agent steps from 15 to 3 via tool consolidation, cutting cost/query by 93% ($2.20 → $0.15).
-
----
-
-## Quick Reference: When to Use What
-
-### Prompting Patterns
-- **Temperature=0:** Classification, extraction, deterministic tasks
-- **Temperature=0.3-0.7:** Creative writing, brainstorming
-- **Chain-of-Thought:** Complex reasoning, math, code generation
-- **Self-Consistency:** High-stakes decisions (medical, financial, legal)
-- **Prompt Caching:** Static system prompts, knowledge bases (>1024 tokens)
-- **Model Cascading:** High-volume tasks with clear confidence signals
-
-### RAG Patterns
-- **BM25 Search:** Exact terminology (legal codes, SKUs, product IDs)
-- **Semantic Search:** Conceptual queries, paraphrased intent
-- **Hybrid Search:** Most production use cases (exact + conceptual)
-- **Two-Stage Retrieval:** When recall and precision both matter
-- **GraphRAG:** Multi-hop reasoning, entity-centric queries
-- **Iterative RAG:** Vague queries, large document corpus
-
-### Agent Patterns
-- **Simple LLM Call:** Single question, no external data, no actions
-- **Agent:** External data lookup, actions needed, multi-turn conversation
-- **Tool Consolidation:** Related data from same source (e.g., customer context)
-- **Working Memory:** Session-scoped state, conversation continuity, tool caching
-- **Long-Term Memory:** User preferences, persistent knowledge, cross-session context
-
----
-
-## Cost & Performance Guidelines
-
-### Model Selection (January 2025)
-| Model | Context | Cost ($/1M tokens in/out) | Best For |
-|-------|---------|-------------------------|----------|
-| GPT-4 Turbo | 128K | $10 / $30 | Complex reasoning, structured output |
-| GPT-3.5 Turbo | 16K | $0.50 / $1.50 | Simple tasks, high volume |
-| Claude Sonnet 4.5 | 200K | $3 / $15 | Long documents, nuanced analysis |
-| Claude Haiku | 200K | $0.25 / $1.25 | Fast classification, simple extraction |
-| Gemini Pro 1.5 | 2M | $1.25 / $5 | Massive context, multimodal |
-
-### Prompt Caching Economics
-- **Scenario:** Customer support with 50K token knowledge base, 10K queries
-- **Without caching:** 10K × 50K tokens × $3/1M = $1,500
-- **With caching (80% hit rate):** $450 (70% savings)
-
-### RAG Performance
-- **BM25 alone:** 70-75% relevant results
-- **Semantic alone:** 72-78% relevant results
-- **Hybrid:** 85-92% relevant results
-- **With reranking:** Additional precision lift on top results
-
-### Agent Tool Complexity
-- **1-3 parameters:** 90%+ correct tool usage
-- **4-6 parameters:** 75-85% correct usage
-- **7+ parameters:** 60-70% correct usage (break into multiple tools)
-
----
-
-## Production Checklists
-
-### Before Deploying Prompts
-- [ ] Evaluation dataset created (100+ examples)
-- [ ] Accuracy meets requirements (>90%)
-- [ ] Cost per request measured
-- [ ] Caching implemented where applicable
-- [ ] Input/output validation in place
-- [ ] A/B testing framework ready
-- [ ] Rollout plan defined (10% → 50% → 100%)
-
-### Before Deploying RAG
-- [ ] Two-stage retrieval implemented
-- [ ] Chunking strategy chosen and tested
-- [ ] Metadata extraction for filtering
-- [ ] Golden evaluation dataset (50+ test cases)
-- [ ] Retrieval metrics: Recall@k, NDCG@k
-- [ ] Generation metrics: Faithfulness, relevance
-- [ ] Component-level monitoring
-- [ ] Error handling for empty results
-
-### Before Deploying Agents
-- [ ] Agent loop handles all stop reasons
-- [ ] Tools follow MCP best practices
-- [ ] Tool parameters kept simple (1-3 preferred)
-- [ ] Consistent response format
-- [ ] Working memory for session continuity
-- [ ] Tool result caching implemented
-- [ ] Long-term memory for preferences
-- [ ] Error messages are actionable
-
----
-
-## Common Anti-Patterns to Avoid
-
-### Prompting
-❌ Unstructured prompts (no role, context, constraints)
-❌ No caching on repeated content
-❌ Using expensive models for simple tasks
-❌ No evaluation dataset ("vibe checks")
-❌ Deploying without A/B testing
-
-### RAG
-❌ Single-stage retrieval (sacrifices recall or precision)
-❌ Uniform chunking (one-size-fits-all fails)
-❌ Ignoring metadata (misses accuracy gains)
-❌ No component-level evaluation (can't debug failures)
-❌ Skipping reranking on high-value queries
-
-### Agents
-❌ Complex tools (7+ parameters)
-❌ Vague tool descriptions
-❌ No memory (redundant API calls)
-❌ Inconsistent tool responses
-❌ Throwing exceptions instead of structured errors
-❌ Missing "when NOT to use" guidance
-
----
-
-## Key Metrics & Targets
-
-### Prompting
-- **Prompt caching hit rate:** >80% for knowledge-base queries
-- **Cost reduction:** 50-70% with caching on static content
-- **Accuracy improvement:** 10-20% with structured prompts (varies by task)
-
-### RAG
-- **Recall@10:** >90% (catch relevant docs in top 10)
-- **Precision@5:** >80% (top 5 are relevant)
-- **NDCG@10:** >80% (strong ranking quality)
-- **Faithfulness:** >90% (minimal hallucination)
-- **Answer Relevance:** >85% (actually helpful)
-
-### Agents
-- **Tool selection accuracy:** >90% with well-designed tools
-- **Memory cache hit rate:** >70% within sessions
-- **Error handling:** 100% structured responses (no exceptions to LLM)
-- **Cost reduction:** 90%+ possible with tool consolidation
-
----
-
-## Resources & References
-
-### Official Documentation
-- [Anthropic Prompt Engineering](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview)
-- [OpenAI GPT Best Practices](https://platform.openai.com/docs/guides/prompt-engineering)
-- [Google Gemini Prompting Strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-
-### Evaluation Tools
-- **Open Source:** LangFuse, Phoenix, Opik, Inspect AI
-- **Commercial:** Braintrust, Langsmith, Arize, AgentOps
-
-### Vector Databases
-- **Milvus:** GPU-accelerated, billion-scale
-- **Qdrant:** Rust-based, high performance
-- **pgvector:** PostgreSQL extension
-- **Pinecone:** Managed vector DB
-- **Weaviate:** Built-in hybrid search
-
-### Memory Systems
-- **Redis Agent Memory Server:** Production two-tier memory
-- **Mem0:** Alternative memory system
-- **Zep:** Long-term memory for agents
-- **OpenAI Agent SDK:** Built-in sessions
-
----
-
-## Contributors
-
-- **Pablo Luna** - 
-- **Paulo Veiga** - Contributor
-
-
-
----
-
-*This index is optimized for LLM consumption. For human-readable documentation, visit the full tutorial site.*
-
+### About
+- [About Us](https://aitutorial.dev/about): Authors, contributing, repositories
