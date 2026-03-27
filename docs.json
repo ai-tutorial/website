@@ -71,12 +71,16 @@
     "dark": "/logo/logo-dark-full.svg"
   },
   "navbar": {
-    "links": [],
-    "primary": {
-      "type": "button",
-      "label": "Contact",
-      "href": "mailto:pablo.luna@gmail.com"
-    }
+    "links": [
+      {
+        "label": "Report Issue",
+        "href": "https://github.com/ai-tutorial/website/issues/new"
+      },
+      {
+        "label": "About Us",
+        "href": "/about"
+      }
+    ]
   },
   "contextual": {
     "options": [
