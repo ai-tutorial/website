@@ -25,56 +25,96 @@ Agent accuracy drops from 92% to 58% as tool count grows from 5 to 20+. This pag
 
 ## Challenge 1: Too Many Tools
 
-The anti-pattern: dumping all tools into a flat list. The agent sees 20 options and guesses.
+Your customer support agent handles customers, products, orders, and tickets. The naive approach: register all 20 CRUD tools in a flat list. The LLM sees all 20 at once and picks the wrong one 42% of the time.
 
-<CodeEditor
-  file="src/agents/tool_selection_patterns.ts"
-  lines="22-28"
-  functionName="flatToolList"
-  title="Anti-Pattern: Flat Tool List (20 tools → 58% accuracy)"
-/>
+**Anti-pattern:** All 20 tools in a flat list.
+
+```ts Pseudocode
+// Agent sees all 20 tools at once → 58% accuracy
+const tools = [
+    searchCustomers, searchProducts, searchOrders, searchTickets,
+    getCustomer, getProduct, getOrder, getTicket,
+    updateCustomer, updateProduct, updateOrder, updateTicket,
+    createCustomer, createProduct, createOrder, createTicket,
+    deleteCustomer, deleteProduct, deleteOrder, deleteTicket,
+];
+```
 
 ### Solution 1: Hierarchical Routing
 
-Two-step routing: first pick domain + action, then call the specific tool. Agent sees 1 routing tool instead of 20 → accuracy jumps to 90%+.
+Instead of 20 flat tools, give the agent 1 routing tool. It picks the domain + action, then a second step calls the specific tool.
 
-<CodeEditor
-  file="src/agents/tool_selection_patterns.ts"
-  lines="38-65"
-  functionName="createHierarchicalRouter"
-  title="Hierarchical Routing (2 steps → 90%+ accuracy)"
-/>
+```ts Pseudocode
+// Agent sees 1 tool instead of 20 → 90%+ accuracy
+const routeTool = tool(async ({ domain, action }) => {
+    const mapping = {
+        "customers,search": searchCustomers,
+        "customers,get": getCustomer,
+        "orders,search": searchOrders,
+        // ... 20 mappings
+    };
+    return mapping[`${domain},${action}`];
+}, {
+    name: "route_to_domain",
+    schema: z.object({
+        domain: z.enum(["customers", "products", "orders", "tickets"]),
+        action: z.enum(["search", "get", "update", "create", "delete"]),
+    })
+});
+```
 
 ### Solution 2: Context-Based Tool Groups
 
-Return only relevant tools for the current conversation phase. Agent sees 2-4 tools at a time.
+A support conversation has phases: greeting (authentication), diagnosis (searching), resolution (ticketing). During diagnosis, the agent doesn't need ticket creation tools. During resolution, it doesn't need search. Show only the tools relevant to the current phase — the agent sees 2-4 instead of 20.
 
-<CodeEditor
-  file="src/agents/tool_selection_patterns.ts"
-  lines="75-89"
-  functionName="getToolsForPhase"
-  title="Context-Based Tool Groups (phase filtering)"
-/>
+```ts Pseudocode
+function getToolsForPhase(phase: string) {
+    const groups = {
+        greeting:  [authenticateCustomer],
+        diagnosis: [searchKnowledgeBase, checkSystemStatus],
+        resolution: [createTicket, scheduleCallback],
+    };
+    return groups[phase];  // Agent sees 2-3 tools, not 20
+}
+```
 
 ## Challenge 2: Overlapping Functionality
 
-Three tools named `search_products`, `find_products`, `product_lookup` — all do the same thing. The agent picks randomly.
+Your e-commerce agent has three product tools: `search_products`, `find_products`, and `product_lookup`. They all sound the same — the LLM picks randomly or calls all three. Even with just 3 tools, overlapping descriptions destroy accuracy.
 
 ### Solution: Clear Differentiation
 
 Each tool has a distinct purpose with "Use when" / "Do NOT use" guidance:
 
-<CodeEditor
-  file="src/agents/tool_selection_patterns.ts"
-  lines="99-146"
-  functionName="createDifferentiatedProductTools"
-  title="Clear Tool Differentiation (distinct purposes)"
-/>
+```ts Pseudocode
+// Instead of 3 overlapping tools, 3 distinct tools:
 
-The agent now picks the right tool for each query type:
-- "wireless mouse" → `search_products_by_text` (fuzzy text search)
-- "PROD-001" → `get_product_by_sku` (exact lookup)
-- "mice under $20" → `filter_products_by_attributes` (structured filter)
+tool("search_products_by_text", {
+    description: `Full-text search.
+    Use when: customer describes product ("wireless mouse").
+    Do NOT use when: you have exact SKU.`,
+    schema: { query: z.string() }
+});
+
+tool("get_product_by_sku", {
+    description: `Exact SKU lookup.
+    Use when: customer provides SKU ("PROD-001").
+    Do NOT use for search.`,
+    schema: { sku: z.string() }
+});
+
+tool("filter_products_by_attributes", {
+    description: `Structured filter.
+    Use when: customer specifies category, price, brand.
+    Do NOT use for text search.`,
+    schema: { category: z.string().optional(), priceMax: z.number().optional() }
+});
+```
+
+The agent picks the right tool for each query:
+- "wireless mouse" → `search_products_by_text`
+- "PROD-001" → `get_product_by_sku`
+- "mice under $20" → `filter_products_by_attributes`
 
 ## Advanced: Tool Usage Analytics
 
