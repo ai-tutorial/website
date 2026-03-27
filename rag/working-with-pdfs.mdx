@@ -1,0 +1,89 @@
+---
+title: Working with PDFs
+description: How to process PDFs for RAG — digital, scanned, and tables
+sidebarTitle: Working with PDFs
+icon: book
+mode: wide
+slug: rag/working-with-pdfs
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+## Why PDF Processing Matters
+
+80% of enterprise data lives in unstructured formats — PDFs, scans, reports. Before any of it can be retrieved by your RAG system, it needs to be extracted into clean text. The challenge: PDFs come in two fundamentally different forms (digital and scanned), and tables are notoriously hard to parse in both.
+
+This page covers how to extract text from PDFs reliably. For image processing and long document strategies, see [Images & Long Documents](/rag/images-and-long-documents).
+
+## PDF Processing: Digital vs. Scanned
+
+Not all PDFs are created equal.
+
+### Digital PDFs (Text-Based)
+
+<CodeEditor
+    file="src/rag/pdf_processing.ts"
+    lines="19-37"
+    functionName="extractDigitalPdf"
+    title="Digital PDF Extraction"
+/>
+
+### Scanned PDFs (Image-Based)
+
+<CodeEditor
+    file="src/rag/pdf_processing.ts"
+    lines="39-82"
+    functionName="extractScannedPdf"
+    title="Scanned PDF Extraction (OCR)"
+/>
+
+### Combined PDF Processing Pipeline
+
+<CodeEditor
+    file="src/rag/pdf_processing.ts"
+    lines="89-154"
+    functionName="PDFProcessor"
+    title="Combined PDF Processing Pipeline"
+/>
+
+## Table Extraction: The Hard Problem
+
+Tables are notoriously difficult for OCR and even digital PDFs.
+
+**Why tables are hard:**
+- OCR sees tables as disconnected text blocks
+- Column alignment information is lost
+- Multi-line cells get fragmented
+- Headers vs. data distinction unclear
+
+**Solutions:**
+
+### 1. Specialized Table Extractors
+
+<CodeEditor
+    file="src/rag/pdf_table_extraction.ts"
+    lines="41-75"
+    functionName="extractTablesFromPdf"
+    title="Specialized Table Extraction"
+/>
+
+### 2. Vision-Language Models for Tables
+
+Modern approach: Use multimodal models to "see" the table.
+
+<CodeEditor
+    file="src/rag/pdf_vision.ts"
+    lines="44-74"
+    functionName="extractTableWithVision"
+    title="Vision-Based Table Extraction"
+/>
+
+**Production recommendation:**
+1. Try specialized extractor (camelot) first - fast and accurate for clean tables
+2. Fall back to vision model for complex/messy tables - slower but more robust
+3. Store both raw table and structured version in metadata
+
+<Quiz>
+<QuizQuestion question="What is the key difference between processing digital PDFs and scanned PDFs?" options={["There is no difference — all PDFs are processed the same way", "Digital PDFs have extractable text; scanned PDFs are images that require OCR", "Scanned PDFs are always higher quality"]} answer={1} explanation="Digital PDFs contain selectable text that can be extracted directly. Scanned PDFs are images of text that need OCR (Optical Character Recognition) first." />
+<QuizQuestion question="When should you use vision-language models instead of OCR for table extraction?" options={["Always — vision models are always more accurate", "When tables are complex, messy, or have irregular layouts that confuse traditional extractors", "Only for tables with fewer than 5 rows"]} answer={1} explanation="Vision models 'see' the table layout holistically, making them better at complex or messy tables. Use specialized extractors first for clean tables (faster and cheaper), and fall back to vision for difficult cases." />
+</Quiz>

@@ -31,11 +31,13 @@ export const LLMPlayground = ({
   // ==================== CONSTANTS ====================
   const OPENAI_STORAGE_KEY = 'openai_api_key';
   const GEMINI_STORAGE_KEY = 'gemini_api_key';
+  const ANTHROPIC_STORAGE_KEY = 'anthropic_api_key';
   const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
   const SETTINGS_PANEL_KEY = 'llm_playground_settings_open';
   const SETTINGS_PANEL_WIDTH = 220;
   const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
   const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+  const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
   const MAX_TOKENS = 2000;
 
   const OPENAI_MODELS = [
@@ -53,9 +55,16 @@ export const LLMPlayground = ({
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   ];
 
+  const ANTHROPIC_MODELS = [
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude 4.5 Haiku' },
+    { value: 'claude-sonnet-4-6-20260326', label: 'Claude 4.6 Sonnet' },
+    { value: 'claude-opus-4-6-20260326', label: 'Claude 4.6 Opus' },
+  ];
+
   const PROVIDERS = {
     gemini: { label: 'Gemini', models: GEMINI_MODELS, storageKey: GEMINI_STORAGE_KEY, apiUrl: GEMINI_API_URL },
     openai: { label: 'OpenAI', models: OPENAI_MODELS, storageKey: OPENAI_STORAGE_KEY, apiUrl: OPENAI_API_URL },
+    anthropic: { label: 'Claude', models: ANTHROPIC_MODELS, storageKey: ANTHROPIC_STORAGE_KEY, apiUrl: ANTHROPIC_API_URL },
   };
 
   // ==================== ICON HELPERS ====================
@@ -519,13 +528,24 @@ export const LLMPlayground = ({
       requestMessages = advancedMessages;
     }
 
-    const jsonPayload = {
-      model,
-      messages: requestMessages,
-      temperature,
-      top_p: topP,
-      max_tokens: MAX_TOKENS
-    };
+    // Anthropic API uses a different payload and header format
+    const isAnthropic = provider === 'anthropic';
+    const jsonPayload = isAnthropic
+      ? {
+          model,
+          messages: requestMessages.filter(m => m.role !== 'system'),
+          ...(requestMessages.find(m => m.role === 'system') && { system: requestMessages.find(m => m.role === 'system').content }),
+          temperature,
+          top_p: topP,
+          max_tokens: MAX_TOKENS
+        }
+      : {
+          model,
+          messages: requestMessages,
+          temperature,
+          top_p: topP,
+          max_tokens: MAX_TOKENS
+        };
 
     setLastSentJson(jsonPayload);
 
@@ -534,13 +554,14 @@ export const LLMPlayground = ({
       const maxRetries = 3;
       let response;
 
+      const headers = isAnthropic
+        ? { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }
+        : { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
+
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         response = await fetch(apiUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
+          headers,
           body: JSON.stringify(jsonPayload)
         });
 
@@ -563,7 +584,9 @@ export const LLMPlayground = ({
       }
 
       const data = await response.json();
-      const newResponse = data.choices[0]?.message?.content || 'No response generated';
+      const newResponse = isAnthropic
+        ? (data.content?.[0]?.text || 'No response generated')
+        : (data.choices?.[0]?.message?.content || 'No response generated');
 
       setLastResponseJson(data);
 

@@ -21,6 +21,7 @@ export const CodeEditor = ({
   // Constants must be inside the component — snippets are eval'd, not imported as modules
   const STORAGE_KEY = 'openai_api_key';
   const GEMINI_STORAGE_KEY = 'gemini_api_key';
+  const ANTHROPIC_STORAGE_KEY = 'anthropic_api_key';
   const PROVIDER_STORAGE_KEY = 'llm_playground_provider';
 
   // Validate required parameter
@@ -80,8 +81,10 @@ export const CodeEditor = ({
   const isApiKeyConfigured = () => {
     const openaiKey = localStorage.getItem(STORAGE_KEY);
     const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY);
+    const anthropicKey = localStorage.getItem(ANTHROPIC_STORAGE_KEY);
     return (openaiKey !== null && openaiKey.trim().length > 0) ||
-           (geminiKey !== null && geminiKey.trim().length > 0);
+           (geminiKey !== null && geminiKey.trim().length > 0) ||
+           (anthropicKey !== null && anthropicKey.trim().length > 0);
   };
 
   /**
@@ -120,19 +123,23 @@ export const CodeEditor = ({
   const buildEnvContent = () => {
     const openaiKey = localStorage.getItem(STORAGE_KEY)?.trim();
     const geminiKey = localStorage.getItem(GEMINI_STORAGE_KEY)?.trim();
+    const anthropicKey = localStorage.getItem(ANTHROPIC_STORAGE_KEY)?.trim();
 
-    if (!openaiKey && !geminiKey) {
+    if (!openaiKey && !geminiKey && !anthropicKey) {
       return `OPENAI_MODEL=gpt-4.1-nano
 OPENAI_API_KEY=sk-mock-key-1234567890abcdef
 GEMINI_MODEL=gemini-2.5-flash-lite
 GOOGLE_GENERATIVE_AI_API_KEY=
+GOOGLE_API_KEY=
+ANTHROPIC_API_KEY=
 AI_PROVIDER=openai
 # API key not found in browser storage
 # To configure your API key:
 # 1. For Gemini (free): Go to https://aistudio.google.com/apikey
 # 2. For OpenAI: Go to https://platform.openai.com/api-keys
-# 3. Enter it in the configuration form above this editor
-# 4. The .env file will be automatically updated with your key`;
+# 3. For Claude: Go to https://console.anthropic.com/settings/keys
+# 4. Enter it in the configuration form above this editor
+# 5. The .env file will be automatically updated with your key`;
     }
 
     const envLines = ['# Using the API key(s) you configured. This file will be created when the dialog is loaded.'];
@@ -142,9 +149,15 @@ AI_PROVIDER=openai
     }
     if (geminiKey) {
       envLines.push(`GEMINI_MODEL=gemini-2.5-flash-lite`);
+      envLines.push(`# Vercel AI SDK uses GOOGLE_GENERATIVE_AI_API_KEY, LangChain uses GOOGLE_API_KEY`);
       envLines.push(`GOOGLE_GENERATIVE_AI_API_KEY=${geminiKey}`);
+      envLines.push(`GOOGLE_API_KEY=${geminiKey}`);
     }
-    envLines.push(`AI_PROVIDER=${geminiKey ? 'gemini' : 'openai'}`);
+    if (anthropicKey) {
+      envLines.push(`ANTHROPIC_API_KEY=${anthropicKey}`);
+    }
+    const provider = anthropicKey ? 'anthropic' : geminiKey ? 'gemini' : 'openai';
+    envLines.push(`AI_PROVIDER=${provider}`);
     return envLines.join('\n');
   };
 
@@ -195,12 +208,18 @@ AI_PROVIDER=openai
    */
   const validateApiKey = async (key, provider) => {
     try {
-      const url = provider === 'gemini'
-        ? 'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key.trim())
-        : 'https://api.openai.com/v1/models';
-      const headers = provider === 'gemini'
-        ? { 'Content-Type': 'application/json' }
-        : { 'Authorization': `Bearer ${key.trim()}`, 'Content-Type': 'application/json' };
+      const urls = {
+        gemini: 'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(key.trim()),
+        openai: 'https://api.openai.com/v1/models',
+        anthropic: 'https://api.anthropic.com/v1/models',
+      };
+      const headerMap = {
+        gemini: { 'Content-Type': 'application/json' },
+        openai: { 'Authorization': `Bearer ${key.trim()}`, 'Content-Type': 'application/json' },
+        anthropic: { 'x-api-key': key.trim(), 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
+      };
+      const url = urls[provider];
+      const headers = headerMap[provider];
 
       const response = await fetch(url, { method: 'GET', headers });
 
@@ -239,8 +258,9 @@ AI_PROVIDER=openai
     setSuccess(false);
     setIsSubmitting(true);
 
+    const providerNames = { gemini: 'Gemini', openai: 'OpenAI', anthropic: 'Claude' };
     if (!apiKey || !apiKey.trim()) {
-      setError(`Please enter your ${selectedProvider === 'gemini' ? 'Gemini' : 'OpenAI'} API key`);
+      setError(`Please enter your ${providerNames[selectedProvider]} API key`);
       setIsSubmitting(false);
       return;
     }
@@ -249,6 +269,11 @@ AI_PROVIDER=openai
     const trimmedKey = apiKey.trim();
     if (selectedProvider === 'openai' && !trimmedKey.startsWith('sk-')) {
       setError('Invalid API key format. OpenAI API keys should start with "sk-"');
+      setIsSubmitting(false);
+      return;
+    }
+    if (selectedProvider === 'anthropic' && !trimmedKey.startsWith('sk-ant-')) {
+      setError('Invalid API key format. Anthropic API keys should start with "sk-ant-"');
       setIsSubmitting(false);
       return;
     }
@@ -267,8 +292,8 @@ AI_PROVIDER=openai
 
     // Key is valid, save it
     try {
-      const storageKey = selectedProvider === 'gemini' ? GEMINI_STORAGE_KEY : STORAGE_KEY;
-      localStorage.setItem(storageKey, trimmedKey);
+      const storageKeys = { gemini: GEMINI_STORAGE_KEY, openai: STORAGE_KEY, anthropic: ANTHROPIC_STORAGE_KEY };
+      localStorage.setItem(storageKeys[selectedProvider], trimmedKey);
       localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProvider);
       dispatchApiKeyChanged();
       setSuccess(true);
@@ -489,6 +514,13 @@ AI_PROVIDER=openai
             >
               OpenAI
             </button>
+            <button
+              type="button"
+              onClick={() => { setSelectedProvider('anthropic'); setError(''); setApiKey(''); }}
+              className={`llm-provider-tab ${selectedProvider === 'anthropic' ? 'llm-provider-tab-active' : ''}`}
+            >
+              Claude
+            </button>
           </div>
 
           {selectedProvider === 'gemini' && (
@@ -519,6 +551,25 @@ AI_PROVIDER=openai
                   className="code-editor-link"
                 >
                   platform.openai.com/api-keys
+                </a>
+              </p>
+            </div>
+          )}
+
+          {selectedProvider === 'anthropic' && (
+            <div className="code-editor-info-box">
+              <p className="code-editor-info-box-title">
+                Don't have an API key?
+              </p>
+              <p className="code-editor-info-box-text">
+                Get one at{' '}
+                <a
+                  href="https://console.anthropic.com/settings/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="code-editor-link"
+                >
+                  console.anthropic.com/settings/keys
                 </a>
               </p>
             </div>

@@ -1,0 +1,90 @@
+---
+title: Images & Long Documents
+description: How to handle images and long documents in RAG pipelines
+sidebarTitle: Images & Long Documents
+icon: book
+mode: wide
+slug: rag/images-and-long-documents
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+## Beyond Text: Images and Long Documents
+
+Once you can extract text from PDFs (covered in [Working with PDFs](/rag/working-with-pdfs)), two harder problems remain: **images** that contain information your RAG system needs, and **documents too long** to process in a single pass. This page covers both.
+
+## Image Integration in RAG
+
+Not all information lives in text. Product photos, architecture diagrams, charts, and scanned receipts all carry data your RAG system might need. The question is: how do you make image content searchable?
+
+### When to Extract Text from Images
+
+<CodeEditor
+    file="src/rag/pdf_image_ocr.ts"
+    lines="38-58"
+    functionName="extractImageText"
+    title="Image OCR Extraction"
+/>
+
+### When to Caption/Describe Images
+
+<CodeEditor
+    file="src/rag/pdf_image_captioning.ts"
+    lines="45-73"
+    functionName="generateImageCaption"
+    title="Image Captioning (Vision API)"
+/>
+
+### Decision Framework: Text vs. Caption
+
+| Image Type | Approach | Reason |
+|------------|----------|--------|
+| Screenshots of code/logs | OCR text extraction | Text is primary content |
+| Charts/graphs | Caption with data | Visual info + specific values |
+| Diagrams with labels | Both (OCR + caption) | Labels + structural understanding |
+| Photos of products | Caption | Visual features matter |
+| Scanned text documents | OCR | Text is the content |
+| Infographics | Caption | Mix of visual + text |
+
+## Handling Long Documents
+
+Long documents (100+ pages) present unique challenges:
+- Can't fit entire document in LLM context window
+- Need to aggregate information across sections
+- Must maintain document-level context
+
+### Pattern 1: Constant-Output Tasks
+
+**Use case:** Finding specific information (needle in haystack)
+
+<CodeEditor
+    file="src/rag/pdf_needle_search.ts"
+    lines="40-75"
+    functionName="needleInHaystackSearch"
+    title="Pattern 1: Constant-Output (Needle in Haystack)"
+/>
+
+### Pattern 2: Variable-Output Tasks
+
+**Use case:** Summarization, analysis (output scales with document length)
+
+<CodeEditor
+    file="src/rag/pdf_hierarchical_summary.ts"
+    lines="38-80"
+    functionName="hierarchicalSummary"
+    title="Pattern 2: Variable-Output (Map-Reduce Summarization)"
+/>
+
+## A Complete Unstructured Data Pipeline
+
+<CodeEditor
+    file="src/rag/pdf_unstructured_pipeline.ts"
+    lines="23-119"
+    functionName="UnstructuredDataPipeline"
+    title="Complete Unstructured Data Pipeline"
+/>
+
+<Quiz>
+<QuizQuestion question="Your RAG corpus has product photos, scanned contracts, and architecture diagrams. You can only pick one processing approach per type. What's the best assignment?" options={["OCR for everything — it's the most reliable", "OCR for contracts, captioning for photos, both for diagrams", "Captioning for everything — vision models handle all image types"]} answer={1} explanation="Each image type has different information density. Contracts are text-heavy (OCR), product photos need visual understanding (captioning), and diagrams have both labels and structure (both)." />
+<QuizQuestion question="You need to summarize a 200-page report. Why can't you just stuff it into a 1M-token context window?" options={["You can — large context windows solve long document problems entirely", "Cost, latency, and attention degradation — the model may miss details buried in the middle of a massive context", "1M tokens can't fit 200 pages"]} answer={1} explanation="Even with large windows, attention degrades over long contexts (the 'lost in the middle' problem), costs scale linearly with input size, and latency increases. Map-reduce summarization is more reliable and cost-effective." />
+</Quiz>

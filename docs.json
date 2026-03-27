@@ -18,7 +18,7 @@
         "group": "Context Engineering & Prompt Design",
         "pages": [
           "prompting/overview",
-          "prompting/llm-foundamentals",
+          "prompting/llm-fundamentals",
           "prompting/structured-prompt-engineering",
           "prompting/advanced-techniques",
           "prompting/prompt-optimization-and-testing",
@@ -36,8 +36,9 @@
           "rag/fundamentals",
           "rag/search-strategy-selection",
           "rag/chunking",
-          "rag/working-with-unstructured-data",
-          "rag/rag-evaluation",
+          "rag/working-with-pdfs",
+          "rag/images-and-long-documents",
+          "rag/evaluation-and-quality-metrics",
           "rag/reranking",
           "rag/advanced-rag-patterns",
           "rag/hands-on-exercise",
@@ -49,7 +50,7 @@
         "pages": [
           "agents/overview",
           "agents/intro",
-          "agents/tool-design-and-implementation",
+          "agents/model-context-protocol",
           "agents/memory",
           "agents/hands-on-exercise",
           "agents/recap-and-resources"

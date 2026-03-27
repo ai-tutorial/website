@@ -7,16 +7,17 @@ mode: wide
 slug: agents/intro
 ---
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
 ## What is an AI Agent?
 
 Let's start with the basics. You've been using LLMs for single-shot tasks:
 
 <CodeEditor
-  file="src/agents/simple_llm_call.ts"
-  lines="19-29"
+  file="src/agents/minimal_agent.ts"
+  lines="18-27"
   functionName="main"
-  title="Simple LLM Call"
+  title="Minimal Agent"
 />
 
 This works great for simple questions. But what if you need to:
@@ -26,6 +27,10 @@ This works great for simple questions. But what if you need to:
 - **Make decisions** based on intermediate results (if X then Y)
 
 **That's what agents do.**
+
+<Note>
+There are many agent frameworks available — [LangChain](https://www.langchain.com/)/[LangGraph](https://langchain-ai.github.io/langgraph/), [CrewAI](https://www.crewai.com/), [AutoGen](https://microsoft.github.io/autogen/), [Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), [Vercel AI SDK](https://sdk.vercel.ai/), and others. The core concepts (tool calling, reasoning loops, memory, orchestration) are the same across all of them. In this tutorial we use **LangChain** because it's one of the most widely adopted, but everything you learn here applies regardless of the framework you choose.
+</Note>
 
 **Definition:** An AI agent is an LLM system that can:
 1. **Perceive** - Understand the current situation (user request, context, state)
@@ -79,9 +84,9 @@ Let's build the simplest possible agent - one that can look up weather informati
 
 <CodeEditor 
   file="src/agents/weather_agent.ts"
-  lines="23-73"
+  lines="22-68"
   functionName="main"
-  title="Simple Weather Agent"
+  title="Simple Weather Agent (LLM + Tool)"
 />
 
 **What just happened:**
@@ -186,3 +191,8 @@ Agents are powerful but come with challenges:
 
 ---
 
+
+<Quiz>
+<QuizQuestion question="A user asks your chatbot to 'check my order status and email me if it's delayed.' Can a simple LLM call handle this?" options={["Yes — modern LLMs are smart enough to handle multi-step tasks in one call", "No — this requires an agent because it needs tool access (order lookup + email sending) and conditional logic", "Only if you fine-tune the model on order data"]} answer={1} explanation="This task requires fetching data from an external system, making a decision based on the result, and taking an action. A simple LLM call has no access to tools — only an agent can perceive, reason, act, and repeat." />
+<QuizQuestion question="Your agent has access to 3 tools but always calls all of them, even when only 1 is needed. What's the most likely fix?" options={["Add more tools so the agent has better options", "Improve tool descriptions with clear 'when to use' and 'when NOT to use' guidance", "Switch to a more expensive model"]} answer={1} explanation="The agent decides which tools to call based solely on their descriptions. Adding 'when to use' and 'when NOT to use' sections helps the LLM make targeted selections instead of calling everything." />
+</Quiz>

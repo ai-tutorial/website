@@ -1,0 +1,357 @@
+---
+title: "Model Context Protocol (MCP)"
+description: "Tools, MCP servers, and how agents interact with external systems"
+sidebarTitle: "Model Context Protocol (MCP)"
+icon: book
+mode: wide
+slug: agents/model-context-protocol
+---
+
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+## What is MCP?
+
+The **Model Context Protocol (MCP)** is an open standard introduced by Anthropic in late 2024 that defines how AI agents connect to external tools and data sources. Before MCP, every agent framework invented its own way to define and call tools — leading to fragmentation and vendor lock-in.
+
+MCP solves this with a universal protocol: tools are exposed as **MCP servers** (lightweight processes that declare their capabilities), and agents connect to them as **MCP clients**. Think of it like USB for AI — one standard interface that works everywhere.
+
+**Why MCP became the de-facto standard:**
+- **Before MCP:** Each framework (LangChain, AutoGen, Semantic Kernel) had its own tool format. Tools built for one couldn't be reused in another.
+- **After MCP:** A tool built as an MCP server works with any MCP-compatible client — Claude, ChatGPT, Cursor, VS Code, or your own agent.
+- **Adoption:** Within months of its release, MCP gained support from Anthropic, OpenAI, Google, Microsoft, and most major agent frameworks.
+
+**The MCP architecture:**
+
+```
+┌─────────────┐     MCP Protocol     ┌─────────────────┐
+│   Agent      │ ◄──────────────────► │   MCP Server    │
+│  (Client)    │   JSON-RPC over      │  (Weather API)  │
+│              │   stdio / HTTP       │                 │
+└─────────────┘                       └─────────────────┘
+       │                                      │
+       │          MCP Protocol                │
+       │ ◄──────────────────────────► ┌───────┴─────────┐
+       │                              │   MCP Server    │
+       │                              │  (Database)     │
+       └──────────────────────────► └─────────────────┘
+```
+
+An agent can connect to multiple MCP servers simultaneously — each one exposing a different set of tools. The agent discovers available tools at runtime, selects the right ones, and calls them through the protocol.
+
+## From Hardcoded Tools to MCP
+
+In the [previous section](/agents/intro), you built a weather agent with a tool defined directly inside the agent code. That works for a single agent — but what happens when you want a second agent to use the same weather tool? Or when a different team wants to add a new tool without touching your agent code?
+
+You'd have to copy the tool definition, keep them in sync, and redeploy every agent when a tool changes. This doesn't scale.
+
+**MCP solves this by separating tools from agents.** Instead of defining tools inside your agent, you run them as independent **MCP servers** over HTTP. Any agent can connect, discover available tools, and call them — without knowing how they're implemented.
+
+Here's what changes when you move the weather tool from hardcoded to MCP:
+
+| | Hardcoded Tool (intro) | MCP Server |
+|---|---|---|
+| **Where tool lives** | Inside agent code | Separate process on `localhost:8002` |
+| **Discovery** | Agent knows tools at compile time | Agent queries `tools/list` at runtime |
+| **Reuse** | Copy-paste to other agents | Any MCP client connects |
+| **Updates** | Redeploy the agent | Restart the server — agents pick it up |
+| **Protocol** | Framework-specific | Standard JSON-RPC over HTTP |
+
+**The MCP tool lifecycle:**
+
+1. **MCP server starts** on a port and declares its tools (name, description, parameter schema)
+2. **Agent connects** as an MCP client and discovers available tools via `tools/list`
+3. **User sends a query** — the LLM sees the tool descriptions and decides which to call
+4. **Agent calls the tool** through the MCP protocol with structured parameters
+5. **MCP server executes** and returns a structured result
+6. **LLM uses the result** to continue reasoning or respond to the user
+
+The critical insight: the LLM never sees your code — it only sees the **tool name, description, and parameter schema**. That's why tool design is everything. A poorly described tool will be misused regardless of how well it's implemented.
+
+Here's the weather tool from the intro, now exposed as an MCP server. Notice how the tool is registered with a name, description, Zod schema, and handler — this is the standard MCP pattern:
+
+<CodeEditor
+  file="src/agents/weather_mcp_server.ts"
+  lines="20-62"
+  functionName="registerTool"
+  title="Weather MCP Server — Tool Registration"
+/>
+
+The `mcp.registerTool()` call is all it takes to make a tool available over the protocol. Any MCP client that connects to this server will automatically discover `get_weather` and know how to call it.
+
+## Tool Design Principles
+
+### Principle 1: Clear, Descriptive Names
+
+**Bad names:**
+- `process` (process what?)
+- `fetch` (fetch what?)
+- `do_thing` (what thing?)
+
+**Good names:**
+```ts Pseudocode
+// MCP tool naming examples
+get_customer_by_email
+search_products_by_category
+calculate_shipping_cost_for_order
+send_notification_to_user
+```
+
+**Naming convention:** `[verb]_[noun]_[context]`
+
+### Principle 2: Comprehensive Descriptions
+
+The description is the most important part of your tool. It must answer:
+- **What** does this tool do?
+- **When** should the agent use it?
+- **When NOT** to use it (distinguish from similar tools)
+- **What format** are inputs/outputs?
+
+**Bad description:**
+
+```ts Pseudocode
+// Bad: Vague tool definition
+mcp.registerTool(
+    'get_data',
+    {
+        title: 'Get Data',
+        description: 'Get data.',  // ❌ Too vague!
+        inputSchema: {
+            id: z.string()
+        }
+    },
+    async (args) => { /* ... */ }
+);
+```
+
+**Good description:**
+
+```ts Pseudocode
+// Good: Comprehensive tool definition
+const customerSchema = {
+    customer_id: z.string().describe(
+        'Customer ID in format CUST-##### (e.g., "CUST-12345")'
+    )
+};
+
+mcp.registerTool(
+    'get_customer_by_id',
+    {
+        title: 'Get Customer By ID',
+        description: `Retrieve customer account information by customer ID.
+        
+        Use this when:
+        - You have a customer ID and need their details
+        - User mentions "my account" (look up by context)
+        
+        Do NOT use for:
+        - Searching by name/email (use search_customers instead)
+        - Getting order history (use get_customer_orders instead)
+        
+        Returns: Customer object with name, email, phone, address, account_status
+        
+        Example:
+          Input: customer_id="CUST-12345"
+          Output: { name: "Alice Johnson", email: "alice@example.com", account_status: "active" }`,
+        inputSchema: customerSchema
+    },
+    async (args) => {
+        const customer = await customerDb.findById(args.customer_id);
+        return { content: [{ type: "text", text: JSON.stringify(customer) }] };
+    }
+);
+```
+
+### Principle 3: Simple Parameter Schemas
+
+**Research shows:** Tool parameter complexity significantly affects agent accuracy.
+
+| Parameter Count | Agent Accuracy |
+|----------------|----------------|
+| 1-3 parameters | 90%+ correct usage |
+| 4-6 parameters | 75-85% correct usage |
+| 7+ parameters | 60-70% correct usage |
+
+**Why:** More parameters = more cognitive load = more confusion.
+
+**Design principle:** Prefer multiple simple tools over one complex tool.
+
+**Anti-pattern: Complex Tool**
+
+```ts Pseudocode
+// Anti-pattern: Too many parameters (10) - agent will struggle
+const complexOrderSchema = {
+    customer_id: z.string(),
+    product_ids: z.array(z.string()),
+    quantities: z.array(z.number()),
+    shipping_address: z.object({}),
+    billing_address: z.object({}),
+    payment_method: z.string(),
+    promotional_code: z.string(),
+    gift_wrap: z.boolean(),
+    gift_message: z.string(),
+    shipping_speed: z.string()
+};
+
+mcp.registerTool(
+    'create_order',
+    {
+        title: 'Create Order',
+        description: '10 parameters - agent will struggle.',
+        inputSchema: complexOrderSchema
+    },
+    async (args) => { /* ... */ }
+);
+```
+
+**Better: Multiple Simple Tools**
+
+```ts Pseudocode
+// Better: Break into 3 simple tools (2-3 parameters each)
+
+// Tool 1: Create cart (2 parameters)
+mcp.registerTool(
+    'create_order_cart',
+    {
+        title: 'Create Order Cart',
+        description: 'Create shopping cart. Returns cart_id. Use this as first step when customer wants to place an order.',
+        inputSchema: {
+            customer_id: z.string(),
+            items: z.array(z.object({ product_id: z.string(), quantity: z.number() }))
+        }
+    },
+    async (args) => {
+        const cartId = await createCart(args.customer_id, args.items);
+        return { content: [{ type: "text", text: cartId }] };
+    }
+);
+
+// Tool 2: Set shipping (3 parameters)
+mcp.registerTool(
+    'set_cart_shipping',
+    {
+        title: 'Set Cart Shipping',
+        description: 'Set shipping details for cart. Call after create_order_cart, before finalize_order.',
+        inputSchema: {
+            cart_id: z.string(),
+            address: z.object({}),
+            speed: z.enum(['standard', 'express', 'overnight'])
+        }
+    },
+    async (args) => {
+        await setShipping(args.cart_id, args.address, args.speed);
+        return { content: [{ type: "text", text: "Shipping set" }] };
+    }
+);
+
+// Tool 3: Finalize order (2 parameters)
+mcp.registerTool(
+    'finalize_order',
+    {
+        title: 'Finalize Order',
+        description: 'Complete order and charge payment. Returns order_id. Final step after cart is configured.',
+        inputSchema: {
+            cart_id: z.string(),
+            payment_method: z.string()
+        }
+    },
+    async (args) => {
+        const orderId = await finalizeOrder(args.cart_id, args.payment_method);
+        return { content: [{ type: "text", text: orderId }] };
+    }
+);
+```
+
+**Result:** Three simple tools have higher success rate than one complex tool, even though they require more agent steps.
+
+*Source: "Tool Space Interference in the MCP Era" - Microsoft Research ([microsoft.com/research](https://www.microsoft.com/en-us/research/blog/tool-space-interference-in-the-mcp-era-designing-for-agent-compatibility-at-scale/))*
+
+### Principle 4: Consistent Return Formats
+
+**Standard response envelope:**
+
+```ts Pseudocode
+// Standard response format for all MCP tools
+interface ToolResponse {
+    success: boolean;
+    data?: any;
+    error?: string;
+    message: string;
+}
+
+mcp.registerTool(
+    'example_tool',
+    {
+        title: 'Example Tool',
+        description: 'Tool with consistent response format.',
+        inputSchema: { param: z.string() }
+    },
+    async (args): Promise<ToolResponse> => {
+        try {
+            const result = await process(args.param);
+            return {
+                success: true,
+                data: result,
+                error: undefined,
+                message: "Operation completed successfully"
+            };
+        } catch (e: any) {
+            return {
+                success: false,
+                data: undefined,
+                error: e.constructor.name,
+                message: `Failed: ${e.message}`
+            };
+        }
+    }
+);
+```
+
+**Benefits:**
+- Agent knows what to expect
+- Easy to check success/failure
+- Consistent error handling
+
+## Build Your Own MCP Server
+
+
+The weather server has one tool. A real production server has many. This customer support MCP server exposes four tools that work together — an agent connecting to it can answer FAQs, look up accounts, create tickets, and track orders, all through the same MCP protocol.
+
+### Search Knowledge Base
+
+The first tool an agent reaches for when a user asks a question. It searches help articles by keyword and optional category, returning matches with confidence scores. The description explicitly tells the agent *when* to use it ("general questions, how-to, troubleshooting") so it doesn't call customer lookup for a simple FAQ.
+
+### Customer Support Agent
+
+The full example ties everything together: three MCP servers (knowledge base, customer info, incident tickets), a LangChain agent that discovers tools from all of them, and thread-based memory so the conversation persists across turns.
+
+```
+┌──────────────────────┐
+│  CustomerSupportAgent │  ← LangChain + MemorySaver (thread_id)
+│  (one per user)       │
+└──────────┬───────────┘
+           │  discovers tools via MCP
+     ┌─────┼──────────────┐
+     ▼     ▼              ▼
+┌─────────┐ ┌────────────┐ ┌──────────────┐
+│Knowledge│ │ Customer   │ │ Incident     │
+│Base     │ │ Info       │ │ Ticket       │
+│ :8001   │ │ :8002      │ │ :8003        │
+└─────────┘ └────────────┘ └──────────────┘
+  1 tool      4 tools        2 tools
+```
+
+Each server runs independently, owns its domain, and can be deployed/scaled separately. The agent doesn't know or care where the tools live — it discovers them all via `tools/list` and the LLM picks the right one per query.
+
+<CodeEditor
+  file="src/agents/customer_support_agent.ts"
+  lines="26-70"
+  functionName="main"
+  title="Customer Support Agent — 3 MCP Servers"
+/>
+
+<Quiz>
+<QuizQuestion question="Your agent has a hardcoded tool that works perfectly. Why would you move it to an MCP server?" options={["For better performance — MCP is faster than direct function calls", "For reusability — any MCP-compatible agent can discover and use it without code changes", "MCP is required by all LLM providers"]} answer={1} explanation="MCP's value is decoupling tools from agents. A tool running as an MCP server can be used by Claude, ChatGPT, Cursor, or your own agents — without copying code or changing implementations." />
+<QuizQuestion question="An agent calls tools/list on your MCP server and gets back 15 tools. The agent then picks the wrong tool for the user's query. What's the most likely cause?" options={["Too many tools — the agent can't handle more than 5", "Poor tool descriptions — the LLM only sees names and descriptions, not your implementation", "The MCP protocol lost data during transmission"]} answer={1} explanation="The LLM never sees your code. It chooses tools based solely on names, descriptions, and parameter schemas. Vague or overlapping descriptions cause misselection regardless of how well the tools are implemented." />
+</Quiz>
+
