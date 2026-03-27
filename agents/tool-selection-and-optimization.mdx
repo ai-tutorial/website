@@ -28,7 +28,7 @@ Agent accuracy drops from 92% to 58% as tool count grows from 5 to 20+. This pag
 The anti-pattern: dumping all tools into a flat list. The agent sees 20 options and guesses.
 
 <CodeEditor
-  file="src/agent-reliability/tool_selection_patterns.ts"
+  file="src/agents/tool_selection_patterns.ts"
   lines="22-28"
   functionName="flatToolList"
   title="Anti-Pattern: Flat Tool List (20 tools → 58% accuracy)"
@@ -39,7 +39,7 @@ The anti-pattern: dumping all tools into a flat list. The agent sees 20 options 
 Two-step routing: first pick domain + action, then call the specific tool. Agent sees 1 routing tool instead of 20 → accuracy jumps to 90%+.
 
 <CodeEditor
-  file="src/agent-reliability/tool_selection_patterns.ts"
+  file="src/agents/tool_selection_patterns.ts"
   lines="38-65"
   functionName="createHierarchicalRouter"
   title="Hierarchical Routing (2 steps → 90%+ accuracy)"
@@ -50,7 +50,7 @@ Two-step routing: first pick domain + action, then call the specific tool. Agent
 Return only relevant tools for the current conversation phase. Agent sees 2-4 tools at a time.
 
 <CodeEditor
-  file="src/agent-reliability/tool_selection_patterns.ts"
+  file="src/agents/tool_selection_patterns.ts"
   lines="75-89"
   functionName="getToolsForPhase"
   title="Context-Based Tool Groups (phase filtering)"
@@ -65,7 +65,7 @@ Three tools named `search_products`, `find_products`, `product_lookup` — all d
 Each tool has a distinct purpose with "Use when" / "Do NOT use" guidance:
 
 <CodeEditor
-  file="src/agent-reliability/tool_selection_patterns.ts"
+  file="src/agents/tool_selection_patterns.ts"
   lines="99-146"
   functionName="createDifferentiatedProductTools"
   title="Clear Tool Differentiation (distinct purposes)"
@@ -81,7 +81,7 @@ The agent now picks the right tool for each query type:
 Track every tool call to find unused tools, high-failure tools, and latency bottlenecks:
 
 <CodeEditor
-  file="src/agent-reliability/tool_analytics.ts"
+  file="src/agents/tool_analytics.ts"
   lines="17-77"
   functionName="ToolAnalytics"
   title="Tool Analytics: Metrics & Recommendations"

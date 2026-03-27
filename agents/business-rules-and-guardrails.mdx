@@ -35,7 +35,7 @@ Rules:
 Instead of hoping the LLM remembers the rules, give it a `validate_expense` tool that enforces them in code:
 
 <CodeEditor
-  file="src/agent-reliability/business_rules_validation.ts"
+  file="src/agents/business_rules_validation.ts"
   lines="39-68"
   functionName="validateExpense"
   title="Deterministic Expense Validation (enforced 100%)"
@@ -44,7 +44,7 @@ Instead of hoping the LLM remembers the rules, give it a `validate_expense` tool
 The agent calls this tool before approving any expense. Category limits, receipt requirements, and approval thresholds are checked in code — the LLM can't skip them.
 
 <CodeEditor
-  file="src/agent-reliability/business_rules_validation.ts"
+  file="src/agents/business_rules_validation.ts"
   lines="97-148"
   functionName="main"
   title="Agent with Validation Tool"
@@ -56,7 +56,7 @@ The agent calls this tool before approving any expense. Category limits, receipt
 **Post-execution:** validate the response AFTER generation (e.g., check for PII leaks).
 
 <CodeEditor
-  file="src/agent-reliability/business_rules_validation.ts"
+  file="src/agents/business_rules_validation.ts"
   lines="78-91"
   functionName="preValidateRefund"
   title="Pre/Post Execution Guardrails"
@@ -67,14 +67,14 @@ The agent calls this tool before approving any expense. Category limits, receipt
 Protect against PII leakage, jailbreak attempts, and sensitive data in outputs — all enforced deterministically with regex patterns:
 
 <CodeEditor
-  file="src/agent-reliability/guardrails_security.ts"
+  file="src/agents/guardrails_security.ts"
   lines="25-56"
   functionName="detectPII"
   title="PII Detection & Redaction"
 />
 
 <CodeEditor
-  file="src/agent-reliability/guardrails_security.ts"
+  file="src/agents/guardrails_security.ts"
   lines="65-81"
   functionName="detectJailbreak"
   title="Jailbreak Detection"
@@ -85,7 +85,7 @@ Protect against PII leakage, jailbreak attempts, and sensitive data in outputs �
 Combine input validation, processing, and output filtering into a single pipeline that wraps every agent interaction:
 
 <CodeEditor
-  file="src/agent-reliability/guardrails_security.ts"
+  file="src/agents/guardrails_security.ts"
   lines="128-165"
   functionName="guardrailsPipeline"
   title="Combined Guardrails Pipeline"
@@ -101,7 +101,7 @@ The pipeline:
 A complete example combining validation tools, business rules, and an agent that processes insurance claims:
 
 <CodeEditor
-  file="src/agent-reliability/insurance_claims_example.ts"
+  file="src/agents/insurance_claims_example.ts"
   lines="39-88"
   functionName="validateClaim"
   title="Insurance Claims Validation Rules"
@@ -115,7 +115,7 @@ Rules enforced in code:
 - **Policy format**: must match `POL-XXXXXX`
 
 <CodeEditor
-  file="src/agent-reliability/insurance_claims_example.ts"
+  file="src/agents/insurance_claims_example.ts"
   lines="94-155"
   functionName="main"
   title="Insurance Claims Agent"
