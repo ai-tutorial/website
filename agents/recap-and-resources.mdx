@@ -7,72 +7,75 @@ mode: wide
 slug: agents/recap-and-resources
 ---
 
+## What We Built
+
+| Page | What You Learned |
+|------|-----------------|
+| [Introduction](/agents/intro) | LLM vs agent distinction, ReAct loop with `createAgent`, weather agent with tool calling |
+| [Model Context Protocol](/agents/model-context-protocol) | MCP architecture, 3-server split (KnowledgeBase, CustomerInfo, IncidentTicket), tool design principles |
+| [Agent Memory](/agents/memory) | Working memory (MemorySaver + thread_id), long-term memory (cross-session persistence), integration patterns |
+
 ## Key Takeaways
 
-1. **Agents extend LLMs with actions:** The agent loop (think → act → think) enables multi-step workflows and external data access that simple LLM calls can't achieve.
+1. **Agents = LLM + tools + loop.** A simple LLM call can't look up data or take actions. Agents add tool calling with a reasoning loop — the LLM decides which tool to use, observes the result, and continues until it can answer.
 
-2. **Tool design directly impacts reliability:** Research shows 1-3 parameter tools achieve 90%+ accuracy, while 7+ parameters drop to 60-70%. Break complex tools into simple, composable pieces.
+2. **MCP decouples tools from agents.** Instead of hardcoding tools inside agents, MCP servers expose them over HTTP. Any agent connects, discovers tools via `tools/list`, and calls them — no code changes when tools are added or updated.
 
-3. **Memory prevents waste:** Production agents need working memory (session context) and long-term memory (persistent knowledge) to avoid redundant tool calls and maintain user context.
+3. **Split servers by domain.** One monolithic MCP server with 15 tools is hard to maintain. Three servers (knowledge base, customer info, tickets) can be deployed, scaled, and owned independently. The agent connects to all of them via `MultiServerMCPClient`.
 
-4. **MCP is the standard:** Model Context Protocol provides consistent tool interfaces, discovery, error handling, and security - use it over custom tool implementations.
+4. **The agent is stateless.** `user_uuid` and `thread_id` are passed per call. All conversation state lives in the `MemorySaver` checkpointer, not the agent instance. One agent serves all users concurrently.
 
-5. **Choose integration patterns intentionally:** Code-driven memory offers predictability, LLM-driven offers flexibility, background extraction offers continuous learning. Most production systems use hybrid approaches.
+5. **User identity flows via headers, not tool params.** The `x-user-uuid` header identifies the user at the HTTP layer. MCP servers read it from the request — the LLM never needs to pass it. Tools like `get_customer_info` take no user parameter.
+
+6. **Tool design is the #1 reliability lever.** Clear names, "when to use / when NOT to use" descriptions, and 1-3 parameters per tool. The LLM only sees descriptions — not your implementation.
+
+7. **Memory has two tiers.** Working memory (`MemorySaver` + `thread_id`) handles within-session state. Long-term memory (external store) handles cross-session persistence. Start with working memory; add long-term when needed.
 
 ## Production Checklist
 
-Before deploying agents to production, ensure:
-
-- [ ] Agent loop properly handles all stop reasons (tool use, completion, errors)
-- [ ] Tools follow MCP best practices (clear names, comprehensive descriptions)
-- [ ] Tool parameters kept simple (prefer 1-3 params per tool)
-- [ ] Consistent response format across all tools (success/error envelope)
-- [ ] Working memory implemented for session continuity
-- [ ] Tool result caching to avoid redundant API calls
-- [ ] Long-term memory for user preferences and persistent context
-- [ ] Error handling that returns structured responses (never throw to agent)
+- [ ] Tools exposed via MCP servers (not hardcoded in agent)
+- [ ] Servers split by domain (separate deployment and ownership)
 - [ ] Tool descriptions include "when to use" and "when NOT to use"
-- [ ] Memory integration pattern chosen based on control requirements
-
-## Common Pitfalls Recap
-
-❌ **Complex tools:** 7+ parameters = accuracy drop to 60-70%  
-❌ **Vague descriptions:** Agent can't select tools accurately without context  
-❌ **No memory:** Redundant tool calls waste money and add latency  
-❌ **Inconsistent responses:** Agents struggle with varying tool output formats  
-❌ **Throwing exceptions:** Return structured errors instead  
-❌ **Missing "when NOT to use":** Agents pick wrong tools without negative guidance
+- [ ] Tool parameters kept simple (1-3 per tool)
+- [ ] User identity via `x-user-uuid` header (not in tool schemas)
+- [ ] `MemorySaver` with `thread_id` for session persistence
+- [ ] Agent is stateless — `userId` and `threadId` passed per call
+- [ ] Structured error responses from tools (never throw to agent)
+- [ ] System prompt instructs agent to call `get_customer_info` on first turn
+- [ ] Tool call logging for observability
 
 ## Learn More
 
-### Official Documentation
+### Specifications & Standards
 
-- [Anthropic Tool Use](https://docs.anthropic.com/claude/docs/tool-use) - Claude's tool calling guide
-- [OpenAI Function Calling](https://platform.openai.com/docs/guides/function-calling) - GPT function calling
-- [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
+- [Model Context Protocol](https://modelcontextprotocol.io/) — MCP specification
+- [Anthropic Tool Use](https://docs.anthropic.com/claude/docs/tool-use) — Claude's tool calling guide
+- [OpenAI Function Calling](https://platform.openai.com/docs/guides/function-calling) — GPT function calling
 
-### Research Papers
+### Frameworks (used in this module)
 
-- [Tool Space Interference](https://www.microsoft.com/en-us/research/blog/tool-space-interference-in-the-mcp-era-designing-for-agent-compatibility-at-scale/) - Microsoft Research on tool design
-- [Stop Converting REST APIs to MCP](https://www.jlowin.dev/blog/stop-converting-rest-apis-to-mcp) - Tool consolidation patterns
+- [LangChain](https://www.langchain.com/) / [LangGraph](https://langchain-ai.github.io/langgraph/) — Agent framework with `createAgent`, `MemorySaver`
+- [@langchain/mcp-adapters](https://github.com/langchain-ai/langchainjs/tree/main/libs/langchain-mcp-adapters/) — MCP tool loading for LangChain
+- [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/typescript-sdk) — MCP server/client SDK
 
-### Memory Systems
+### Other Agent Frameworks
 
-- [Redis Agent Memory Server](https://redis.github.io/agent-memory-server/) - Production memory architecture
-- [Mem0 Documentation](https://docs.mem0.ai/introduction) - Alternative memory system
-- [Zep](https://help.getzep.com/overview) - Long-term memory for agents
-- [Managing Memory for AI Agents](../Assets/Managing%20Memory%20for%20AI%20Agents.pdf) - O'Reilly report (in Assets)
+- [CrewAI](https://www.crewai.com/) — Multi-agent orchestration
+- [AutoGen](https://microsoft.github.io/autogen/) — Microsoft's agent framework
+- [Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/) — Microsoft's AI SDK
+- [Vercel AI SDK](https://sdk.vercel.ai/) — `generateText` with `maxSteps` for agent loops
+- [Google ADK](https://developers.google.com/gemini/docs/adk) — Agent Development Kit
 
-### Framework Documentation
+### Research
 
-- [LangChain Agents](https://python.langchain.com/docs/modules/agents/) - Agent framework
-- [LlamaIndex Agents](https://docs.llamaindex.ai/en/stable/module_guides/deploying/agents/) - Data-focused agents
-- [Google ADK](https://developers.google.com/gemini/docs/adk) - Agent Development Kit
-- [Koog](https://docs.koog.ai) - Visual agent builder
+- [Tool Space Interference](https://www.microsoft.com/en-us/research/blog/tool-space-interference-in-the-mcp-era-designing-for-agent-compatibility-at-scale/) — Microsoft Research on tool design at scale
+- [Stop Converting REST APIs to MCP](https://www.jlowin.dev/blog/stop-converting-rest-apis-to-mcp) — Tool consolidation patterns
 
-### Community
+### Memory
 
-- [Agents.md](https://agents.md/) - Comprehensive agent guide
-- [GenAI Agents](https://github.com/NirDiamant/GenAI_Agents) - Open-source examples
+- [Redis Agent Memory Server](https://redis.github.io/agent-memory-server/) — Production memory with semantic search
+- [Mem0](https://docs.mem0.ai/introduction) — Managed memory layer
+- [Zep](https://help.getzep.com/overview) — Long-term memory with automatic extraction
+- [Managing Memory for AI Agents](../Assets/Managing%20Memory%20for%20AI%20Agents.pdf) — O'Reilly report
 
 ---
