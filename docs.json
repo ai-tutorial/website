@@ -52,8 +52,8 @@
           "agents/intro",
           "agents/model-context-protocol",
           "agents/memory",
-          "agent-reliability-and-optimization/business-rules-and-guardrails",
-          "agent-reliability-and-optimization/tool-selection-and-optimization",
+          "agents/business-rules-and-guardrails",
+          "agents/tool-selection-and-optimization",
           "agents/hands-on-exercise",
           "agents/recap-and-resources"
         ]
