@@ -18,9 +18,9 @@ You've probably tried encoding business rules in prompts:
 ```ts Pseudocode
 const systemPrompt = `You are processing expense reports.
 Rules:
-- Meals: max $75
+- Meals: max \$75
 - Transport: max $200
-- Receipt required over $25
+- Receipt required over \$25
 - Director approval over $500`;
 ```
 
@@ -32,7 +32,7 @@ Rules:
 
 ### Pattern 1: Validation Tools
 
-Your expense processing agent has rules like "meals max $75" and "receipt required over $25" in its system prompt. But 15% of the time it approves expenses that violate policy. The fix: move the rules into a `validateExpense` function that the agent calls before approving anything. The LLM handles natural language; code handles the rules.
+Your expense processing agent has rules like "meals max \$75" and "receipt required over \$25" in its system prompt. But 15% of the time it approves expenses that violate policy. The fix: move the rules into a `validateExpense` function that the agent calls before approving anything. The LLM handles natural language; code handles the rules.
 
 <CodeEditor
   file="src/agents/business_rules_validation.ts"
@@ -52,7 +52,7 @@ The agent calls this tool before approving any expense. Category limits, receipt
 
 ### Pattern 2: Pre/Post Execution Guardrails
 
-A refund tool processes a $2,000 refund without checking if the order is eligible. A response generator returns a customer's SSN because it was in the tool result. Both are caught too late. The fix: validate at two checkpoints — **before** the tool runs (is this refund allowed?) and **after** the response is generated (does this contain PII?).
+A refund tool processes a \$2,000 refund without checking if the order is eligible. A response generator returns a customer's SSN because it was in the tool result. Both are caught too late. The fix: validate at two checkpoints — **before** the tool runs (is this refund allowed?) and **after** the response is generated (does this contain PII?).
 
 <CodeEditor
   file="src/agents/business_rules_validation.ts"
@@ -108,9 +108,9 @@ A complete example combining validation tools, business rules, and an agent that
 
 Rules enforced in code:
 - **Filing deadline**: 30 days from incident
-- **Coverage limits**: per claim type ($50K auto, $100K home, $500K medical)
-- **Auto-approval**: claims under $500 with no violations
-- **Review required**: claims over $10,000
+- **Coverage limits**: per claim type (\$50K auto, \$100K home, \$500K medical)
+- **Auto-approval**: claims under \$500 with no violations
+- **Review required**: claims over \$10,000
 - **Policy format**: must match `POL-XXXXXX`
 
 <CodeEditor

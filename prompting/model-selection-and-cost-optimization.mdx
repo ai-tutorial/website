@@ -17,11 +17,11 @@ Choosing the right model and optimizing costs can reduce your bill by 10x withou
 
 | Model | Context | Cost (input/output per 1M tokens) | Best For |
 |-------|---------|-----------------------------------|----------|
-| GPT-4 Turbo | 128K | $10 / $30 | Complex reasoning, structured output |
-| GPT-3.5 Turbo | 16K | $0.50 / $1.50 | Simple tasks, high volume |
-| Claude Sonnet 4.5 | 200K | $3 / $15 | Long documents, nuanced analysis |
-| Claude Haiku | 200K | $0.25 / $1.25 | Fast classification, simple extraction |
-| Gemini Pro 1.5 | 2M | $1.25 / $5 | Massive context, multimodal |
+| GPT-4 Turbo | 128K | \$10 / \$30 | Complex reasoning, structured output |
+| GPT-3.5 Turbo | 16K | \$0.50 / \$1.50 | Simple tasks, high volume |
+| Claude Sonnet 4.5 | 200K | \$3 / \$15 | Long documents, nuanced analysis |
+| Claude Haiku | 200K | \$0.25 / \$1.25 | Fast classification, simple extraction |
+| Gemini Pro 1.5 | 2M | \$1.25 / \$5 | Massive context, multimodal |
 | Llama 3 70B | Varies | Self-hosted | On-premise requirements |
 
 **Decision Tree:**
@@ -61,7 +61,7 @@ for (const query of queries) {  // 10,000 queries
 }
 
 // Cost: 10,000 * 50,100 tokens = 501M input tokens
-// At $3/1M: $1,503
+// At \$3/1M: \$1,503
 ```
 </CodeGroup>
 
@@ -93,13 +93,13 @@ Mark reusable parts of your prompt for caching:
 // - Avg conversation: 5 queries
 // - Cache hit rate: 80% (users ask follow-ups quickly)
 
-without_caching = 10_000 queries * 50K tokens * $3/1M = $1,500
+without_caching = 10_000 queries * 50K tokens * \$3/1M = \$1,500
 with_caching = (
     (10_000 * 0.2) * 50K   // Cache misses (20%)
     + (10_000 * 0.8) * 5K  // Cache hits (90% reduction)
-) * $3/1M = $450
+) * \$3/1M = \$450
 
-savings = $1,050 (70% reduction)
+savings = \$1,050 (70% reduction)
 ```
 </CodeGroup>
 
