@@ -91,20 +91,27 @@ Production RAG systems go beyond "search + LLM." They use a carefully designed m
         v
 +------------------+
 │  Stage 1:        │
-│  Fast Retrieval  │  ← Get 10-50 candidates quickly
+│  Fast Retrieval  │  ← Get 10-50 candidates per method
 │  (Lexical/Vector)│     (prioritize recall over precision)
 +------------------+
         |
         v
 +------------------+
 │  Stage 2:        │
+│  Rank Fusion     │  ← Merge results from multiple retrievers
+│  (RRF)           │     into a single ranked list
++------------------+
+        |
+        v
++------------------+
+│  Stage 3:        │
 │  Reranking       │  ← Narrow to top 3-5 precisely
 │  (Cross-Encoder) │     (prioritize precision over speed)
 +------------------+
         |
         v
 +------------------+
-│  Stage 3:        │
+│  Stage 4:        │
 │  LLM Generation  │  ← Use retrieved context to generate
 │  (GPT-4/Claude)  │     grounded response
 +------------------+
@@ -115,15 +122,22 @@ Production RAG systems go beyond "search + LLM." They use a carefully designed m
 +------------------+
 ```
 
-### Why Two-Stage Retrieval?
+### Why Multi-Stage Retrieval?
 
 **The Fundamental Trade-off:**
 - Fast retrieval methods (lexical, vector) can process 100K+ documents in milliseconds
 - Accurate ranking methods (cross-encoders) can only handle ~100 documents in reasonable time
-- Solution: Use fast method to filter, accurate method to rank
+- Solution: Use fast methods to filter, fuse their results, then use an accurate method to rank
+
+**Why Rank Fusion (RRF)?**
+- Different retrieval methods have different strengths — lexical search excels at exact keyword matches, while vector search captures semantic similarity
+- Running both in parallel and then merging the results with **Reciprocal Rank Fusion (RRF)** gives you the best of both worlds
+- RRF combines ranked lists by assigning each document a score based on its rank position across all retrievers: `score = Σ 1/(k + rank)` — documents that appear high in multiple lists bubble to the top
+- This fused list is then passed to the cross-encoder reranker for precise scoring
 
 **Latency in practice (varies by system):**
 - First-pass retrieval returns a small candidate set quickly (implementation-, scale-, and hardware-dependent).
+- RRF merging is near-instant — it's just arithmetic over rank positions.
 - Cross-encoder reranking narrows to top results but adds additional latency.
 - Production systems typically target interactive end-to-end latency budgets on available hardware.
 
@@ -136,9 +150,10 @@ A production RAG system needs:
    - Metadata extraction (title, date, source)
    - Quality filtering
 
-2. **Two-Stage Retrieval**
-   - First-pass: Fast, broad recall (lexical or vector)
-   - Reranking: Slow, precise scoring
+2. **Multi-Stage Retrieval**
+   - First-pass: Fast, broad recall (lexical and vector in parallel)
+   - Rank fusion: Merge results from multiple retrievers via RRF
+   - Reranking: Slow, precise scoring with cross-encoders
 
 3. **Context Engineering**
    - Prompt design for grounding
