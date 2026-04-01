@@ -1382,7 +1382,7 @@
   top: 0;
   left: 0;
   width: 100vw !important;
-  height: 100dvh !important;
+  height: 100vh !important;
   z-index: 9999;
   padding: 60px 10px 40px 10px;
   background-color: rgba(10, 10, 10, 0.98);
@@ -1390,7 +1390,6 @@
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(10px);
-  overflow: hidden;
 }
 
 [data-theme='light'] .code-editor-wrapper.maximized {
@@ -1407,9 +1406,8 @@
 }
 
 .code-editor-wrapper.maximized .code-editor-iframe {
-  flex: 1 !important;
-  height: auto !important;
-  min-height: 0;
+  height: calc(100vh - 150px) !important;
+  max-height: calc(100vh - 150px) !important;
   border-radius: 0 0 8px 8px;
   box-shadow: none;
   border: none;

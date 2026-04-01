@@ -705,7 +705,7 @@ AI_PROVIDER=openai
       </div>
 
       {!isCollapsed && (
-        <div style={{ position: 'relative', height: isMaximized ? 'auto' : height, flex: isMaximized ? 1 : 'none', minHeight: isMaximized ? 0 : undefined, overflow: isMaximized ? 'hidden' : undefined }}>
+        <div style={{ position: 'relative', height: isMaximized ? 'auto' : height, flex: isMaximized ? 1 : 'none' }}>
           <iframe
             key={iframeKey}
             ref={iframeRef}
