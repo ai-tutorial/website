@@ -1,7 +1,7 @@
 ---
-title: Segmentation with SAM
-description: Pixel-level masks, semantic vs instance vs panoptic, and prompting SAM for interactive segmentation
-sidebarTitle: Segmentation (SAM)
+title: Segmentation with U-Net
+description: Pixel-level masks, encoder-decoder architectures, and training a U-Net end to end
+sidebarTitle: Segmentation
 icon: book
 mode: wide
 slug: computer-vision/segmentation
@@ -9,11 +9,11 @@ slug: computer-vision/segmentation
 import { CodeEditor } from '/snippets/CodeEditor.jsx';
 import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
 
-Detection draws a box around an object. Segmentation goes one level deeper and labels **every pixel**. It's what powers background removal, medical organ delineation, autonomous-driving road masks, and every "make this photo's background blurry" feature on your phone. Since 2023 the field has been reshaped by a single model — Segment Anything (SAM) — and this page is built around it.
+Classification gives one label per image. Detection draws a box around each object. Segmentation goes one level deeper and labels **every pixel** — it's what powers background removal, medical organ delineation, autonomous-driving road masks, and every "blur the background" feature on your phone. The canonical architecture for this job is the **U-Net**, and this page is built around it.
 
 ## Three Flavors of Segmentation
 
-It's worth keeping these straight because papers and APIs all assume you know the difference.
+Worth keeping straight because papers and APIs all assume you know the difference.
 
 | Type | What it labels | Example task |
 |---|---|---|
@@ -23,87 +23,110 @@ It's worth keeping these straight because papers and APIs all assume you know th
 
 Output shape is always a mask of the same spatial size as the input: `(H, W)` of class IDs for semantic, or `(N, H, W)` of binary masks for instance-level.
 
-## Classic Architectures
+## Why Classification Networks Don't Work Here
 
-Before SAM, segmentation meant picking a task-specific encoder–decoder:
+A classifier maps `(C, H, W)` → a vector of class scores. A segmenter has to produce `(K, H, W)` — one score per class *per pixel*. Three things break when you try to reuse a standard CNN:
 
-- **FCN (2015):** the original "replace the FC layers with conv layers" paper; produces a dense output map.
-- **U-Net (2015):** a symmetric encoder-decoder with skip connections that's still the default in medical imaging. Small, data-efficient, surprisingly hard to beat on specialized datasets.
-- **DeepLab v3+ (2018):** atrous convolutions for large receptive fields; strong on outdoor scenes.
-- **Mask R-CNN (2017):** instance segmentation by adding a per-ROI mask head to Faster R-CNN.
-- **Mask2Former (2022):** unified architecture for semantic / instance / panoptic segmentation using a transformer decoder with mask queries — one model, three tasks.
+1. **Spatial resolution collapses.** A classification backbone aggressively downsamples with pooling and strides to produce a compact feature vector. If you simply upsample that final feature map back to the input size, you get blurry, low-frequency output — no fine detail.
+2. **The fully-connected head expects a flattened vector**, not a grid. You need to remove it and replace it with something spatial.
+3. **Every pixel contributes to the loss.** A single "is this a cat?" gradient doesn't carry enough signal to teach the network where the cat's ears end.
 
-These still ship in production, especially U-Net in medical and Mask2Former for panoptic scenes.
+So the architecture needs two things: a way to **recover spatial resolution** on the output side, and a way to **preserve the spatial detail** that the encoder normally throws away.
 
-## Enter SAM: "Prompt Engineering for Pixels"
+## U-Net: The Encoder-Decoder That Defined Segmentation
 
-Segment Anything (Meta AI, 2023) took a different approach. Instead of training a task-specific segmenter, they:
-
-1. Built a huge pretrained image encoder (a ViT).
-2. Added a lightweight **prompt encoder** that accepts points, boxes, or coarse masks.
-3. Added a **mask decoder** that outputs a binary mask for the prompted object.
-4. Trained on **SA-1B** — 11M images, 1.1B masks — the largest segmentation dataset ever assembled.
-
-The result is a single model that can segment essentially any object you point to, **zero-shot**, without fine-tuning.
+U-Net (Ronneberger et al., 2015) solves both problems with a symmetric encoder-decoder plus **skip connections** from encoder to decoder at every resolution. It was originally designed for biomedical microscopy — where it is still the workhorse — and has since spread to essentially every field that does segmentation (and, famously, it is the denoiser sitting inside every latent diffusion model).
 
 ```text
- Image  ──► [ViT Encoder]     ─┐
-                               ├──► [Mask Decoder]  ──► mask(s) + scores
- Prompt ──► [Prompt Encoder]  ─┘
-  (point, box, or mask)
+        Encoder (contracting)                  Decoder (expanding)
+        ─────────────────────                  ────────────────────
+
+  Input (C, 256, 256)                          Output (K, 256, 256)
+          │                                             ▲
+          v                                             │
+    ┌─ Conv block ─┐─────── skip ──────────────▶ Conv block (1/1)
+    │              │                                    ▲
+    │   pool ↓                             upsample ↑   │
+    │              │                                    │
+    └─ Conv block ─┘─────── skip ──────────▶ Conv block (1/2)
+                   │                          ▲
+       pool ↓                        upsample ↑
+                   │                          │
+         Conv block ─── skip ─────▶ Conv block (1/4)
+                   │                ▲
+       pool ↓              upsample ↑
+                   │                │
+              Bottleneck (deep features, low resolution)
 ```
 
-### Prompting SAM
+**What each part does:**
 
-Three prompt types, composable:
+- **Encoder (left side)** — stack of conv + pool blocks, same shape as a classification CNN. Each step halves the spatial resolution and roughly doubles the channel count. Learns progressively abstract features.
+- **Bottleneck** — the lowest-resolution, highest-semantic feature map. *What* is in the image is encoded here; *where* is mostly lost.
+- **Decoder (right side)** — a mirror of the encoder. At each stage it upsamples (via transposed convolution or bilinear-plus-conv) and applies a couple of conv layers.
+- **Skip connections** — at each resolution, the encoder's feature map is **concatenated** into the corresponding decoder stage *before* its conv layers run. This is the whole trick: the decoder receives both **semantic context** from the bottleneck and **precise spatial detail** from the skips.
 
-- **Point:** a single `(x, y)` with a `foreground / background` flag. The go-to for interactive tools — "click the thing you want segmented".
-- **Box:** a bounding box — useful for pairing with a detector ("detect, then segment each box").
-- **Mask:** a coarse mask — useful for iteration: click, get a mask, click again to refine.
+### Output and Loss
 
-Given one prompt, SAM produces up to 3 candidate masks at different granularity (`whole object / part / subpart`) with scores, letting downstream code pick or combine them.
+- **Output** shape is `(K, H, W)` — one score per class per pixel. Take `argmax` along the class axis to get the predicted mask.
+- **Loss** is per-pixel cross-entropy, averaged over every pixel — exactly like classification, just `H × W` times per image. For imbalanced datasets (tiny foreground, huge background — common in medical and in defect detection) **Dice loss** or a Dice + cross-entropy hybrid is the default, because plain cross-entropy is dominated by the easy background pixels.
 
-### Automatic Mask Generation
+### Training a U-Net
 
-Feed SAM a grid of point prompts covering the image, dedupe overlapping masks with IoU-based NMS, and you get a full panoptic-ish segmentation of every distinct region in the image — no classes, no labels, just regions. This is the killer application for pipelines that need "find all the things" without knowing what the things will be.
+The training loop is identical to a classifier's — forward pass, loss, backward pass, parameter update — just with a spatial loss. The worked example trains a small U-Net on a toy segmentation dataset so you can see the pipeline end to end.
 
-## SAM 2: Video and Interactivity
+<CodeEditor
+  file="src/computer-vision/unet_training.ts"
+  functionName="main"
+  lines="1-120"
+  title="Training a U-Net on a small segmentation dataset (placeholder)"
+/>
 
-SAM 2 (2024) extended the model to video, introducing **memory attention** so a mask prompted on frame 0 propagates through frames 1..N, tracking the object across time. It's backward-compatible with SAM 1 image prompts and has become the default for interactive video segmentation tools.
+On a modest dataset (a few thousand images), a 4- or 5-stage U-Net reaches usable accuracy in minutes on a single GPU. That efficiency — strong results from a small network and little data — is exactly why it still dominates applied work.
+
+## Beyond Vanilla U-Net
+
+U-Net is the starting point; the family has grown and branched:
+
+- **nnU-Net (2021)** — a self-configuring U-Net pipeline that inspects the dataset and picks spacing, patch size, normalization, and architecture hyperparameters automatically. Wins medical segmentation benchmarks year after year with almost no tuning.
+- **U-Net++, Attention U-Net** — refinements to the skip connections (nested or attention-gated) that squeeze a few points of Dice out of hard datasets.
+- **Swin UNETR, UNETR** — replace the convolutional encoder with a vision transformer; stronger on large or complex volumes at the cost of more compute.
+- **DeepLab v3+ (2018)** — atrous (dilated) convolutions for large receptive fields without downsampling; strong on outdoor scenes.
+- **Mask R-CNN (2017)** — adds a per-ROI mask head to a detector; the standard move when you need **instance** segmentation with class labels.
+- **Mask2Former, OneFormer (2022)** — transformer decoders with mask queries that unify semantic / instance / panoptic in a single model.
+
+For most applied work the decision tree is small: if you need semantic masks, start with a U-Net; if you need instance IDs, use Mask R-CNN or Mask2Former; if you're in medical imaging, go straight to nnU-Net.
+
+## Segmentation Foundation Models: A Note on Recent Work
+
+Recent work has reframed segmentation as "prompting for pixels". **Segment Anything (SAM, Meta 2023)** is a large pretrained encoder plus a prompt-aware mask decoder: click a point or draw a box, get a zero-shot mask with no fine-tuning. **SAM 2 (2024)** extends the idea to video with memory attention. **Grounded-SAM** chains an open-vocabulary detector (Grounding DINO) into SAM so you can "segment everything labeled 'hard hat'" from a text prompt.
+
+These models don't replace U-Net — they complement it. SAM shines for interactive tools and for segmenting objects a custom model was never trained on; U-Net (and descendants) still dominate when you have a labeled dataset and a specific target domain. The rule of thumb: **if you have labels, train a U-Net; if you don't, prompt SAM.**
 
 ## When To Use What
 
 | Situation | Recommendation |
 |---|---|
-| Highly specialized domain with a clean labeled dataset (e.g., segmenting tumors on MRI) | Start with a U-Net or nnU-Net — still state of the art in medical |
-| "Segment everything in this scene" without labels | SAM automatic mask generator |
-| "Segment the object I clicked" in an app | SAM with point/box prompts |
-| Panoptic scene understanding with classes | Mask2Former or OneFormer |
+| Specialized domain with labeled data (medical, industrial QA, satellite) | U-Net / nnU-Net / Swin UNETR |
+| Instance-level masks with class labels | Mask R-CNN or Mask2Former |
+| Panoptic scene understanding | Mask2Former / OneFormer |
+| "Segment the thing I clicked" in an interactive tool | SAM |
+| "Segment everything matching this text" with no fine-tuning | Grounded-SAM (Grounding DINO → SAM) |
 | Video object segmentation / rotoscoping | SAM 2 |
-| Open-vocabulary "segment everything labeled 'hard hat'" | Grounding DINO → SAM (detect then segment) |
-
-## Worked Example: Prompted Segmentation
-
-<CodeEditor
-  file="src/computer-vision/sam_prompted.ts"
-  functionName="main"
-  lines="1-80"
-  title="Prompting SAM with points and boxes (placeholder)"
-/>
 
 ### Practical Implication
 
-SAM is a **segmentation foundation model**, not a classifier. It tells you *where* the object is, not *what* it is. Production pipelines usually combine SAM with a detector or a classifier — detect → crop → classify, or detect → segment → label — rather than expecting SAM to do both jobs.
+Segmentation's production bottleneck is almost always **labeled data**, not architecture. A well-curated 500-image labeled dataset trained with a small U-Net will usually outperform a fancier model trained on 50 poorly-labeled ones. Spend the time on label quality first; swap architectures second.
 
 #### ❌ Antipattern
 
-Expecting SAM to return class labels ("this is a cat"). It returns masks and confidence scores — class labels require a separate classifier or an open-vocabulary detector upstream.
+Reaching for a transformer-based Swin UNETR on a dataset of 200 images. The model has tens of millions of parameters, your dataset won't regularize it, and training Dice will look great while test Dice collapses.
 
 #### ✅ Best Practice
 
-For "find and segment every hard hat in this construction photo", chain an open-vocabulary detector (Grounding DINO with prompt `"hard hat"`) into SAM (box prompts from each detection). You get class-labeled pixel-perfect masks with no fine-tuning.
+Start with a small U-Net plus standard augmentation (random flips, small rotations, and — for medical — elastic deformations). Check whether accuracy plateaus because of the model or because of the data. If it's the data, labeling is the highest-leverage next step. If it's the model, *then* scale up.
 
 <Quiz>
-<QuizQuestion question="You need to segment different organs on CT scans for a clinical pipeline where the anatomy is well-defined and you have 500 expert-annotated volumes. What's the most reliable starting point?" options={["Use SAM zero-shot with box prompts around each organ", "Fine-tune a U-Net (or nnU-Net) on the annotated volumes — specialized medical segmentation still benefits strongly from domain-specific training", "Train a YOLO detector and use its boxes as masks"]} answer={1} explanation="SAM is a strong general-purpose tool but medical segmentation rewards domain-specific training. nnU-Net in particular is still state of the art for most organ/lesion segmentation benchmarks when you have expert labels." />
-<QuizQuestion question="A user clicks on a dog in an image and SAM returns three masks — one of the whole dog, one of the dog's head, one of just an ear. How should the UI use this?" options={["Pick the highest-scoring mask and discard the others", "Expose all three to the user — SAM produces multi-granularity masks precisely because a single click is ambiguous (whole object vs part vs subpart), and the user is the one who can disambiguate", "Average the three masks together"]} answer={1} explanation="SAM's multi-mask output is a feature, not a bug. A single point is ambiguous and SAM communicates that ambiguity by returning candidate masks at different granularity levels. Interactive tools typically show the top mask and let the user cycle to the others." />
+<QuizQuestion question="You're training a U-Net to segment thin vessels on retinal images. Training loss goes down but predictions completely miss the vessels at test time. What's most likely going wrong?" options={["The optimizer is stuck in a local minimum", "Class imbalance — the background dwarfs the vessel, so per-pixel cross-entropy is dominated by easy negatives. Switch to Dice loss or a Dice + cross-entropy hybrid", "The encoder isn't deep enough"]} answer={1} explanation="Thin structures on a large background make cross-entropy a lopsided loss — predicting 'background everywhere' is already ~99% correct per pixel. Dice or Focal loss weight minority-class errors much more heavily and are the standard fix." />
+<QuizQuestion question="You remove the skip connections from a U-Net to simplify it. Training converges but predicted masks look like fuzzy blobs with no sharp edges. Why?" options={["The decoder needs more layers", "Without skip connections the decoder has only the low-resolution bottleneck to work from — it has lost the fine spatial detail the encoder threw away during pooling", "The loss function needs to change"]} answer={1} explanation="Skip connections are U-Net's whole point: they give the decoder access to the high-resolution encoder features that would otherwise be downsampled away. Without them you get semantically correct but spatially blurry masks." />
 </Quiz>
