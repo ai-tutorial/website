@@ -1,0 +1,131 @@
+---
+title: How Images Become Tensors
+description: Representing images, videos, and volumetric studies as matrices and tensors
+sidebarTitle: Image Representation
+icon: book
+mode: wide
+slug: computer-vision/image-representation
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+Before any model, every vision pipeline does the same thing: it reads pixels off disk and turns them into a tensor with a specific shape. Get the shape wrong and nothing downstream works. This page covers the mental model for images, videos, and volumetric studies, and the tensor layouts you will see over and over again.
+
+## Pixels Are Just Numbers
+
+A grayscale image is a grid of brightness values. A 28×28 MNIST digit is literally a 2D matrix of 784 numbers, each between 0 and 255 (or scaled to `[0, 1]` before feeding a network):
+
+```text
+Grayscale image → shape: (H, W)
+
+         col 0  col 1  col 2  ...  col 27
+ row  0 [  0      0    120   ...    0   ]
+ row  1 [  0    230    255   ...    0   ]
+  ...
+ row 27 [  0      0      0   ...    0   ]
+```
+
+A color image adds a third axis for channels. Each pixel stores three intensities (Red, Green, Blue), so a 224×224 RGB image is a tensor of shape `(H, W, 3)` — or `(3, H, W)` depending on framework convention. Remember this because it is the single most common source of "my tensor has the wrong shape" errors.
+
+| Framework | Preferred layout | Mnemonic |
+|---|---|---|
+| PyTorch, Caffe, many vision libs | `(C, H, W)` | "channels first" |
+| TensorFlow / Keras, NumPy image I/O, Pillow | `(H, W, C)` | "channels last" |
+
+**Batches** stack multiple images along a new leading axis:
+
+```text
+Batch of RGB images → (N, C, H, W) in PyTorch
+                   → (N, H, W, C) in TensorFlow
+```
+
+## Videos Add Time
+
+A video is a sequence of frames, so it adds a temporal axis. The most common layout is:
+
+```text
+Video clip → (T, C, H, W)   or   (N, T, C, H, W) for a batch
+```
+
+where `T` is the number of frames. Early video models flattened time into the channel dimension (`3 × T` channels); modern ones treat time explicitly, either with 3D convolutions (`Conv3D`), temporal attention, or by tubeletizing patches like a ViT. The representation is the same three-digit tensor you already know — just one dimension longer.
+
+## Volumetric Studies: CT, MRI, and Friends
+
+Medical imaging is where many newcomers trip, because "a scan" is not a single image. A CT or MRI study is a stack of 2D cross-sections through the body, and each one is a separate grayscale image.
+
+```text
+CT / MRI volume → (D, H, W)          single-channel volumetric
+                (C, D, H, W)         multi-modality (e.g. T1 + T2 + FLAIR for MRI)
+                (N, C, D, H, W)      batch of volumes
+```
+
+- **D** ("depth" or "slices") is the number of cross-sections, typically 30–500 for CT, 100–300 for MRI per sequence.
+- **MRI** is inherently multi-channel: the same anatomy is imaged with different pulse sequences (T1, T2, FLAIR, DWI), each highlighting different tissue properties. You stack them as channels, just like RGB.
+- **Spacing matters.** Unlike natural images, medical volumes carry physical units: each voxel is, say, `0.8 × 0.8 × 3.0 mm`. Networks are not scale-aware — if you train on 1mm-spaced scans and run on 3mm-spaced scans, you will silently degrade. Resampling to a canonical spacing is a standard preprocessing step.
+
+Other "not-quite-a-picture" data follows the same pattern:
+
+- **Hyperspectral imagery:** `(H, W, C)` where `C` can be 100+ wavelength bands (satellite remote sensing).
+- **Point clouds from LiDAR:** `(N, 3)` or `(N, 4)` for `(x, y, z, intensity)` — not a grid, handled by PointNet-style architectures.
+- **Depth maps:** `(H, W)` with floats — distance in meters per pixel.
+
+## The Preprocessing Pipeline
+
+Almost every image you feed a network goes through the same stages:
+
+```text
+ File on disk (JPEG/PNG/DICOM/NIfTI)
+        |
+        v
+  Decode  → HxW[xC] array of uint8 / int16
+        |
+        v
+  Resize / crop  → match the model's expected input
+        |
+        v
+  Normalize     → divide by 255, subtract mean, divide by std
+        |
+        v
+  Reorder axes  → (C, H, W) for PyTorch, (H, W, C) for TF
+        |
+        v
+  Stack into a batch → (N, C, H, W)
+```
+
+Skip any of these, and you get either silent quality degradation (forgotten normalization) or a hard crash (wrong axis order).
+
+## Inspecting Tensors In Practice
+
+The worked example loads a JPEG, a short video clip, and a NIfTI volume and prints their shapes side-by-side so you can feel the difference.
+
+<CodeEditor
+  file="src/computer-vision/tensor_explorer.ts"
+  functionName="main"
+  lines="1-60"
+  title="Tensor shapes for images, video, and volumes (placeholder)"
+/>
+
+### Practical Implication
+
+Many "my model outputs nonsense" bugs come from shape mistakes that the framework happily accepts because the numbers still multiply. Always log `.shape` (and `.dtype`) at the boundaries of your pipeline — after decode, after normalization, right before the forward pass — rather than trusting the documentation of the library you called three lines above.
+
+#### ❌ Antipattern
+
+```python
+img = load_image("digit.png")
+pred = model(img)   # shape surprise: model expected (1, 1, 28, 28), got (28, 28, 1)
+```
+
+#### ✅ Best Practice
+
+```python
+img = load_image("digit.png")
+assert img.shape == (28, 28), f"unexpected shape {img.shape}"
+img = img[None, None, :, :].astype("float32") / 255.0   # (1, 1, 28, 28)
+pred = model(img)
+```
+
+<Quiz>
+<QuizQuestion question="You trained an MRI segmentation model on studies resampled to 1×1×1 mm spacing. At inference time you feed it raw scans without resampling and accuracy collapses. Why?" options={["The model overfit the training set", "Convolution kernels operate in voxel units, not millimeters — different physical spacing changes effective receptive field and breaks the learned scale", "MRI volumes should be converted to RGB before inference"]} answer={1} explanation="Networks are not scale-aware. A 3mm-spaced scan makes every anatomical structure span fewer voxels than training time, so a kernel that covered, say, 9mm during training now covers 27mm. Resample to a canonical spacing before any model call." />
+<QuizQuestion question="You load a color image with Pillow (shape `(H, W, 3)`) and pass it directly to a PyTorch model trained with torchvision. It runs but the predictions are garbage. What's the most likely cause?" options={["You forgot to convert to grayscale", "PyTorch expects channels-first `(3, H, W)`; you fed channels-last, so the 'channels' axis is being interpreted as spatial pixels", "The model needs a larger batch size"]} answer={1} explanation="Channels-first vs channels-last is the classic silent failure in vision pipelines. The tensor has the right total size so the framework doesn't complain — but every convolution now sees nonsense." />
+</Quiz>

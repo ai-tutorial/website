@@ -1,0 +1,109 @@
+---
+title: Segmentation with SAM
+description: Pixel-level masks, semantic vs instance vs panoptic, and prompting SAM for interactive segmentation
+sidebarTitle: Segmentation (SAM)
+icon: book
+mode: wide
+slug: computer-vision/segmentation
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+Detection draws a box around an object. Segmentation goes one level deeper and labels **every pixel**. It's what powers background removal, medical organ delineation, autonomous-driving road masks, and every "make this photo's background blurry" feature on your phone. Since 2023 the field has been reshaped by a single model — Segment Anything (SAM) — and this page is built around it.
+
+## Three Flavors of Segmentation
+
+It's worth keeping these straight because papers and APIs all assume you know the difference.
+
+| Type | What it labels | Example task |
+|---|---|---|
+| **Semantic segmentation** | Each pixel gets a class label — no instance distinction | "this pixel is road / sidewalk / building" |
+| **Instance segmentation** | Each pixel gets a class label **plus** an instance ID | "this pixel is car #3" |
+| **Panoptic segmentation** | Semantic labels for `stuff` (sky, road), instance labels for `things` (car, person) — unified | "this pixel is road", "this pixel is person #2" |
+
+Output shape is always a mask of the same spatial size as the input: `(H, W)` of class IDs for semantic, or `(N, H, W)` of binary masks for instance-level.
+
+## Classic Architectures
+
+Before SAM, segmentation meant picking a task-specific encoder–decoder:
+
+- **FCN (2015):** the original "replace the FC layers with conv layers" paper; produces a dense output map.
+- **U-Net (2015):** a symmetric encoder-decoder with skip connections that's still the default in medical imaging. Small, data-efficient, surprisingly hard to beat on specialized datasets.
+- **DeepLab v3+ (2018):** atrous convolutions for large receptive fields; strong on outdoor scenes.
+- **Mask R-CNN (2017):** instance segmentation by adding a per-ROI mask head to Faster R-CNN.
+- **Mask2Former (2022):** unified architecture for semantic / instance / panoptic segmentation using a transformer decoder with mask queries — one model, three tasks.
+
+These still ship in production, especially U-Net in medical and Mask2Former for panoptic scenes.
+
+## Enter SAM: "Prompt Engineering for Pixels"
+
+Segment Anything (Meta AI, 2023) took a different approach. Instead of training a task-specific segmenter, they:
+
+1. Built a huge pretrained image encoder (a ViT).
+2. Added a lightweight **prompt encoder** that accepts points, boxes, or coarse masks.
+3. Added a **mask decoder** that outputs a binary mask for the prompted object.
+4. Trained on **SA-1B** — 11M images, 1.1B masks — the largest segmentation dataset ever assembled.
+
+The result is a single model that can segment essentially any object you point to, **zero-shot**, without fine-tuning.
+
+```text
+ Image  ──► [ViT Encoder]     ─┐
+                               ├──► [Mask Decoder]  ──► mask(s) + scores
+ Prompt ──► [Prompt Encoder]  ─┘
+  (point, box, or mask)
+```
+
+### Prompting SAM
+
+Three prompt types, composable:
+
+- **Point:** a single `(x, y)` with a `foreground / background` flag. The go-to for interactive tools — "click the thing you want segmented".
+- **Box:** a bounding box — useful for pairing with a detector ("detect, then segment each box").
+- **Mask:** a coarse mask — useful for iteration: click, get a mask, click again to refine.
+
+Given one prompt, SAM produces up to 3 candidate masks at different granularity (`whole object / part / subpart`) with scores, letting downstream code pick or combine them.
+
+### Automatic Mask Generation
+
+Feed SAM a grid of point prompts covering the image, dedupe overlapping masks with IoU-based NMS, and you get a full panoptic-ish segmentation of every distinct region in the image — no classes, no labels, just regions. This is the killer application for pipelines that need "find all the things" without knowing what the things will be.
+
+## SAM 2: Video and Interactivity
+
+SAM 2 (2024) extended the model to video, introducing **memory attention** so a mask prompted on frame 0 propagates through frames 1..N, tracking the object across time. It's backward-compatible with SAM 1 image prompts and has become the default for interactive video segmentation tools.
+
+## When To Use What
+
+| Situation | Recommendation |
+|---|---|
+| Highly specialized domain with a clean labeled dataset (e.g., segmenting tumors on MRI) | Start with a U-Net or nnU-Net — still state of the art in medical |
+| "Segment everything in this scene" without labels | SAM automatic mask generator |
+| "Segment the object I clicked" in an app | SAM with point/box prompts |
+| Panoptic scene understanding with classes | Mask2Former or OneFormer |
+| Video object segmentation / rotoscoping | SAM 2 |
+| Open-vocabulary "segment everything labeled 'hard hat'" | Grounding DINO → SAM (detect then segment) |
+
+## Worked Example: Prompted Segmentation
+
+<CodeEditor
+  file="src/computer-vision/sam_prompted.ts"
+  functionName="main"
+  lines="1-80"
+  title="Prompting SAM with points and boxes (placeholder)"
+/>
+
+### Practical Implication
+
+SAM is a **segmentation foundation model**, not a classifier. It tells you *where* the object is, not *what* it is. Production pipelines usually combine SAM with a detector or a classifier — detect → crop → classify, or detect → segment → label — rather than expecting SAM to do both jobs.
+
+#### ❌ Antipattern
+
+Expecting SAM to return class labels ("this is a cat"). It returns masks and confidence scores — class labels require a separate classifier or an open-vocabulary detector upstream.
+
+#### ✅ Best Practice
+
+For "find and segment every hard hat in this construction photo", chain an open-vocabulary detector (Grounding DINO with prompt `"hard hat"`) into SAM (box prompts from each detection). You get class-labeled pixel-perfect masks with no fine-tuning.
+
+<Quiz>
+<QuizQuestion question="You need to segment different organs on CT scans for a clinical pipeline where the anatomy is well-defined and you have 500 expert-annotated volumes. What's the most reliable starting point?" options={["Use SAM zero-shot with box prompts around each organ", "Fine-tune a U-Net (or nnU-Net) on the annotated volumes — specialized medical segmentation still benefits strongly from domain-specific training", "Train a YOLO detector and use its boxes as masks"]} answer={1} explanation="SAM is a strong general-purpose tool but medical segmentation rewards domain-specific training. nnU-Net in particular is still state of the art for most organ/lesion segmentation benchmarks when you have expert labels." />
+<QuizQuestion question="A user clicks on a dog in an image and SAM returns three masks — one of the whole dog, one of the dog's head, one of just an ear. How should the UI use this?" options={["Pick the highest-scoring mask and discard the others", "Expose all three to the user — SAM produces multi-granularity masks precisely because a single click is ambiguous (whole object vs part vs subpart), and the user is the one who can disambiguate", "Average the three masks together"]} answer={1} explanation="SAM's multi-mask output is a feature, not a bug. A single point is ambiguous and SAM communicates that ambiguity by returning candidate masks at different granularity levels. Interactive tools typically show the top mask and let the user cycle to the others." />
+</Quiz>

@@ -1,0 +1,126 @@
+---
+title: Videos and Volumetric Data
+description: Extending 2D vision to video and to 3D medical volumes like CT and MRI
+sidebarTitle: Video & Volumetric
+icon: book
+mode: wide
+slug: computer-vision/videos-and-volumetric
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+Two dimensions are not enough for half the real world. Autonomous driving has to reason over time, radiology has to reason over a stack of anatomical slices, and content moderation has to understand 30-second clips, not 30 still frames. This page covers how the tools you already have generalize to video and to 3D volumetric data, with a focus on medical imaging.
+
+## Video: Time as an Extra Axis
+
+A video adds a **temporal** axis on top of the usual spatial ones:
+
+```text
+Still image:     (C, H, W)
+Video clip:      (T, C, H, W)         for a single clip
+Video batch:     (N, T, C, H, W)      batched
+```
+
+From here, the architectural choices fall into a handful of patterns.
+
+### Frame-by-Frame
+
+The simplest option: run your 2D model on every frame independently, optionally smooth the outputs with a temporal filter or tracker. Works astonishingly well for many tasks (detection, classification, segmentation) because modern 2D models are strong and video frames are highly redundant. This is the default you should try first.
+
+### 3D Convolutions
+
+Replace `Conv2D(k, k)` with `Conv3D(t, k, k)`. The filter now slides across time as well as space and can learn motion features directly. Classic models: **C3D**, **I3D** (inflated 3D — take a 2D ImageNet-pretrained network and "inflate" every 2D filter into 3D). Expensive, but still a competitive baseline.
+
+### Two-Stream
+
+One network sees RGB frames, another sees **optical flow** (the pixel-level motion between consecutive frames). Their predictions get combined. Popular in early deep video work; still useful when motion is the primary signal (e.g., action recognition).
+
+### Temporal Transformers
+
+Tubelet an image into patches over both space and time, then run a transformer. Models: **ViViT**, **TimeSformer**, **MViT**, **VideoMAE**, **Video Swin**. These have largely taken over video classification and are the backbone behind modern video foundation models and text-to-video generators like **Sora**.
+
+### Tasks You'll See
+
+| Task | What it outputs |
+|---|---|
+| **Action recognition** | A class per clip ("running", "cooking") — the "ImageNet" of video |
+| **Temporal action detection** | `(class, start_time, end_time)` triples across a long video |
+| **Multi-object tracking (MOT)** | Per-object trajectories across frames — detector + association algorithm (SORT, ByteTrack) |
+| **Video object segmentation (VOS)** | A mask for each target across every frame — SAM 2 is the current default |
+| **Text-to-video generation** | A video sampled from a text prompt — Sora, Gen-3, Veo |
+
+## Volumetric Data: 3D From the Start
+
+Unlike video, where most of the information is still 2D and time is a bonus, medical volumes are genuinely 3D: anatomy is continuous across slices, and features (tumors, vessels, bones) live in 3D space.
+
+### CT (Computed Tomography)
+
+A CT scanner rotates an X-ray source and detector around the patient and reconstructs a stack of cross-sectional slices. Output is typically:
+
+```text
+(D, H, W) in Hounsfield Units (HU)       — single scalar per voxel
+typical shape: ~(30–500, 512, 512)
+```
+
+**Hounsfield Units** are calibrated physical units: air is −1000, water is 0, bone is +1000 to +2000. Windowing (clipping to a target HU range and rescaling to `[0, 1]`) is the equivalent of "normalization" for CT — different windows emphasize different tissues (lung window, bone window, soft-tissue window). Your network will see completely different images depending on which window you pick.
+
+### MRI (Magnetic Resonance Imaging)
+
+MRI produces volumes too, but with a twist: the same anatomy is imaged with **multiple pulse sequences** (T1, T2, FLAIR, DWI), each highlighting different tissue properties. Treat each sequence as a channel:
+
+```text
+(C, D, H, W)   with C = number of sequences (often 3 or 4)
+```
+
+Unlike CT, MRI intensities have **no fixed physical meaning** — the same tumor might be bright on one scan and dim on another from a different scanner. Per-volume z-score normalization is standard.
+
+### DICOM, NIfTI, and the Loader Problem
+
+Medical data formats are their own ecosystem:
+
+- **DICOM (.dcm):** the clinical standard. Each slice is a separate file with extensive metadata (patient ID, acquisition parameters, orientation). Loading requires sorting slices by `SliceLocation` and respecting patient orientation.
+- **NIfTI (.nii / .nii.gz):** the research standard. A single file containing the 3D array plus an affine matrix mapping voxel coordinates to physical (world) space.
+- **Affine / orientation:** the affine matrix tells you which axis is superior-inferior, anterior-posterior, left-right in the patient's frame. Training on mixed orientations without canonicalizing produces bizarre bugs.
+
+Libraries: **pydicom**, **nibabel**, **SimpleITK**, **MONAI** (the PyTorch-based library that packages medical-specific layers, losses, and augmentations).
+
+### Architectures for 3D Medical Imaging
+
+- **3D U-Net:** the direct extension of 2D U-Net with `Conv3D` — still the workhorse.
+- **nnU-Net (2021):** a self-configuring 3D U-Net pipeline. It inspects your dataset and picks spacing, patching, and architecture automatically. Wins medical segmentation benchmarks year after year with almost no tuning.
+- **Swin UNETR, UNETR:** transformer-based 3D encoders that trade more compute for better long-range context.
+- **TotalSegmentator:** a nnU-Net-based model that segments 100+ anatomical structures on whole-body CT out of the box.
+
+### Why You Can't Just Use 2D Models Slice-by-Slice
+
+You can, and for some tasks (bone fracture detection, large-organ outlines) it works fine. But:
+
+- **Small structures** (a 3-voxel nodule, a thin vessel) visible across only a few slices get missed or flicker between them.
+- **3D context** matters: a structure's cross-section often looks the same as something else in a single slice and is only distinguishable via its 3D shape.
+- **Memory:** 3D U-Nets on full `(300, 512, 512)` volumes don't fit on a GPU. You train on **patches** (e.g., `(96, 96, 96)`) and stitch predictions at inference — a standard technique with gotchas at patch boundaries.
+
+## Worked Example: Load a CT Volume, Window It, Feed a Patch to a Network
+
+<CodeEditor
+  file="src/computer-vision/ct_patch_pipeline.ts"
+  functionName="main"
+  lines="1-100"
+  title="CT volume loading, windowing, patching, inference (placeholder)"
+/>
+
+### Practical Implication
+
+Medical imaging looks like regular computer vision but has a pile of domain conventions — physical units, multi-modality, orientation, patch-based training — that are invisible in the model architecture but determine whether the pipeline works at all. Use **MONAI** or **nnU-Net**; they encode a decade of hard-won conventions so you don't rediscover them one bug at a time.
+
+#### ❌ Antipattern
+
+Training a 2D ImageNet-pretrained ResNet on raw CT slice PNGs with default RGB normalization. You've thrown away HU calibration, 3D context, orientation, and slice spacing — the result is a model that "works" on the dev set and fails silently on scans from a different hospital.
+
+#### ✅ Best Practice
+
+Resample every volume to a fixed physical spacing, window to the tissue range that matters for your task, train a 3D U-Net (or nnU-Net) on random 3D patches with patient-level train/val splits, and evaluate on volumes from a held-out scanner or site.
+
+<Quiz>
+<QuizQuestion question="You train a lung-nodule detector on CT scans from one hospital and deploy it to another. Sensitivity drops from 92% to 61%. What's the most likely cause and fix?" options={["The model is too small — retrain with more parameters", "Distribution shift from different scanners and acquisition protocols (spacing, kernel, dose). Canonical preprocessing (resampling to fixed spacing, HU windowing, z-score normalization) and multi-site training data close most of this gap", "The hospital is sending older images"]} answer={1} explanation="Cross-site CT performance drops are almost always scanner/protocol differences. Canonicalizing physical spacing, HU windowing, and including multiple sites in training are the standard mitigations." />
+<QuizQuestion question="For a general-purpose 'recognize the action in this 10-second clip' model, you don't have compute to train 3D CNNs from scratch. What's a pragmatic starting point?" options={["Run your strongest 2D image classifier on every frame and majority-vote — or fine-tune a pretrained video transformer like VideoMAE/ViViT, which ships with strong action-recognition weights", "Build a two-stream network with hand-designed optical flow", "Train a new model with 3D convolutions from scratch"]} answer={0} explanation="Pretrained video transformers (VideoMAE, ViViT, VideoSwin) fine-tuned on your data are the current default. Frame-wise majority-voting with a strong 2D model is a very competitive cheap baseline — sometimes it's all you need." />
+</Quiz>

@@ -1,0 +1,105 @@
+---
+title: Linear Classifiers on MNIST
+description: Build intuition with the simplest possible image classifier before moving to CNNs
+sidebarTitle: Linear Classifiers & MNIST
+icon: book
+mode: wide
+slug: computer-vision/linear-classifiers
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+Before reaching for a convolutional network, it's worth seeing how far you can get with the simplest classifier: one matrix multiplication and a softmax. It's a surprisingly useful baseline — and it makes the limitations we fix in the next page very concrete.
+
+## The Problem: 10-Way Digit Classification
+
+MNIST is 70,000 grayscale images of handwritten digits 0–9, each 28×28 pixels, split into 60K training and 10K test. It's small enough to train in seconds and famous enough that every competing model has been measured on it — the perfect first dataset.
+
+```text
+Input:  one image  → (1, 28, 28)  → flatten → x ∈ ℝ^784
+Output: class probabilities        → ŷ ∈ ℝ^10  (must sum to 1)
+```
+
+We want a function `f(x) = ŷ` that maps the 784 pixel intensities to 10 class probabilities.
+
+## The Linear Classifier
+
+The simplest choice is a single linear layer followed by softmax:
+
+```text
+logits = W · x + b           # W has shape (10, 784), b has shape (10,)
+ŷ     = softmax(logits)      # turns logits into a probability distribution
+```
+
+That's 7,850 parameters (10 × 784 weights + 10 biases) — tiny. Each row of `W` is a **template** for one digit class: the pixels where that template is bright tell the model "this is what a 3 looks like on average". Training adjusts those templates to maximize agreement with the labels.
+
+**Loss:** cross-entropy between `ŷ` and the one-hot true label `y`:
+
+$$
+L = -\sum_{i=1}^{10} y_i \log \hat{y}_i
+$$
+
+Minimizing cross-entropy is equivalent to maximizing the probability the model assigns to the correct class.
+
+## Training, Step by Step
+
+```text
+for each epoch:
+    for each mini-batch (x_batch, y_batch):
+        logits = x_batch @ W.T + b
+        loss   = cross_entropy(softmax(logits), y_batch)
+        ∂L/∂W, ∂L/∂b = autograd.backward(loss)
+        W -= α · ∂L/∂W
+        b -= α · ∂L/∂b
+```
+
+A well-tuned linear classifier on MNIST plateaus around **92% test accuracy** — which sounds fine until you remember that 92% means **8 mistakes per 100 digits**. Any real postal-code, check-reading, or form-processing pipeline needs much better than that.
+
+<CodeEditor
+  file="src/computer-vision/mnist_linear.ts"
+  functionName="main"
+  lines="1-80"
+  title="Training a linear classifier on MNIST (placeholder)"
+/>
+
+## What the Templates Look Like
+
+A nice side-effect of the linear model is that each row of `W` can be reshaped back to 28×28 and visualized. You see ghostly averages of each digit — a round blob for `0`, a vertical stroke for `1`, a loopy `S` for `8`. The classifier is literally computing "how much does this input look like the average 3?" for every class in parallel, then picking the winner.
+
+## Where It Breaks
+
+92% is an honest ceiling for something this simple. The failure modes are instructive because every image task has a more sophisticated version of them:
+
+- **Translation sensitivity.** Slide a `7` two pixels to the right, and every entry in `x` changes. The model has to re-learn each digit at every possible position, with no parameter sharing. Tiny shifts at test time break it.
+- **No notion of locality.** Pixel `(3, 3)` and pixel `(3, 4)` are neighbors on the image, but to the classifier they are just two of 784 independent inputs. It cannot exploit the fact that nearby pixels form edges and strokes.
+- **One template per class.** A `4` can be written "closed" or "open", a `7` with or without a cross-bar. A single weight vector per class cannot represent multi-modal style.
+- **Parameters grow with resolution.** Doubling the image size quadruples the input dimension. A 224×224 RGB ImageNet image has 150,528 inputs — millions of parameters per class. The linear model doesn't scale.
+
+### Practical Implication
+
+The linear classifier is a useful smoke test, not a production model. If your deep network can't beat a well-tuned linear baseline, something is wrong with your data pipeline — not your architecture. Always run the baseline first.
+
+#### ❌ Antipattern
+
+Jumping straight to a 50M-parameter CNN for a 10-class problem with 500 training images. You'll overfit instantly and have no reference for what "reasonable" accuracy looks like.
+
+#### ✅ Best Practice
+
+Train a linear baseline, then a small CNN, then scale. Each step should measurably improve the test metric — if it doesn't, investigate before making the model bigger.
+
+## A Note on Regression
+
+Classification isn't the only supervised vision task. Sometimes the target is a **continuous number** rather than a category — and the pipeline barely changes.
+
+Replace the softmax layer with a single linear output, swap cross-entropy for mean squared error, and the same model becomes a regressor that predicts a scalar from an image. Classic examples:
+
+- **Bone age estimation from a hand X-ray.** A pediatric radiologist normally estimates skeletal maturity in months by comparing the scan to a reference atlas. The model takes the image in and outputs one number. Same CNN, same training loop — only the loss and the final layer change.
+- **Image-quality score prediction.** Given a photo, predict a 0–10 human-rated quality score.
+- **Keypoint / pose regression.** Predict `(x, y)` coordinates of landmarks (face keypoints, joints, anatomical markers) instead of a class label.
+
+Everything else in this module — CNNs, detection heads, segmentation decoders — has a regression counterpart you get with the same two-line change. Keep "regression" in mind as a separate task slot whenever a dataset's label is naturally a number, not a category.
+
+<Quiz>
+<QuizQuestion question="Your linear MNIST classifier gets 91% test accuracy. You double its parameter count by increasing hidden units — wait, there are no hidden units. What do you try next?" options={["Increase the learning rate 10×", "Add a non-linearity and a hidden layer, or switch to a convolutional architecture that can exploit spatial locality", "Train for 10× more epochs"]} answer={1} explanation="A pure linear classifier has a hard ceiling on MNIST — one template per class, no spatial reasoning. The next step is a non-linear model (MLP) or, better, a CNN that shares weights across positions." />
+<QuizQuestion question="Why does a linear classifier trained on centered MNIST digits fail on the same dataset after a small random translation augmentation?" options={["Augmentation introduces label noise", "The model has no translation-invariance built in — every shifted pixel is a completely new input to the model, so it has to relearn each digit at each position independently", "Cross-entropy loss is sensitive to pixel position"]} answer={1} explanation="Linear models treat pixel `(3, 3)` and pixel `(3, 4)` as unrelated input features. They cannot exploit spatial structure, so shifts produce inputs the model has effectively never seen." />
+</Quiz>

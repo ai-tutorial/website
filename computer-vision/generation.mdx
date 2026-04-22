@@ -1,0 +1,160 @@
+---
+title: Image Generation — GANs and Diffusion
+description: Two families of generative image models, how they work, and how they compare
+sidebarTitle: Image Generation
+icon: book
+mode: wide
+slug: computer-vision/generation
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+Everything so far has been **discriminative** — given an image, output a label, a box, or a mask. Generation flips the problem: given nothing (or a prompt), output an image. This page covers the two model families that define modern image generation: GANs, which dominated 2014–2021, and diffusion models, which dominate today.
+
+## Generative Adversarial Networks (GANs)
+
+A GAN trains two networks against each other:
+
+- **Generator `G`:** takes a random noise vector `z` and tries to produce a realistic image `G(z)`.
+- **Discriminator `D`:** takes an image and tries to decide whether it's real (from the dataset) or fake (from the generator).
+
+```text
+   noise z  ──►  [Generator]  ──►  fake image
+                                       │
+   real img  ──────────────────────────┤
+                                       v
+                                 [Discriminator]  ──►  real / fake
+```
+
+Training is a two-player minimax game. The discriminator learns to tell real from fake; the generator learns to fool the discriminator. When it works, the equilibrium is a generator producing samples indistinguishable from the real data distribution.
+
+### Strengths
+
+- **Fast sampling:** one forward pass through `G` produces an image. No iterative denoising.
+- **High visual fidelity:** StyleGAN2/3 remain extremely strong on constrained domains (faces, cars) with crisp, photorealistic outputs.
+- **Latent space is well-behaved:** interpolation in `z` gives smooth morphs between generated images; editing directions correspond to semantic attributes (age, pose, lighting).
+
+### Weaknesses
+
+- **Training instability:** the minimax loss is notoriously brittle. Mode collapse (the generator produces only a narrow slice of the distribution) is common.
+- **Hard to condition on text:** GANs were designed for unconditional or class-conditional generation. Full text-to-image conditioning never worked as well as with diffusion.
+- **Low diversity at scale:** struggles to cover very broad distributions (e.g., "all of the internet's images") compared to diffusion.
+
+Notable members of the family: **DCGAN**, **Progressive GAN**, **StyleGAN / StyleGAN2 / StyleGAN3** (Nvidia's face-generation line), **BigGAN** (class-conditional on ImageNet), **pix2pix / CycleGAN** (image-to-image translation).
+
+## Diffusion Models
+
+Diffusion models take a very different route. The key idea: it's easy to **destroy** structure by adding noise, and we can train a network to **reverse** that process one small step at a time.
+
+### Forward process (fixed, no learning)
+
+Start with a real image `x_0` and repeatedly add a tiny bit of Gaussian noise:
+
+```text
+x_0  →  x_1  →  x_2  →  ...  →  x_T   (≈ pure Gaussian noise)
+```
+
+After many steps, `x_T` looks like random noise. This process is defined analytically — no learning involved.
+
+### Reverse process (learned)
+
+Train a neural network `ε_θ` to predict the noise that was added at step `t`, given the noisy image `x_t` and the step index `t`:
+
+```text
+  noisy x_t  ──►  [U-Net / DiT]  ──►  predicted noise ε̂
+                      ▲
+                      │
+                   step t
+```
+
+Training loss is just MSE between predicted and actual noise. Once trained, generation works by starting from pure noise `x_T` and iteratively denoising:
+
+```text
+ x_T (pure noise)  →  x_{T-1}  →  ...  →  x_0  (generated image)
+ (repeat T steps, subtracting a bit of predicted noise each step)
+```
+
+`T` is typically 20–1000 depending on the sampler; modern schedulers (DDIM, DPM-Solver) get good quality in ~20 steps.
+
+### Conditioning: How Text Enters the Picture
+
+Text-to-image works by **conditioning** the denoiser on a text embedding — typically from a frozen CLIP text encoder (the same CLIP used in open-vocabulary detection):
+
+```text
+ prompt "a corgi astronaut"
+         │
+         v
+   [CLIP text encoder]  ──►  text embedding
+                                  │
+                                  v
+ x_t  ──►  [U-Net with cross-attention on text]  ──►  ε̂
+```
+
+The cross-attention layers are where the prompt actually influences each denoising step. Classifier-free guidance then amplifies the conditional signal at sampling time, trading diversity for prompt adherence.
+
+### Latent Diffusion (Stable Diffusion)
+
+Running diffusion directly in pixel space is expensive. **Stable Diffusion** (Rombach et al., 2022) instead:
+
+1. Uses a pretrained **VAE** to compress `512×512×3` images into a `64×64×4` latent.
+2. Runs the diffusion process in that latent space — 64× smaller, much faster.
+3. Decodes the final latent back to pixels with the VAE decoder.
+
+This is why Stable Diffusion runs on consumer GPUs and why the recipe is now the default: `CLIP encoder + U-Net / DiT denoiser + VAE decoder`.
+
+### Strengths
+
+- **State-of-the-art quality and diversity** on open-ended distributions.
+- **Natural text conditioning** via cross-attention.
+- **Rich control ecosystem:** ControlNet, LoRA fine-tuning, inpainting, img2img, image-to-video — all bolt onto the same base model.
+- **Stable training** compared to GANs.
+
+### Weaknesses
+
+- **Slow sampling:** multiple denoising steps means generation is seconds, not milliseconds. Distillation and consistency models (LCM, Turbo, SDXL Turbo) bring it down to 1–4 steps at some quality cost.
+- **Less editable latent space** than StyleGAN's for fine-grained attribute control (though methods like textual inversion and prompt-to-prompt partially close the gap).
+
+Notable members: **DDPM** (the original), **Latent Diffusion / Stable Diffusion / SDXL / SD3**, **DALL·E 2 & 3**, **Imagen / Imagen 3**, **Midjourney**, **FLUX**, **Sora** (video).
+
+## GANs vs Diffusion at a Glance
+
+| Dimension | GANs | Diffusion |
+|---|---|---|
+| Sampling speed | 1 forward pass | 20–1000 steps (faster with distillation) |
+| Training stability | Notoriously hard | Straightforward MSE objective |
+| Text conditioning | Weak | Strong (cross-attention on CLIP embeddings) |
+| Typical quality ceiling | Very high on narrow domains | Very high on open-domain, general use |
+| Latent space editing | Rich (StyleGAN direction space) | Growing (textual inversion, prompt edits) |
+| Production default in 2026 | Niche — narrow domains, real-time | General text-to-image, image-to-image |
+
+## The Family Beyond These Two
+
+- **VAEs (Variational Autoencoders):** encode and decode images through a latent bottleneck. Lower-quality samples than GANs/diffusion, but the encoder is what Stable Diffusion uses to shrink the image before diffusion.
+- **Autoregressive image models:** predict image tokens one at a time (Parti, Muse). Very slow but high-quality and useful as tokenizers for multimodal LLMs.
+- **Flow matching / rectified flows:** recent alternatives to the diffusion formulation with simpler training and fewer sampling steps (Stable Diffusion 3 is based on this).
+
+## Worked Example: Generate With Both
+
+<CodeEditor
+  file="src/computer-vision/gan_vs_diffusion.ts"
+  functionName="main"
+  lines="1-100"
+  title="Sampling from a GAN and a diffusion model (placeholder)"
+/>
+
+### Practical Implication
+
+In production, "generation quality" is rarely the real problem — **control** is. Can you consistently get the composition, style, and subject you want? Diffusion wins here because it comes with an ecosystem (ControlNet, LoRA, inpainting, IP-Adapter) that makes control surgical. Raw FID scores ignore this entirely.
+
+#### ❌ Antipattern
+
+Picking an image generator purely by benchmark FID or CLIP score. These correlate poorly with how useful the model is for a real product workflow.
+
+#### ✅ Best Practice
+
+Build an internal eval set of **real prompts from your product** and score outputs on the dimensions you actually care about (prompt adherence, style consistency, safety, cost per image, latency). A "worse" model that's steerable often beats a "better" one that isn't.
+
+<Quiz>
+<QuizQuestion question="You need to generate product photos that match an existing brand style tightly. Which approach is most likely to give you consistent results?" options={["Use an unconditional StyleGAN trained once on a general image dataset", "Fine-tune or LoRA-adapt a diffusion model on your brand's existing images and use ControlNet or image conditioning to lock composition", "Prompt any text-to-image model with a detailed style description and accept the variance"]} answer={1} explanation="Consistent, on-brand output needs both style adaptation (LoRA or full fine-tune on brand images) and structural control (ControlNet, IP-Adapter). Prompt-only approaches produce too much variance for production brand work." />
+<QuizQuestion question="Your text-to-image service has a hard 200ms latency budget per image and you're currently running 50-step Stable Diffusion. What's the most pragmatic next step?" options={["Downgrade to a 512-parameter model", "Use a distilled / turbo / LCM version of your diffusion model that produces comparable quality in 1–4 steps", "Switch to a GAN — it generates in a single forward pass"]} answer={1} explanation="Step-distilled diffusion (SDXL Turbo, LCM, consistency models) closes most of the quality gap at 1–4 steps and keeps the diffusion ecosystem (ControlNet, LoRA, text conditioning). A GAN sampling speed advantage doesn't outweigh losing prompt control in most production settings." />
+</Quiz>

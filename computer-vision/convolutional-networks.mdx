@@ -1,0 +1,123 @@
+---
+title: Convolutional Networks
+description: Why convolutions beat linear classifiers on images, with a CNN trained on MNIST
+sidebarTitle: Convolutional Networks
+icon: book
+mode: wide
+slug: computer-vision/convolutional-networks
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+The linear classifier's failures all point the same direction: we need a model that knows **pixels close together are related**, and that **a feature should mean the same thing wherever it appears**. Convolutional Neural Networks (CNNs) build exactly those two ideas into the architecture, and the accuracy jump on MNIST makes the benefit very visible.
+
+## The Two Ideas
+
+**Local connectivity.** Instead of connecting every input pixel to every output neuron, a convolutional layer looks at small patches — typically 3×3 or 5×5. It slides the same little filter across the image and computes a dot product at every position. Why it matters: edges, corners, and textures are local phenomena; modeling them locally is both more natural and more parameter-efficient.
+
+**Weight sharing.** The filter is the same at every position. If it detects a horizontal edge at the top of the image, it detects the same horizontal edge at the bottom. Translation shifts the **output** but doesn't require new parameters — the single biggest missing piece in the linear baseline.
+
+```text
+Linear layer:        every output = dense combination of ALL inputs
+                     → parameters scale with image size
+                     → no spatial reuse
+
+Convolutional layer: every output = same small filter applied locally
+                     → parameters depend on filter size, not image size
+                     → translation-equivariant
+```
+
+## What a Convolutional Layer Computes
+
+A single filter of size `k×k` with `C_in` input channels produces one **feature map** — a 2D grid of "how strongly this filter fired at every location". A layer typically has many filters (say, 32 or 64), so the output is a stack of feature maps:
+
+```text
+Input:   (C_in, H, W)
+Filter:  (C_out, C_in, k, k)          ← one k×k filter per (input, output) channel pair
+Output:  (C_out, H', W')
+```
+
+Stacking convolutional layers composes these feature detectors into a hierarchy. The first layer finds edges; the second finds corners and simple textures from combinations of edges; deeper layers find digits, faces, wheels. **The receptive field** — the region of the input that influences one output — grows with depth, so late layers "see" large chunks of the image even though each individual filter is tiny.
+
+## Pooling and Strides
+
+Between convolutions, networks typically downsample to shrink spatial resolution and enlarge the receptive field:
+
+- **Max pooling:** take the largest value in each `2×2` window. Cheap, effective, discards precise location.
+- **Strided convolutions:** run the filter every 2 pixels instead of every 1. Learnable downsampling.
+
+A classic CNN alternates `conv → non-linearity → (conv → non-linearity) → pool` blocks, halving the spatial size and doubling the channel count each stage — trading spatial resolution for semantic richness.
+
+## A Small CNN for MNIST
+
+A textbook architecture that comfortably gets **>99% test accuracy** on MNIST:
+
+```text
+Input:        (1, 28, 28)
+Conv(32, 3×3) + ReLU                → (32, 26, 26)
+Conv(64, 3×3) + ReLU                → (64, 24, 24)
+MaxPool(2×2)                        → (64, 12, 12)
+Flatten                             → 9216
+Linear(9216, 128) + ReLU + Dropout  → 128
+Linear(128, 10) → Softmax           → 10 class probs
+```
+
+That's a modest model by modern standards, but it moves MNIST accuracy from ~92% (linear) to ~99.2% — about **one-tenth the error rate**. The jump is almost entirely about the two inductive biases (locality + weight sharing) matching the structure of images.
+
+<CodeEditor
+  file="src/computer-vision/mnist_cnn.ts"
+  functionName="main"
+  lines="1-120"
+  title="Training a CNN on MNIST (placeholder)"
+/>
+
+## How to Read a CNN Accuracy Report
+
+On MNIST the numbers are close to saturated, so differences look small but are meaningful:
+
+| Model | Test error | Reduction vs previous |
+|---|---|---|
+| Logistic regression (linear) | ~8.0% | — |
+| 2-layer MLP | ~2.0% | 4× fewer errors |
+| Small CNN (above) | ~0.8% | 2.5× fewer errors |
+| Modern CNN with augmentation | ~0.2% | 4× fewer errors |
+
+"99% vs 99.2%" looks tiny on a slide. In a production OCR system processing millions of characters, it's the difference between 10,000 and 2,000 mistakes per million — a 5× quality improvement.
+
+## Beyond MNIST: What CNNs Look Like at Scale
+
+The same ideas scaled up give you the architectures behind every classical vision benchmark:
+
+- **LeNet-5 (1998):** the original digit CNN — 2 conv + 2 FC layers.
+- **AlexNet (2012):** the ImageNet-winning network that kicked off the deep-learning era.
+- **VGG / Inception / ResNet (2014-15):** progressively deeper nets, with ResNet introducing **skip connections** to train 100+ layer networks stably.
+- **EfficientNet / ConvNeXt:** modern CNNs tuned to match or beat transformers with better compute efficiency.
+
+ResNet-50 — a workhorse in industry — has around 25M parameters and gets ~76% top-1 on ImageNet (1,000 classes). That number is the yardstick you'll see cited whenever someone claims their new architecture is "better than ResNet-50".
+
+## Same Architecture, Different Dataset, Different Problem
+
+Here's a pattern that shows up everywhere in applied vision: the same backbone gets reused across completely unrelated products. A ResNet-50 trained on ImageNet is almost never left there — it's the starting weights for a retail product-photo classifier, a manufacturing defect detector, a satellite imagery land-use model, a pathology screening tool, and a content-moderation filter. Swap the final layer, fine-tune on the new dataset, ship.
+
+The same holds for **EfficientNet** and **ViT** on classification, **YOLO** / **Faster R-CNN** on detection, and **U-Net** on segmentation. The architecture changes on the scale of years; the datasets change every project.
+
+The practical consequence for most applied teams: the hard work isn't "design a new network". It's **collecting, labeling, cleaning, and versioning a dataset that actually represents the problem you're trying to solve**. Pretrained weights buy you a large head start; data quality is what separates the model that ships from the one that doesn't.
+
+A nice historical aside: **U-Net was invented for biomedical microscopy in 2015** and has since leaked into natural-image segmentation, satellite imagery, audio spectrograms, and — most notably — it's the denoiser sitting inside every latent diffusion model. Good architectures don't stay in their home domain.
+
+### Practical Implication
+
+For small datasets (thousands of images, not millions), you almost always start from a pretrained backbone (ResNet, EfficientNet, or a ViT) and **fine-tune** on your task. Training from scratch only wins when you have a very large, domain-specific dataset.
+
+#### ❌ Antipattern
+
+Training a 25M-parameter CNN from scratch on 2,000 product photos. The model overfits in an epoch and test accuracy is worse than a pretrained linear probe.
+
+#### ✅ Best Practice
+
+Load pretrained ImageNet weights, freeze the backbone, and train only a new classification head. Then, if you have enough data, unfreeze the last few stages and fine-tune with a small learning rate.
+
+<Quiz>
+<QuizQuestion question="Your CNN reaches 99.4% training accuracy but only 97.1% test accuracy on MNIST. What's the first thing to try?" options={["Switch from CNN to a pure transformer", "Add regularization (dropout, weight decay) or data augmentation (random shifts, rotations) — the gap suggests mild overfitting", "Remove the pooling layers to retain more information"]} answer={1} explanation="The ~2 point gap is a classic overfitting signature. On MNIST you rarely need a bigger model — add regularization and light augmentation first." />
+<QuizQuestion question="Why is a CNN more parameter-efficient than an MLP on a 224×224 RGB image?" options={["It uses fewer layers", "A CNN's parameters are tied to filter size, not image size, and it reuses the same filters at every spatial position — an MLP would need 150,528 inputs × hidden units of weights in the first layer alone", "CNNs use lower-precision floats"]} answer={1} explanation="Weight sharing is the key economic argument for convolutions. A single 3×3 filter has 9 (plus bias) parameters no matter how big the image is, and it applies at every spatial location." />
+</Quiz>

@@ -59,6 +59,22 @@
         ]
       },
       {
+        "group": "Computer Vision",
+        "pages": [
+          "computer-vision/overview",
+          "computer-vision/image-representation",
+          "computer-vision/deep-learning-foundations",
+          "computer-vision/linear-classifiers",
+          "computer-vision/convolutional-networks",
+          "computer-vision/object-detection",
+          "computer-vision/segmentation",
+          "computer-vision/generation",
+          "computer-vision/videos-and-volumetric",
+          "computer-vision/hands-on-exercise",
+          "computer-vision/recap-and-resources"
+        ]
+      },
+      {
         "group": "Coming Soon",
         "pages": [
           "coming-soon"
