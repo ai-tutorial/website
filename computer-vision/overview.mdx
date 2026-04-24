@@ -1,0 +1,52 @@
+---
+title: "Overview & Learning Objectives"
+description: "Overview and learning objectives for the Computer Vision module"
+sidebarTitle: "Overview & Learning Objectives"
+icon: book
+mode: wide
+slug: computer-vision/overview
+---
+
+## Module Overview
+
+**You've probably noticed:** vision tasks look deceptively similar — "classify this image", "find that object", "generate a cat" — but the models, data pipelines, and failure modes behind them are wildly different. A network that's great at classification is useless for detection, and a detector tells you nothing about pixel-perfect boundaries.
+
+**Here's why that happens:** each vision problem imposes a different structure on the **output**. Pixels go in the same way, but what comes out — a label, a box, a mask, or a new image — reshapes the entire architecture. Underneath, though, every modern vision system relies on the same idea: images are tensors, and a deep neural network learns to transform them.
+
+**In this module:** you'll learn how digital images, videos, and volumetric scans (CT, MRI) are represented as tensors, build intuition for the deep-learning machinery that also powers the LLMs from the earlier modules, and work through the canonical vision problems — **classification, regression, detection, segmentation, generation** — with hands-on examples on MNIST and pointers to production-scale systems.
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+- ✅ Represent images, videos, and volumetric studies (CT, MRI) as tensors with the correct dimensionality
+- ✅ Explain deep learning in plain terms and connect it back to the transformer models from earlier modules
+- ✅ Train a linear classifier on MNIST and diagnose where it breaks
+- ✅ Explain why convolutions beat fully-connected layers on images and train a CNN on MNIST
+- ✅ Reason about object detection building blocks: anchors, IoU, NMS, and common benchmarks
+- ✅ Use Segment Anything (SAM) for interactive and automatic segmentation
+- ✅ Compare GANs and diffusion models for image generation and their production trade-offs
+- ✅ Extend 2D vision techniques to video and 3D volumetric data
+
+## Why This Matters
+
+Computer vision is the other half of the production AI stack. Even if your product is text-first, vision is creeping in through OCR, screenshot understanding, multimodal agents, and document pipelines.
+
+- **Vision is production-critical:** radiology, autonomous driving, retail analytics, manufacturing QA, and content moderation all run on the stack covered in this module
+- **The same architecture under many hoods:** transformers now dominate vision too — ViT, DETR, SAM, Stable Diffusion cross-attention — so everything you learned about attention in the LLM modules applies here
+- **Data representation determines everything downstream:** a CT volume loaded as `(H, W, slices)` vs `(slices, H, W)` silently breaks networks; choosing the right tensor layout is half the job
+- **Benchmark literacy separates practitioners from demo-builders:** knowing what "42 mAP on COCO" or "94% top-1 on ImageNet" actually means tells you which model to pick — and which numbers to distrust
+
+## What You'll Build
+
+- **Tensor explorer** — load images, videos, and volumetric studies and inspect their shapes end-to-end
+- **MNIST linear classifier** — softmax regression trained from scratch, with baseline metrics
+- **MNIST CNN** — a small convolutional network that shows the accuracy jump over the linear baseline
+- **Detection walkthrough** — annotated IoU / NMS examples and a tour of one-stage vs two-stage detectors
+- **SAM playground** — click-to-segment and automatic mask generation
+- **Diffusion vs GAN demo** — generate images with each approach and compare fidelity and controllability
+- **3D viewer** — open a CT/MRI volume, scroll through slices, and extract a 2D window the network can consume
+
+<Note>
+  Code examples in this module are placeholders while the TypeScript/Python companion repository catches up. Each `CodeEditor` block marks the file path it will point to once the implementation lands.
+</Note>

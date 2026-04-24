@@ -1,0 +1,124 @@
+---
+title: "Hands-On Exercise: A Mini Vision Pipeline"
+description: Build a small end-to-end vision pipeline that exercises each concept from the module
+sidebarTitle: Hands-On Exercise
+icon: book
+mode: wide
+slug: computer-vision/hands-on-exercise
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+You've seen the ideas separately — tensors, linear classifiers, CNNs, detectors, segmenters, generators, 3D volumes. This exercise wires the main pieces into a single pipeline you can run and extend. The goal isn't state of the art; it's to feel how the parts connect.
+
+## The Scenario
+
+You're building a **photo triage tool** for a hobbyist photographer's backup drive. For each photo we want to:
+
+1. **Classify** whether it contains people, pets, or neither.
+2. **Detect** and count the subjects if it does.
+3. **Segment** the main subject with SAM so the UI can cut it out as a thumbnail.
+4. **Generate** a stylized preview (diffusion model) for the hero shot of each album.
+
+No medical or video data this time — those live in the bonus extension.
+
+## Pipeline
+
+```text
+ input image
+      |
+      v
+ (1) classifier    → {people, pets, neither}  + confidence
+      |
+      v
+ (2) open-vocab detector with prompt "person, dog, cat"  → boxes + scores
+      |
+      v
+ (3) SAM, prompted with highest-score box  → binary mask + cropped thumbnail
+      |
+      v
+ (4) diffusion img2img on the thumbnail, prompt "cinematic portrait, shallow depth of field"
+      |
+      v
+ decorated output, written back to disk
+```
+
+Each stage uses exactly one concept from the module.
+
+## Stage 1 — Classifier
+
+Start with a pretrained ResNet-18 or small ViT, replace the final layer with three outputs, and fine-tune on a handful of labeled images from the user's own library. If you have very few examples, run a frozen CLIP image encoder and a **linear probe** over its embeddings — no GPU training needed.
+
+<CodeEditor
+  file="src/computer-vision/exercise/stage1_classifier.ts"
+  functionName="main"
+  lines="1-80"
+  title="Stage 1: classifier head on CLIP embeddings (placeholder)"
+/>
+
+## Stage 2 — Detection
+
+Use **Grounding DINO** (open-vocabulary) with the prompt `"person . dog . cat"`. You get a list of `(label, box, score)` triples with no fine-tuning required. Skip the image if no box scores above a confidence threshold you pick on a small validation set.
+
+<CodeEditor
+  file="src/computer-vision/exercise/stage2_detection.ts"
+  functionName="main"
+  lines="1-60"
+  title="Stage 2: open-vocabulary detection (placeholder)"
+/>
+
+## Stage 3 — Segmentation
+
+Feed the highest-scoring detection box into SAM as a box prompt. Pick the best of SAM's three candidate masks by score. Multiply by the image to produce a cut-out with the background removed.
+
+<CodeEditor
+  file="src/computer-vision/exercise/stage3_sam.ts"
+  functionName="main"
+  lines="1-60"
+  title="Stage 3: SAM with box prompts (placeholder)"
+/>
+
+## Stage 4 — Generation
+
+Run Stable Diffusion in **img2img** mode on the cut-out thumbnail with a short style prompt and a low strength value (so composition is preserved). For speed, use a distilled / LCM variant that runs in 4 steps.
+
+<CodeEditor
+  file="src/computer-vision/exercise/stage4_diffusion.ts"
+  functionName="main"
+  lines="1-80"
+  title="Stage 4: style transfer via img2img diffusion (placeholder)"
+/>
+
+## Putting It Together
+
+The driver script loops over the input directory, runs all four stages, and writes the results plus a small HTML index.
+
+<CodeEditor
+  file="src/computer-vision/exercise/pipeline.ts"
+  functionName="main"
+  lines="1-120"
+  title="End-to-end pipeline driver (placeholder)"
+/>
+
+## Extensions
+
+- **Video:** swap SAM for SAM 2 and propagate the cut-out across all frames of a short clip.
+- **3D:** load a DICOM series, window the volume to the soft-tissue range, and segment an organ with a pretrained TotalSegmentator.
+- **Train instead of prompt:** replace Grounding DINO with a YOLO fine-tuned on a small dataset of the user's own subjects — measure whether accuracy and latency actually improve.
+
+### Practical Implication
+
+Every stage in this exercise is a **separate model**, each with its own failure modes, latency, and cost profile. Production vision pipelines look exactly like this — a chain of specialized models rather than one giant do-everything network. The skill is choosing the right model per stage and measuring each piece independently.
+
+#### ❌ Antipattern
+
+Treating the pipeline as a black box and only measuring end-to-end photo quality. When quality drops you'll have no idea which stage regressed.
+
+#### ✅ Best Practice
+
+Log per-stage metrics (classifier accuracy, detection mAP, segmentation IoU, generation latency and prompt-adherence) on a fixed eval set. Any quality regression traces back to a specific stage.
+
+<Quiz>
+<QuizQuestion question="Your pipeline works great on portraits but fails on group photos — SAM segments only one person even though detection correctly finds several. What should you change?" options={["Retrain SAM with more data", "Run SAM once per detection box, produce one mask per subject, and compose them — SAM is a per-prompt segmenter, not a 'segment all detected objects' model", "Lower the detector confidence threshold"]} answer={1} explanation="SAM segments the thing you prompt for. The fix is to iterate the detections and run SAM for each, not to blame the model." />
+<QuizQuestion question="You add Stable Diffusion img2img at the end and latency jumps from 300ms to 4s per image. Before removing the feature, what's the best first optimization?" options={["Reduce image resolution to 64×64", "Switch to a step-distilled / turbo / LCM variant of the same model so generation takes 1–4 denoising steps instead of 20–50", "Regenerate every image twice and average"]} answer={1} explanation="Step distillation is the cheapest big win for diffusion latency and keeps your existing prompts, LoRAs, and pipeline. It's usually the first knob to turn before giving up on quality." />
+</Quiz>

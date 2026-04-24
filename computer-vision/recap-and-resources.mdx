@@ -1,0 +1,90 @@
+---
+title: "Recap & Resources"
+description: Recap and resources for the Computer Vision module
+sidebarTitle: "Recap & Resources"
+icon: cauldron
+mode: wide
+slug: computer-vision/recap-and-resources
+---
+## Key Takeaways
+
+1. **Images are tensors, and shape is half the job:** `(N, C, H, W)` vs `(N, H, W, C)`, CT volumes `(D, H, W)`, MRI multi-sequence `(C, D, H, W)`. Log shapes at every pipeline boundary.
+
+2. **Deep learning is one recipe:** forward pass → task-specific loss → backprop → gradient step. CNNs, transformers, U-Nets, and LLMs all share this loop — only the input representation and core operator differ.
+
+3. **Start with a linear baseline:** on MNIST it plateaus around 92%, which is a useful smoke test. If your deep net can't beat it, fix your data pipeline before your architecture.
+
+4. **Convolutions win on images because of locality + weight sharing:** a small CNN on MNIST moves from ~8% error to <1% with a tiny fraction of the parameters a fully-connected net would need.
+
+5. **Detection has its own vocabulary:** bounding boxes, IoU, NMS, anchors, and mAP. "mAP@0.5:0.95 on COCO" is the dominant metric — but per-class accuracy at your deploy threshold is what usually matters in production.
+
+6. **Segmentation has been reshaped by SAM:** prompt with points/boxes/masks, get high-quality zero-shot masks. For specialized medical domains, U-Net / nnU-Net are still state of the art.
+
+7. **Generation = GANs + Diffusion:** GANs are fast and sharp on narrow domains; diffusion dominates general text-to-image because of strong conditioning and a rich control ecosystem (ControlNet, LoRA, IP-Adapter).
+
+8. **Video and 3D are 2D with an extra axis — and extra gotchas:** temporal redundancy often makes frame-wise 2D models a strong baseline; medical volumes carry physical units and orientation metadata that silently break pipelines if ignored.
+
+**Production Checklist:**
+
+Before shipping a vision system, ensure:
+
+- [ ] Data pipeline logs tensor shape and dtype at every stage
+- [ ] Preprocessing matches training exactly at inference (resize, normalize, channel order)
+- [ ] A baseline (linear, or pretrained backbone with a linear head) is measured alongside the main model
+- [ ] Evaluation set is drawn from the same distribution as production (scanners, cameras, lighting, user types)
+- [ ] Per-class accuracy tracked — not just global mAP or top-1
+- [ ] Confidence/precision-recall operating point chosen deliberately, not left at the default 0.5
+- [ ] Pretrained weights used wherever possible; training from scratch justified with data scale
+- [ ] For medical/industrial data: fixed physical spacing, canonical orientation, domain-appropriate normalization
+- [ ] Cost, latency, and memory measured per stage of the pipeline
+- [ ] Failure cases collected for regression testing
+
+## Common Pitfalls Recap
+
+❌ **Wrong channel order:** `(H, W, C)` fed into a channels-first model silently produces garbage  
+❌ **Skipping normalization:** forgetting to match training preprocessing at inference  
+❌ **Training from scratch with tiny datasets:** use pretrained weights instead  
+❌ **Chasing benchmark numbers over product metrics:** FID/mAP/top-1 rarely match real user impact  
+❌ **Treating SAM as a classifier:** it returns masks, not labels — chain with a detector or classifier  
+❌ **Loading medical volumes as RGB images:** discards HU calibration, 3D context, orientation  
+❌ **No per-stage telemetry in a chained pipeline:** you can't debug end-to-end quality regressions  
+
+## Trends (Last 3–6 months)
+
+**What's new:**
+
+- **Vision foundation models are the default:** SAM 2, DINOv2, SigLIP, and CLIP variants are now the backbones most teams start from — full training from scratch is increasingly rare outside research.
+- **Open-vocabulary everything:** detection (Grounding DINO, OWL-ViT), segmentation (SEEM, Grounded-SAM), classification (CLIP zero-shot) — describing classes in text has become the common interface.
+- **Transformers overtake CNNs on mainstream benchmarks** for classification and detection, while hybrid / convnext architectures keep pace on compute-constrained deployments.
+- **Distilled diffusion models** (SDXL Turbo, LCM, SD3 Turbo, FLUX schnell) bring text-to-image under 200ms per image on a single GPU.
+- **Video generation from text** has moved from research curiosity to shipping products (Sora, Veo, Runway Gen-3, Kling) with transformer-based diffusion-in-latent-space architectures.
+- **Medical foundation models** (MedSAM, TotalSegmentator, RadImageNet-style pretraining) offer strong zero-shot baselines where expert-annotated data is scarce.
+
+**Vendor-specific (awareness):**
+
+- **Hugging Face:** the de facto hub for pretrained vision weights, datasets, and evaluation; `transformers`, `diffusers`, `datasets`.
+- **Ultralytics:** the YOLO line (YOLOv8/11/...) packaged with a lightweight training/export CLI. Ubiquitous in industry.
+- **MONAI:** PyTorch library for medical imaging — DICOM/NIfTI loaders, 3D-aware augmentations, medical-specific losses, nnU-Net integration.
+- **NVIDIA:** NGC pretrained checkpoints, TensorRT / Triton for inference, DeepStream for video pipelines.
+- **Roboflow:** dataset management and hosted training tuned for object detection pipelines.
+- **Meta AI:** SAM / SAM 2 / DINOv2 releases with permissive licenses.
+- **Stability AI, Black Forest Labs (FLUX), Midjourney, Runway, OpenAI, Google:** generation models via API or weights.
+
+## References
+
+- He, K., et al. **Deep Residual Learning for Image Recognition** (2015). https://arxiv.org/abs/1512.03385
+- Dosovitskiy, A., et al. **An Image Is Worth 16×16 Words: Vision Transformers** (2020). https://arxiv.org/abs/2010.11929
+- Redmon, J., et al. **YOLO: You Only Look Once** (2016). https://arxiv.org/abs/1506.02640
+- Carion, N., et al. **End-to-End Object Detection with Transformers (DETR)** (2020). https://arxiv.org/abs/2005.12872
+- Liu, S., et al. **Grounding DINO: Open-Set Object Detection** (2023). https://arxiv.org/abs/2303.05499
+- Ronneberger, O., et al. **U-Net: Convolutional Networks for Biomedical Image Segmentation** (2015). https://arxiv.org/abs/1505.04597
+- Isensee, F., et al. **nnU-Net: Self-Configuring Method for Biomedical Image Segmentation** (2021). https://www.nature.com/articles/s41592-020-01008-z
+- Kirillov, A., et al. **Segment Anything** (2023). https://arxiv.org/abs/2304.02643
+- Ravi, N., et al. **SAM 2: Segment Anything in Images and Videos** (2024). https://arxiv.org/abs/2408.00714
+- Goodfellow, I., et al. **Generative Adversarial Networks** (2014). https://arxiv.org/abs/1406.2661
+- Ho, J., et al. **Denoising Diffusion Probabilistic Models** (2020). https://arxiv.org/abs/2006.11239
+- Rombach, R., et al. **High-Resolution Image Synthesis with Latent Diffusion Models (Stable Diffusion)** (2022). https://arxiv.org/abs/2112.10752
+- Karras, T., et al. **Analyzing and Improving the Image Quality of StyleGAN** (2020). https://arxiv.org/abs/1912.04958
+- Tong, Z., et al. **VideoMAE: Masked Autoencoders for Video Pretraining** (2022). https://arxiv.org/abs/2203.12602
+- Wasserthal, J., et al. **TotalSegmentator: Robust Segmentation of 104 Anatomical Structures in CT** (2023). https://arxiv.org/abs/2208.05868
+- MONAI consortium. **MONAI: Medical Open Network for AI**. https://monai.io

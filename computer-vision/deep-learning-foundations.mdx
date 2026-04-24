@@ -1,0 +1,120 @@
+---
+title: Deep Learning in Plain English
+description: A conceptual tour of deep learning and its connection to the LLMs from earlier modules
+sidebarTitle: Deep Learning Foundations
+icon: book
+mode: wide
+slug: computer-vision/deep-learning-foundations
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+Everything in this module — classification, detection, segmentation, generation — is a different shape of the same object: a deep neural network trained with gradient descent. This page is a fast conceptual tour so the rest of the module doesn't feel like magic. If you've made it through the prompting and RAG modules, you've already been using deep learning — just pointed at text.
+
+## What a Neural Network Actually Is
+
+A neural network is a stack of simple mathematical operations — mostly matrix multiplications and non-linear squashes — that together define a single, very long function `f(x; θ)`. You feed in `x` (an image, a sentence, a CT slice), out pops a prediction, and `θ` is the millions (or billions) of numbers that control how the transformation happens.
+
+```text
+  input x   →   layer 1   →   layer 2   →   ...   →   layer L   →   prediction ŷ
+             (matmul       (matmul                 (matmul
+              + non-        + non-                  + non-
+              linearity)    linearity)              linearity)
+```
+
+Each **layer** does roughly this:
+
+1. Take the previous layer's output.
+2. Multiply by a learned weight matrix and add a learned bias.
+3. Apply a non-linear function (ReLU, GELU, sigmoid, ...).
+
+Without the non-linearity, stacking layers would collapse back into a single matrix multiplication — and you couldn't learn anything interesting. With it, depth lets the network compose progressively more abstract features: edges → textures → shapes → objects.
+
+## How Learning Happens: Loss and Gradient Descent
+
+Training is a feedback loop:
+
+```text
+ forward:  x ──► f(x; θ) ──► ŷ
+                                  \
+                                   ──► loss L(ŷ, y_true)
+                                  /
+ backward: ∂L/∂θ ◄── backprop ◄──
+                 |
+                 v
+           θ  ←  θ − α · ∂L/∂θ      (gradient descent step)
+```
+
+1. **Forward pass:** run `x` through the network to produce a prediction `ŷ`.
+2. **Loss:** measure how wrong `ŷ` is compared to the ground truth `y` using a task-specific function (cross-entropy for classification, MSE for regression, IoU-based losses for detection, pixel-wise cross-entropy for segmentation).
+3. **Backward pass (backpropagation):** compute how each parameter should change to reduce the loss — the gradient `∂L/∂θ`.
+4. **Update:** nudge every parameter slightly against its gradient. Repeat on another batch.
+
+Repeat millions of times over a dataset, and the parameters drift toward values that make the loss small. That's it. Every architecture — CNNs, transformers, U-Nets, diffusion models — uses this same loop.
+
+### Why "deep"?
+
+Empirically, depth is how networks learn hierarchical representations. Early layers learn low-level patterns (edges, gradients), middle layers learn parts (eyes, wheels), late layers learn objects and scenes. You can't get this hierarchy out of a shallow, wide network even if it has the same number of parameters. **Depth + non-linearity + enough data + gradient descent** is the whole recipe.
+
+## Connection to the LLMs You Already Know
+
+This is where the prompting and RAG modules come back. The models behind GPT, Claude, and Gemini are **transformers** — a specific deep-learning architecture where the main operation is **self-attention** instead of convolution. But the plumbing is identical:
+
+| Piece | LLM (transformer on text) | Vision network |
+|---|---|---|
+| Input tensor | `(N, T, d)` — batch × tokens × embedding | `(N, C, H, W)` — batch × channels × height × width |
+| Core operation | Self-attention over tokens | Convolution over pixels, or attention over patches (ViT) |
+| Non-linearity | GELU | ReLU / GELU |
+| Training signal | Predict the next token → cross-entropy | Predict the label / mask / box → task-specific loss |
+| Optimization | Adam/AdamW + gradient descent | Same |
+
+And increasingly the line blurs in both directions:
+
+- **ViT (Vision Transformer)** chops an image into 16×16 patches, flattens each into a token, and runs the same transformer you'd use for text. On large datasets it outperforms CNNs.
+- **Multimodal LLMs** (GPT-4o, Claude, Gemini) use a vision encoder — often a ViT — to turn images into tokens that sit alongside text tokens in the context window.
+- **SAM** is a transformer that takes an image + a prompt (point, box, or mask) and outputs a segmentation mask — basically "prompting for pixels".
+- **Stable Diffusion** generates images conditioned on a text embedding computed by a CLIP text encoder — which is itself a transformer.
+
+So when you prompt an LLM, you are operating the same machinery that powers the rest of this module, just with text tokens instead of pixel patches.
+
+## Why Vision Is Usually Harder Than Text
+
+Sharing the machinery doesn't mean the problems are equally easy. A mid-size LLM can write a coherent essay; a similarly-sized CNN can still struggle to reliably tell one dog breed from another. The difference isn't the optimizer or the layer count — it's that vision problems carry more ambiguity at every level, from the raw input up to the label. Four reasons this shows up in practice:
+
+**1. Text is symbols; images are raw signal.** The word `cat` is always the word `cat` — a discrete token with a pre-compiled meaning the model can look up. A cat in an image is a pattern of light and color that could be any size, pose, color, breed, half-covered by a couch, or photographed in dim light. The model has to *recover* the concept of "cat" from pixels rather than index into a dictionary.
+
+**2. Text has almost no invariances; vision has many.** A sentence doesn't get rotated, partially occluded, lit from a weird angle, or zoomed in. An image of a car must be recognized whether it's big or small, upside down, half-hidden behind a pole, or in deep shadow — and the network has to learn that none of those transformations change the answer. Every one of these invariances is another axis of variation the model has to generalize across.
+
+**3. Ground truth is fuzzier.** "Translate this sentence" has roughly one right answer; "segment the tumor" has two expert radiologists drawing meaningfully different boundaries on the same scan. Labels in vision are intrinsically noisier, and the model trains against that noise. This is also why evaluation is harder: you can't always compute a clean "is this correct?" — sometimes you can only measure agreement with imperfect human labels.
+
+**4. The input is massive.** A short paragraph is a few hundred tokens at modest embedding dimension. A single 224×224 RGB image is already over 150,000 raw numbers, and a CT volume is tens of millions. The model has to extract semantic structure from a much bigger, less-curated signal — and most of those numbers are redundant or uninformative.
+
+None of this means vision is impossible; it means good data curation, clear task definition, and the architectural priors we cover on the next pages (locality, weight sharing, translation equivariance) matter even more here than they do in text.
+
+## The Training Loop, Visualized
+
+The worked example runs a tiny two-layer network on a toy dataset and plots the loss curve so you can see the optimization in action.
+
+<CodeEditor
+  file="src/computer-vision/tiny_training_loop.ts"
+  functionName="main"
+  lines="1-60"
+  title="A minimal training loop, end to end (placeholder)"
+/>
+
+### Practical Implication
+
+You don't have to implement backprop yourself — every modern framework does it automatically. What you **do** control are the knobs that decide whether training converges: **learning rate**, **batch size**, **optimizer** (Adam, SGD), **regularization** (dropout, weight decay), and — most importantly — the **data**. A well-tuned small model beats a badly-tuned giant one, on every task in this module.
+
+#### ❌ Antipattern
+
+Treating the model architecture as the whole problem. Teams spend weeks swapping ResNet-50 for ResNet-101 and see no change because their real issue is a mislabeled training set or learning rate that's an order of magnitude off.
+
+#### ✅ Best Practice
+
+Start with a strong baseline (for images: ResNet-18 or a small ViT), verify you can overfit a tiny subset, then scale up data and architecture together. If the baseline can't overfit 100 examples, the bug is in your pipeline, not your model.
+
+<Quiz>
+<QuizQuestion question="Your classifier's training loss is decreasing but validation loss is going up. What's happening?" options={["The optimizer is broken — switch from Adam to SGD", "The model is overfitting: it's memorizing training examples instead of learning generalizable features", "You need a bigger model to fit the data"]} answer={1} explanation="This is the textbook overfitting signature. The fix is more data, regularization (dropout, weight decay, augmentation), or a smaller model — not a bigger one." />
+<QuizQuestion question="Why does an LLM like Claude share so much machinery with a vision CNN?" options={["They both use convolutions over their input", "They're both deep neural networks trained with gradient descent on task-specific loss functions — only the input representation and core operator (attention vs convolution) differ", "They share the same pretrained weights"]} answer={1} explanation="The optimization loop (forward pass → loss → backprop → parameter update) is identical. The interesting architectural choice is attention-over-tokens vs convolution-over-pixels, but the training recipe is the same." />
+</Quiz>

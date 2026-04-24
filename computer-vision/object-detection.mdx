@@ -1,0 +1,153 @@
+---
+title: Object Detection
+description: Anchors, IoU, NMS, benchmarks, and the main detection architectures at a glance
+sidebarTitle: Object Detection
+icon: book
+mode: wide
+slug: computer-vision/object-detection
+---
+import { CodeEditor } from '/snippets/CodeEditor.jsx';
+import { Quiz, QuizQuestion } from '/snippets/Quiz.jsx';
+
+Classification answers "what is in this image?" with a single label. Object detection answers "what is in this image, **and where**, and how many of them are there?" — every image produces a variable-length list of `(class, box, score)` triples. The machinery needed to make that work introduces a handful of building blocks you will see in every detector ever shipped.
+
+## The Core Building Blocks
+
+### Bounding Boxes
+
+A detection is a rectangle plus a class. The two common formats:
+
+```text
+(x1, y1, x2, y2)   top-left + bottom-right     ← used by COCO eval, torchvision
+(cx, cy, w, h)     center + width + height     ← used by YOLO-family models
+```
+
+Normalized (values in `[0, 1]`) or absolute pixel coordinates — always double-check which one your framework returns.
+
+### Intersection over Union (IoU)
+
+IoU measures how much two boxes overlap:
+
+$$
+\text{IoU}(A, B) = \frac{|A \cap B|}{|A \cup B|}
+$$
+
+```text
+  IoU = 0.0    IoU = 0.5         IoU = 1.0
+ +----+        +--+---+          +----+
+ |    |        |  |   |          |AB  |
+ +----+        +--+   |          +----+
+        +----+    +---+
+        |    |
+        +----+
+    no overlap  half overlap    identical
+```
+
+IoU is used in two places:
+
+- **Matching predictions to ground truth** during evaluation: a prediction "counts" as correct if it has IoU ≥ some threshold (0.5 is classic, 0.5:0.95 is the COCO standard) with a ground-truth box of the right class.
+- **Suppressing duplicates** (NMS, below).
+
+### Non-Maximum Suppression (NMS)
+
+Detectors produce hundreds or thousands of candidate boxes per image — many overlapping on the same object. NMS keeps only the best one per cluster:
+
+```text
+sort predictions by score, descending
+while predictions not empty:
+    keep the top-scoring one
+    remove any remaining prediction whose IoU with it is > threshold (e.g. 0.5)
+```
+
+Tuning the NMS IoU threshold is the difference between "two cars detected as one" (threshold too high) and "one car detected twice" (threshold too low).
+
+### Anchors
+
+Where does the model "propose" boxes? Early detectors used sliding-window classifiers. Modern detectors pre-define a **grid of anchor boxes** — reference shapes at every spatial location:
+
+```text
+For each cell in the feature map:
+    place A anchors of different (aspect_ratio, scale) pairs
+    predict, for each anchor:
+        - objectness score
+        - class scores
+        - 4 offsets (dx, dy, dw, dh) to refine the anchor into the final box
+```
+
+A typical setup might have 3 scales × 3 aspect ratios = 9 anchors per location. Training matches each ground-truth box to the best-IoU anchor and penalizes the rest. **Anchor design used to be an entire art form** — and one of the motivations behind the anchor-free and transformer-based detectors below.
+
+## Benchmarks and Metrics
+
+The main public benchmarks you will see cited:
+
+| Dataset | What it is | Classes | Typical metric |
+|---|---|---|---|
+| **PASCAL VOC 2007/2012** | Classic small-scale detection benchmark | 20 | mAP @ IoU=0.5 |
+| **COCO** | De facto standard; 80 "common objects" | 80 | mAP averaged over IoU 0.5:0.95 |
+| **LVIS** | Long-tail version of COCO with 1,200+ classes | 1,203 | Masks + boxes, long-tail aware mAP |
+| **Open Images** | Google's large-scale dataset, hierarchical labels | 600 | mAP |
+| **BDD100K / nuScenes / Waymo Open** | Autonomous-driving detection + tracking | varies | mAP, tracking metrics |
+
+**mAP (mean Average Precision)** is the workhorse metric. For each class, plot a precision–recall curve across score thresholds, take the area under it (AP), then average over classes. "mAP@0.5:0.95" means average AP across ten IoU thresholds from 0.5 to 0.95 — a much harder target than the single-threshold mAP@0.5.
+
+## The Main Architectures at a Glance
+
+### Two-Stage Detectors: "Propose, Then Classify"
+
+- **Faster R-CNN (2015):** a Region Proposal Network (RPN) suggests candidate boxes, then a second head classifies and refines each one. Accurate but slower.
+- **Mask R-CNN (2017):** Faster R-CNN with an added mask head for instance segmentation (covered in the next page).
+
+Tradeoff: best accuracy on crowded scenes, too slow for many real-time use cases.
+
+### One-Stage Detectors: "Predict Everything At Once"
+
+- **YOLO family (v1 → v11+):** predicts class + box offsets at every anchor location in a single pass. Fastest mainstream detector, ubiquitous in production, steadily improved accuracy over the years.
+- **SSD (2016), RetinaNet (2017):** the original one-stage models. RetinaNet introduced **focal loss** to fix the foreground/background imbalance problem that hurt earlier one-stage detectors.
+- **FCOS (2019):** anchor-free — predicts boxes directly from every feature-map location without pre-defined anchor shapes.
+
+Tradeoff: faster, easier to deploy. Historically slightly behind two-stage on accuracy; the gap has largely closed.
+
+### Transformer-Based Detectors
+
+- **DETR (2020):** treats detection as set prediction. A transformer takes image features + a set of learned "object queries" and outputs exactly N predictions. No anchors, no NMS (a bipartite matching loss handles duplicates during training). Elegant; slower to train than anchor-based peers.
+- **DINO, DETR-variants, Grounding DINO:** modern successors with faster convergence and open-vocabulary detection (detect objects specified by free-form text).
+
+Tradeoff: clean formulation, strong accuracy, no hand-tuned NMS — but they typically need more compute and training data to shine.
+
+### Open-Vocabulary Detectors
+
+- **Grounding DINO, GLIP, OWL-ViT:** accept a natural-language query and detect matching objects, even for categories unseen at training time. The vision encoder is paired with a text encoder (often CLIP) exactly like the LLM → embedding pipelines from earlier modules. This is the detection analog of "prompting" and it's rapidly becoming the default for long-tail applications.
+
+## Picking a Detector in Practice
+
+| Constraint | Sensible default |
+|---|---|
+| Real-time (30+ FPS) on a single GPU | YOLOv8 / YOLOv11 |
+| Best accuracy, latency not critical | DINO / Co-DETR / Cascade Mask R-CNN |
+| Edge device (CPU, phone, embedded) | YOLO-Nano, EfficientDet-Lite, MobileDet |
+| Open-vocabulary ("detect anything I type") | Grounding DINO, OWL-ViT |
+| Small dataset, quick prototyping | Fine-tune a pretrained YOLO or DETR |
+
+<CodeEditor
+  file="src/computer-vision/iou_and_nms.ts"
+  functionName="main"
+  lines="1-80"
+  title="IoU computation and NMS, step by step (placeholder)"
+/>
+
+### Practical Implication
+
+Mean Average Precision obscures the two things that actually matter in production: **per-class accuracy** (your rare class is probably the one you care about) and **the precision–recall operating point** you'll run at (are false positives or false negatives more expensive?). Always evaluate mAP alongside a confusion matrix at your chosen confidence threshold.
+
+#### ❌ Antipattern
+
+Reporting "mAP improved from 38.7 to 39.1 on COCO" as a win without checking whether the change helped or hurt the specific classes your product relies on.
+
+#### ✅ Best Practice
+
+Build a **curated eval set** from your own data with realistic class distribution, and track per-class AP plus precision/recall at the confidence threshold you intend to deploy with.
+
+<Quiz>
+<QuizQuestion question="Your detector outputs three overlapping boxes on the same car with scores 0.91, 0.87, and 0.62. You apply NMS with IoU threshold 0.5 and only the 0.91 box survives. What would happen if you raised the threshold to 0.9?" options={["Only the 0.91 box would still survive", "All three boxes might survive because the IoU threshold now requires near-identical overlap to suppress — producing duplicate detections on the same car", "NMS would ignore the scores entirely"]} answer={1} explanation="A higher IoU threshold makes NMS more lenient — boxes need to overlap more before one gets suppressed. Set too high and you get duplicate detections. Too low and nearby distinct objects get merged." />
+<QuizQuestion question="You need to detect a new object class that wasn't in your training set, and retraining is not an option this week. What's the most sensible approach?" options={["Wait for the next training cycle", "Use an open-vocabulary detector (Grounding DINO, OWL-ViT) that accepts a text prompt like 'yellow hard hat' and detects matching regions zero-shot", "Fine-tune a linear classifier on the new class"]} answer={1} explanation="Open-vocabulary detectors pair a vision encoder with a text encoder so you can describe new classes in natural language. It's the detection analog of LLM prompting and a great fit for long-tail or evolving class lists." />
+</Quiz>
