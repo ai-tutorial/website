@@ -14,7 +14,7 @@ slug: computer-vision/recap-and-resources
 
 3. **Start with a linear baseline:** on MNIST it plateaus around 92%, which is a useful smoke test. If your deep net can't beat it, fix your data pipeline before your architecture.
 
-4. **Convolutions win on images because of locality + weight sharing:** a small CNN on MNIST moves from ~8% error to <1% with a tiny fraction of the parameters a fully-connected net would need.
+4. **Convolutions win on images because of locality + weight sharing:** a small CNN on MNIST moves from ~8% error to &lt;1% with a tiny fraction of the parameters a fully-connected net would need.
 
 5. **Detection has its own vocabulary:** bounding boxes, IoU, NMS, anchors, and mAP. "mAP@0.5:0.95 on COCO" is the dominant metric — but per-class accuracy at your deploy threshold is what usually matters in production.
 
